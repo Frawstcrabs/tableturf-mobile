@@ -11,7 +11,11 @@ import 'package:firebase_crashlytics/firebase_crashlytics.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:game_template/src/game_internals/cards.dart';
+import 'package:game_template/src/game_internals/card.dart';
+import 'package:game_template/src/game_internals/level_state.dart';
+import 'package:game_template/src/game_internals/move.dart';
+import 'package:game_template/src/game_internals/player.dart';
+import 'package:game_template/src/game_internals/tile.dart';
 import 'package:go_router/go_router.dart';
 import 'package:logging/logging.dart';
 import 'package:provider/provider.dart';
@@ -59,6 +63,7 @@ Future<void> main() async {
 
   WidgetsFlutterBinding.ensureInitialized();
   await loadCards();
+  await loadMaps();
   await guardWithCrashlytics(
     guardedMain,
     crashlytics: crashlytics,
@@ -143,14 +148,32 @@ class MyApp extends StatelessWidget {
                     ),
                 routes: [
                   GoRoute(
-                    path: 'session/:level',
+                    path: 'session/:stage',
                     pageBuilder: (context, state) {
-                      final levelNumber = int.parse(state.params['level']!);
-                      final level = gameLevels
-                          .singleWhere((e) => e.number == levelNumber);
+                      final stage = state.params['stage']!;
+                      final List<List<TableturfTile>> board = maps[stage]!.map<List<TableturfTile>>((row) {
+                        return (row as List<dynamic>).map((tile) {
+                          return TableturfTile.fromJson(tile);
+                        }).toList(growable: false);
+                      }).toList(growable: false);
+                      
+                      final battle = TableturfBattle(
+                        player1: TableturfPlayer(
+                            deck: Iterable.generate(15, (i) => cards[i]).toList(),
+                            hand: Iterable.generate(4, (i) => cards[i]).toList(),
+                            special: 0,
+                        ),
+                        player2: TableturfPlayer(
+                          deck: Iterable.generate(15, (i) => cards[i+15]).toList(),
+                          hand: Iterable.generate(4, (i) => cards[i+15]).toList(),
+                          special: 0,
+                        ),
+                        board: board
+                      );
+
                       return buildMyTransition<void>(
                         child: PlaySessionScreen(
-                          level,
+                          battle,
                           key: const Key('play session'),
                         ),
                         color: context.watch<Palette>().backgroundPlaySession,

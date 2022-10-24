@@ -1,12 +1,13 @@
 // GENERATED CODE - DO NOT MODIFY BY HAND
 
-part of 'cards.dart';
+part of 'card.dart';
 
 // **************************************************************************
 // JsonSerializableGenerator
 // **************************************************************************
 
-TableturfCard _$CardFromJson(Map<String, dynamic> json) => TableturfCard(
+TableturfCard _$TableturfCardFromJson(Map<String, dynamic> json) =>
+    TableturfCard(
       json['num'] as int,
       json['name'] as String,
       json['rarity'] as String,
@@ -18,7 +19,8 @@ TableturfCard _$CardFromJson(Map<String, dynamic> json) => TableturfCard(
           .toList(),
     );
 
-Map<String, dynamic> _$CardToJson(TableturfCard instance) => <String, dynamic>{
+Map<String, dynamic> _$TableturfCardToJson(TableturfCard instance) =>
+    <String, dynamic>{
       'num': instance.num,
       'name': instance.name,
       'rarity': instance.rarity,

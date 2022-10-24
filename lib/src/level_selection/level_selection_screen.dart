@@ -40,19 +40,19 @@ class LevelSelectionScreen extends StatelessWidget {
             Expanded(
               child: ListView(
                 children: [
-                  for (final level in gameLevels)
+                  for (final entry in maps.entries)
                     ListTile(
-                      enabled: playerProgress.highestLevelReached >=
-                          level.number - 1,
                       onTap: () {
                         final audioController = context.read<AudioController>();
                         audioController.playSfx(SfxType.buttonTap);
 
                         GoRouter.of(context)
-                            .go('/play/session/${level.number}');
+                            .go('/play/session/${entry.key}');
                       },
-                      leading: Text(level.number.toString()),
-                      title: Text('Level #${level.number}'),
+                      title: Text(entry.key.splitMapJoin("_",
+                        onMatch: (s) => " ",
+                        onNonMatch: (s) => "${s[0].toUpperCase()}${s.substring(1).toLowerCase()}"
+                      )),
                     )
                 ],
               ),
