@@ -19,8 +19,8 @@ int countLayout(List<List<TileState>> pattern) {
   return layout_amount;
 }
 
-List<List<TileState>> getMinPattern(List<List<TileState>> pattern) {
-  var retPattern = List<List<TileState>>.from(pattern.map((l) => List<TileState>.from(l)));
+TileGrid getMinPattern(TileGrid pattern) {
+  var retPattern = TileGrid.from(pattern.map((l) => List<TileState>.from(l)));
 
   // trim top edge
   while (true) {
@@ -75,8 +75,8 @@ class TableturfCard {
   final String name;
   final String rarity;
   final int special;
-  final List<List<TileState>> pattern;
-  final List<List<TileState>> minPattern;
+  final TileGrid pattern;
+  final TileGrid minPattern;
   final int count;
   final Coords selectPoint;
 

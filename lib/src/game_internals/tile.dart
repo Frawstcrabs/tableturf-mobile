@@ -44,3 +44,6 @@ class TableturfTile extends ChangeNotifier {
             .key);
   }
 }
+
+typedef TileGrid = List<List<TileState>>;
+typedef BoardGrid = List<List<TableturfTile>>;

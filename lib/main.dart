@@ -165,7 +165,7 @@ class MyApp extends StatelessWidget {
                         ),
                         player2: TableturfPlayer(
                           deck: Iterable.generate(15, (i) => cards[i+15]).toList(),
-                          hand: Iterable.generate(4, (i) => cards[i+15]).toList(),
+                          hand: Iterable.generate(4, (i) => cards[i+19]).toList(),
                           special: 0,
                         ),
                         board: board

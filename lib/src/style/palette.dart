@@ -43,8 +43,12 @@ class Palette {
   Color get tileBlue => const Color.fromRGBO(71, 92, 255, 1);
   Color get tileBlueSpecial => const Color.fromRGBO(10, 255, 255, 1);
 
-  Color get cardBackground => const Color.fromRGBO(130, 130, 130, 1);
+  Color get cardBackground => const Color.fromRGBO(48, 48, 48, 1);
+  Color get cardBackgroundSelected => const Color.fromRGBO(130, 130, 130, 1);
   Color get cardEdge => const Color.fromRGBO(0, 0, 0, 1);
   Color get cardTileUnfilled => const Color.fromRGBO(32, 32, 32, 0.7);
   Color get cardTileEdge => const Color.fromRGBO(120, 120, 120, 1);
+
+  Color get buttonSelected => const Color.fromRGBO(216, 216, 0, 1);
+  Color get buttonUnselected => const Color.fromRGBO(109, 161, 198, 1);
 }
