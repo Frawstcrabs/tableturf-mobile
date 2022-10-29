@@ -6,8 +6,6 @@ enum FlipDirection {
   HORIZONTAL,
 }
 
-enum Fill { none, fillFront, fillBack }
-
 class FlipCard extends StatelessWidget {
   final Widget front;
   final Widget back;

@@ -1,5 +1,6 @@
 import 'dart:convert';
 
+import 'package:flutter/material.dart';
 import 'package:json_annotation/json_annotation.dart';
 import 'package:flutter/services.dart' show rootBundle;
 
@@ -89,6 +90,10 @@ class TableturfCard {
       );
 
   factory TableturfCard.fromJson(Map<String, dynamic> json) => _$TableturfCardFromJson(json);
+
+  bool operator==(Object other) {
+    return other is TableturfCard && other.num == this.num;
+  }
 
   Map<String, dynamic> toJson() => _$TableturfCardToJson(this);
 }

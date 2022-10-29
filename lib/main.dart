@@ -7,12 +7,14 @@
 // import 'package:firebase_core/firebase_core.dart';
 // import 'firebase_options.dart';
 
+import 'dart:math';
+
 import 'package:firebase_crashlytics/firebase_crashlytics.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:game_template/src/game_internals/card.dart';
-import 'package:game_template/src/game_internals/level_state.dart';
+import 'package:game_template/src/game_internals/battle.dart';
 import 'package:game_template/src/game_internals/move.dart';
 import 'package:game_template/src/game_internals/player.dart';
 import 'package:game_template/src/game_internals/tile.dart';
@@ -131,6 +133,16 @@ void guardedMain() {
 
 Logger _log = Logger('main.dart');
 
+List<T> randomSample<T>(List<T> items, int count) {
+  assert(items.length >= count);
+  List<int> selections = [];
+  List<int> indexes = Iterable<int>.generate(items.length).toList();
+  for (var i = 0; i < count; i++) {
+    selections.add(indexes.removeAt(Random().nextInt(indexes.length)));
+  }
+  return selections.map((i) => items[i]).toList();
+}
+
 class MyApp extends StatelessWidget {
   static final _router = GoRouter(
     routes: [
@@ -156,16 +168,26 @@ class MyApp extends StatelessWidget {
                           return TableturfTile.fromJson(tile);
                         }).toList(growable: false);
                       }).toList(growable: false);
+
+                      final yellowDeck = randomSample(cards, 15);
+                      final yellowHand = randomSample(yellowDeck, 4);
+
+                      final blueDeck = randomSample(cards, 15);
+                      final blueHand = randomSample(blueDeck, 4);
+                      for (final c in blueHand) {
+                        blueDeck.remove(c);
+                      }
+                      assert(blueDeck.length == 11);
                       
                       final battle = TableturfBattle(
-                        player1: TableturfPlayer(
-                            deck: Iterable.generate(15, (i) => cards[i]).toList(),
-                            hand: Iterable.generate(4, (i) => cards[i]).toList(),
-                            special: 0,
+                        yellow: TableturfPlayer(
+                          deck: yellowDeck,
+                          hand: yellowHand.map((c) => ValueNotifier(null as TableturfCard?)).toList(),
+                          special: 0,
                         ),
-                        player2: TableturfPlayer(
-                          deck: Iterable.generate(15, (i) => cards[i+15]).toList(),
-                          hand: Iterable.generate(4, (i) => cards[i+19]).toList(),
+                        blue: TableturfPlayer(
+                          deck: blueDeck,
+                          hand: blueHand.map((c) => ValueNotifier(c)).toList(),
                           special: 0,
                         ),
                         board: board
