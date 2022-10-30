@@ -1,6 +1,6 @@
 {
-    "name": "game_template",
-    "short_name": "game_template",
+    "name": "tableturf_mobile",
+    "short_name": "tableturf_mobile",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0175C2",

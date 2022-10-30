@@ -90,12 +90,12 @@ BEGIN
         BLOCK "040904e4"
         BEGIN
             VALUE "CompanyName", "com.example" "\0"
-            VALUE "FileDescription", "game_template" "\0"
+            VALUE "FileDescription", "tableturf_mobile" "\0"
             VALUE "FileVersion", VERSION_AS_STRING "\0"
-            VALUE "InternalName", "game_template" "\0"
+            VALUE "InternalName", "tableturf_mobile" "\0"
             VALUE "LegalCopyright", "Copyright (C) 2022 com.example. All rights reserved." "\0"
-            VALUE "OriginalFilename", "game_template.exe" "\0"
-            VALUE "ProductName", "game_template" "\0"
+            VALUE "OriginalFilename", "tableturf_mobile.exe" "\0"
+            VALUE "ProductName", "tableturf_mobile" "\0"
             VALUE "ProductVersion", VERSION_AS_STRING "\0"
         END
     END

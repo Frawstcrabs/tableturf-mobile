@@ -1,7 +1,7 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
-    package="com.example.game_template">
+    package="com.example.tableturf_mobile">
    <application
-        android:label="game_template"
+        android:label="Tableturf Mobile"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
         <activity

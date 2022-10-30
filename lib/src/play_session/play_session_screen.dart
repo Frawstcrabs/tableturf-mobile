@@ -5,7 +5,7 @@
 import 'dart:math';
 
 import 'package:flutter/material.dart';
-import 'package:game_template/src/games_services/score.dart';
+import 'package:tableturf_mobile/src/games_services/score.dart';
 import 'package:go_router/go_router.dart';
 import 'package:logging/logging.dart' hide Level;
 import 'package:provider/provider.dart';
@@ -44,7 +44,7 @@ class _PlaySessionScreenState extends State<PlaySessionScreen> {
     await Future<void>.delayed(const Duration(milliseconds: 1000));
     for (var i = 0; i < 4; i++) {
       yellow.hand[i].value = yellow.deck.removeAt(Random().nextInt(yellow.deck.length));
-      await Future<void>.delayed(const Duration(milliseconds: 200));
+      await Future<void>.delayed(const Duration(milliseconds: 150));
     }
     widget.battle.runBlueAI();
   }

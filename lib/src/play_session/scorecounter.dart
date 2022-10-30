@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:game_template/src/game_internals/player.dart';
+import 'package:tableturf_mobile/src/game_internals/player.dart';
 
 
 class ScoreCounter extends StatefulWidget {
