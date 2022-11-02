@@ -35,7 +35,7 @@ class Palette {
   Color get backgroundSettings => const Color(0xffbfc8e3);
   Color get trueWhite => const Color(0xffffffff);
 
-  Color get tileUnfilled => const Color.fromRGBO(0, 0, 32, 1);
+  Color get tileUnfilled => const Color.fromRGBO(0, 0, 0, 0.8);
   Color get tileEdge => const Color.fromRGBO(80, 80, 80, 1);
   Color get tileWall => const Color.fromRGBO(160, 160, 160, 1);
   Color get tileYellow => const Color.fromRGBO(255, 255, 17, 1);

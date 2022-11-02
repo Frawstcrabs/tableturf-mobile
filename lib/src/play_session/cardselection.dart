@@ -10,7 +10,6 @@ import '../game_internals/move.dart';
 
 import 'cardwidget.dart';
 import 'flip_card.dart';
-import 'textwidget.dart';
 
 class SpeenWidget extends StatefulWidget {
   const SpeenWidget({super.key});
@@ -187,12 +186,7 @@ class _CardSelectionWidgetState extends State<CardSelectionWidget>
       ),
       width: CardWidget.CARD_WIDTH,
       height: CardWidget.CARD_HEIGHT,
-      child: Scaffold(
-        backgroundColor: Colors.transparent,
-        body: Center(
-          child: buildTextWidget("Selected"),
-        ),
-      ),
+      child: Center(child: Text("Selected")),
     );
   }
 
@@ -296,7 +290,7 @@ class _CardSelectionWidgetState extends State<CardSelectionWidget>
                         color: Color.fromRGBO(0, 0, 0, 0.4),
                       ),
                       child: Center(
-                          child: buildTextWidget("Pass")
+                          child: Text("Pass")
                       )
                   )
                 ]
@@ -417,12 +411,7 @@ class _CardSelectionConfirmButtonState extends State<CardSelectionConfirmButton>
       ),
       width: CardWidget.CARD_WIDTH,
       height: CardWidget.CARD_HEIGHT,
-      child: Scaffold(
-        backgroundColor: Colors.transparent,
-        body: Center(
-          child: buildTextWidget("Confirm"),
-        ),
-      ),
+      child: Center(child: Text("Confirm")),
     );
   }
 

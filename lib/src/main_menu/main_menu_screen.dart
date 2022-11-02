@@ -31,10 +31,10 @@ class MainMenuScreen extends StatelessWidget {
           child: Transform.rotate(
             angle: -0.1,
             child: const Text(
-              'Flutter Game Template!',
+              'Tableturf Mobile',
               textAlign: TextAlign.center,
               style: TextStyle(
-                fontFamily: 'Permanent Marker',
+                fontFamily: 'Splatfont1',
                 fontSize: 55,
                 height: 1,
               ),
@@ -46,7 +46,7 @@ class MainMenuScreen extends StatelessWidget {
           children: [
             ElevatedButton(
               onPressed: () {
-                audioController.playSfx(SfxType.buttonTap);
+                //audioController.playSfx(SfxType.buttonTap);
                 GoRouter.of(context).go('/play');
               },
               child: const Text('Play'),

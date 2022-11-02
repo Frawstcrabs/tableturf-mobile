@@ -38,7 +38,7 @@ class _ScoreCounterState extends State<ScoreCounter>
         vsync: this
     );
     showSumController = AnimationController(
-        duration: const Duration(milliseconds: 125),
+        duration: const Duration(milliseconds: 200),
         vsync: this
     );
     showDiffController.value = 1.0;
@@ -105,15 +105,15 @@ class _ScoreCounterState extends State<ScoreCounter>
         tween: Tween(
           begin: 1.0,
           end: 1.3,
-        ).chain(CurveTween(curve: Curves.easeIn.flipped)),
+        ).chain(CurveTween(curve: Curves.easeOut)),
         weight: 50.0
       ),
       TweenSequenceItem(
         tween: Tween(
           begin: 1.3,
           end: 1.0,
-        ).chain(CurveTween(curve: Curves.easeInBack.flipped)),
-        weight: 50.0
+        ).chain(CurveTween(curve: Curves.easeInOut)),
+        weight: 70.0
       ),
     ]).animate(showSumController);
   }

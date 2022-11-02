@@ -32,7 +32,7 @@ class LevelSelectionScreen extends StatelessWidget {
                 child: Text(
                   'Select level',
                   style:
-                      TextStyle(fontFamily: 'Permanent Marker', fontSize: 30),
+                      TextStyle(fontFamily: 'Splatfont1', fontSize: 30),
                 ),
               ),
             ),
@@ -40,19 +40,24 @@ class LevelSelectionScreen extends StatelessWidget {
             Expanded(
               child: ListView(
                 children: [
-                  for (final entry in maps.entries)
+                  for (final map in maps.keys)
                     ListTile(
                       onTap: () {
-                        final audioController = context.read<AudioController>();
-                        audioController.playSfx(SfxType.buttonTap);
+                        //final audioController = context.read<AudioController>();
+                        //audioController.playSfx(SfxType.buttonTap);
 
                         GoRouter.of(context)
-                            .go('/play/session/${entry.key}');
+                            .go('/play/session/$map');
                       },
-                      title: Text(entry.key.splitMapJoin("_",
-                        onMatch: (s) => " ",
-                        onNonMatch: (s) => "${s[0].toUpperCase()}${s.substring(1).toLowerCase()}"
-                      )),
+                      title: Text(
+                        map.splitMapJoin("_",
+                          onMatch: (s) => " ",
+                          onNonMatch: (s) => "${s[0].toUpperCase()}${s.substring(1).toLowerCase()}"
+                        ),
+                        style: TextStyle(
+                          fontFamily: "Splatfont2"
+                        )
+                      )
                     )
                 ],
               ),

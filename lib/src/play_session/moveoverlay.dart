@@ -11,67 +11,14 @@ import 'boardwidget.dart';
 
 class MoveOverlayWidget extends StatelessWidget {
   final TableturfBattle battle;
+  final double tileSize;
 
-  const MoveOverlayWidget(this.battle);
-
-  void _updateLocation(PointerEvent details) {
-    if (battle.yellowMoveNotifier.value != null) {
-      return;
-    }
-    final board = battle.board;
-    final newLocation = details.localPosition;
-    final boardTileStep = BoardTile.SIDE_LEN - BoardTile.EDGE_WIDTH;
-    final newX = (newLocation.dx / boardTileStep).floor();
-    final newY = (newLocation.dy / boardTileStep).floor();
-    if (
-    newY < 0 ||
-        newY >= board.length ||
-        newX < 0 ||
-        newX >= board[0].length
-    ) {
-      battle.moveLocationNotifier.value = null;
-    } else {
-      battle.moveLocationNotifier.value = Coords(newX, newY);
-    }
-  }
-
-  void _onPointerHover(PointerEvent details) {
-    if (details.kind == PointerDeviceKind.mouse) {
-      _updateLocation(details);
-    }
-  }
-
-  void _onPointerMove(PointerEvent details) {
-    _updateLocation(details);
-  }
-
-  void _onPointerDown(PointerEvent details) {
-    if (details.kind == PointerDeviceKind.mouse) {
-      battle.confirmMove();
-    } else {
-      _updateLocation(details);
-    }
-  }
-
-  KeyEventResult _handleKeyPress(FocusNode node, RawKeyEvent event) {
-    print("handle key");
-    if (event is RawKeyDownEvent) {
-      if (event.logicalKey == LogicalKeyboardKey.keyQ) {
-        battle.rotateLeft();
-        return KeyEventResult.handled;
-      }
-      if (event.logicalKey == LogicalKeyboardKey.keyE) {
-        battle.rotateRight();
-        return KeyEventResult.handled;
-      }
-    }
-    return KeyEventResult.ignored;
-  }
+  const MoveOverlayWidget(this.battle, {required this.tileSize});
 
   @override
   Widget build(BuildContext context) {
     final board = battle.board;
-    final boardTileStep = BoardTile.SIDE_LEN - BoardTile.EDGE_WIDTH;
+    final boardTileStep = tileSize - BoardTile.EDGE_WIDTH;
     final boardHeight = board.length * boardTileStep + BoardTile.EDGE_WIDTH;
     final boardWidth = board[0].length * boardTileStep + BoardTile.EDGE_WIDTH;
 
@@ -138,8 +85,8 @@ class MoveOverlayWidget extends StatelessWidget {
                                                         color: colour
                                                     ),
                                                   ),
-                                                  width: BoardTile.SIDE_LEN,
-                                                  height: BoardTile.SIDE_LEN,
+                                                  width: tileSize,
+                                                  height: tileSize,
                                                 )
                                             );
                                           }).toList(growable: false);
@@ -154,17 +101,15 @@ class MoveOverlayWidget extends StatelessWidget {
                       if (location == null) {
                         return Container();
                       }
-                      final overlayY = clamp(location.y - selectPoint.y, 0, board.length - pattern.length);
-                      final overlayX = clamp(location.x - selectPoint.x, 0, board[0].length - pattern[0].length);
+                      final overlayY = location.y - selectPoint.y;
+                      final overlayX = location.x - selectPoint.x;
 
-                      return Container(
-                        padding: EdgeInsets.fromLTRB(
-                            overlayX * boardTileStep,
-                            overlayY * boardTileStep,
-                            0,
-                            0
+                      return Transform.translate(
+                        offset: Offset(
+                          overlayX * boardTileStep,
+                          overlayY * boardTileStep
                         ),
-                        child: child!,
+                        child: child,
                       );
                     }
                 );
@@ -173,28 +118,8 @@ class MoveOverlayWidget extends StatelessWidget {
         }
     );
 
-    return Listener(
-      onPointerDown: _onPointerDown,
-      onPointerMove: _onPointerMove,
-      onPointerHover: _onPointerHover,
-      child: Container(
-        decoration: BoxDecoration(
-            color: Color.fromRGBO(0, 0, 0, 0)
-        ),
-        width: boardWidth,
-        height: boardHeight,
-        child: Focus(
-          autofocus: true,
-          onKey: _handleKeyPress,
-          onFocusChange: (bool isFocused) {
-            print("focus change: $isFocused");
-            if (!isFocused) {
-              FocusScope.of(context).requestFocus();
-            }
-          },
-          child: overlayWidget,
-        ),
-      ),
+    return IgnorePointer(
+      child: overlayWidget
     );
   }
 }

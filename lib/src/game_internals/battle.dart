@@ -6,6 +6,8 @@ import 'dart:math';
 import 'package:flutter/foundation.dart';
 import 'package:logging/logging.dart';
 
+import '../audio/audio_controller.dart';
+import '../audio/sounds.dart';
 import 'card.dart';
 import 'tile.dart';
 import 'move.dart';
@@ -206,14 +208,6 @@ BoardGrid _flipBoard(BoardGrid board) {
   return ret;
 }
 
-Iterable<T> joinIterators<T>(Iterable<Iterable<T>> iters) {
-  Iterable<T> ret = Iterable.empty();
-  for (final iter in iters) {
-    ret = ret.followedBy(iter);
-  }
-  return ret;
-}
-
 double _rateMove(BoardGrid board, TableturfMove move) {
   return Random().nextDouble();
 }
@@ -233,16 +227,12 @@ TableturfMove _runBlueAI(List<dynamic> args) {
       traits: YellowTraits(),
     )
   ).followedBy(
-    joinIterators(
-      player.hand
-        .map((card) => getMoves(board, card.value!, special: false))
-    )
+    player.hand
+      .expand((card) => getMoves(board, card.value!, special: false))
   ).followedBy(
-    joinIterators(
-      player.hand
-        .where((card) => card.value!.special <= player.special.value)
-        .map((card) => getMoves(board, card.value!, special: true))
-    )
+    player.hand
+      .where((card) => card.value!.special <= player.special.value)
+      .expand((card) => getMoves(board, card.value!, special: true))
   ).iterator;
   var moveCount = 1;
   moves.moveNext();
@@ -327,10 +317,8 @@ class TableturfBattle {
     final pass = movePassNotifier.value;
     if (pass) {
       moveIsValidNotifier.value = card != null;
-    }
-    if (location != null
-        && card != null
-        && moveCardNotifier.value != null) {
+    } else if (location != null
+        && card != null) {
       final pattern = rotatePattern(
         card.minPattern,
         rot
@@ -341,21 +329,23 @@ class TableturfBattle {
         card.minPattern[0].length,
         rot
       );
-      final overlayY = clamp(
-        location.y - selectPoint.y,
-        0,
-        board.length - pattern.length
-      );
-      final overlayX = clamp(
-        location.x - selectPoint.x,
-        0,
-        board[0].length - pattern[0].length
-      );
+      final locationX = location.x - selectPoint.x;
+      final locationY = location.y - selectPoint.y;
+      print("trying location $locationX, $locationY: (${board[0].length - pattern[0].length}, ${board.length - pattern.length})");
+      if (!(
+          locationY >= 0
+              && locationY <= board.length - pattern.length
+              && locationX >= 0
+              && locationX <= board[0].length - pattern[0].length
+      )) {
+        moveIsValidNotifier.value = false;
+        return;
+      }
       final move = TableturfMove(
           card: card,
           rotation: rot,
-          x: overlayX,
-          y: overlayY,
+          x: locationX,
+          y: locationY,
           special: special
       );
       moveIsValidNotifier.value = moveIsValid(board, move);
@@ -370,6 +360,8 @@ class TableturfBattle {
   }
 
   void rotateLeft() {
+    final audioController = AudioController();
+    audioController.playSfx(SfxType.cursorRotate);
     int rot = moveRotationNotifier.value;
     rot -= 1;
     rot %= 4;
@@ -377,6 +369,8 @@ class TableturfBattle {
   }
 
   void rotateRight() {
+    final audioController = AudioController();
+    audioController.playSfx(SfxType.cursorRotate);
     int rot = moveRotationNotifier.value;
     rot += 1;
     rot %= 4;
@@ -400,7 +394,10 @@ class TableturfBattle {
       return;
     }
 
-    final location = moveLocationNotifier.value!;
+    final location = moveLocationNotifier.value;
+    if (location == null) {
+      return;
+    }
     final rot = moveRotationNotifier.value;
     final pattern = rotatePattern(card.minPattern, rot);
     final selectPoint = rotatePatternPoint(
@@ -409,19 +406,24 @@ class TableturfBattle {
       card.minPattern[0].length,
       rot,
     );
+    final locationX = location.x - selectPoint.x;
+    final locationY = location.y - selectPoint.y;
+    print("trying location $locationX, $locationY");
+    if (!(
+      locationY >= 0
+        && locationY <= board.length - pattern.length
+        && locationX >= 0
+        && locationX <= board[0].length - pattern[0].length
+    )) {
+      return;
+    }
+    final audioController = AudioController();
+    audioController.playSfx(SfxType.confirmMoveSucceed);
     yellowMoveNotifier.value = TableturfMove(
       card: card,
       rotation: rot,
-      x: clamp(
-          location.x - selectPoint.x,
-          0,
-          board[0].length - pattern[0].length
-      ),
-      y: clamp(
-          location.y - selectPoint.y,
-          0,
-          board.length - pattern.length
-      ),
+      x: locationX,
+      y: locationY,
       pass: movePassNotifier.value,
       special: moveSpecialNotifier.value,
     );
@@ -430,6 +432,8 @@ class TableturfBattle {
 
   Future<void> runTurn() async {
     print("turn triggered");
+    final audioController = AudioController();
+    await audioController.playSfx(SfxType.cardFlip);
     revealCardsNotifier.value = true;
     await Future<void>.delayed(const Duration(milliseconds: 1000));
 
@@ -439,14 +443,18 @@ class TableturfBattle {
     // apply moves to board
     if (blueMove.pass && yellowMove.pass) {
       print("no move");
+      await Future<void>.delayed(const Duration(milliseconds: 1500));
     } else if (blueMove.pass && !yellowMove.pass) {
       print("yellow move only");
+      await audioController.playSfx(yellowMove.special ? SfxType.specialMove : SfxType.normalMove);
       _applyMoveToBoard(yellowMove);
     } else if (!blueMove.pass && yellowMove.pass) {
       print("blue move only");
+      await audioController.playSfx(yellowMove.special ? SfxType.specialMove : SfxType.normalMove);
       _applyMoveToBoard(blueMove);
     } else if (!_checkOverlap(blueMove, yellowMove)) {
       print("no overlap");
+      await audioController.playSfx(yellowMove.special || blueMove.special ? SfxType.specialMove : SfxType.normalMove);
       _applyMoveToBoard(blueMove);
       _applyMoveToBoard(yellowMove);
     } else if (blueMove.special && !yellowMove.special) {
@@ -463,7 +471,7 @@ class TableturfBattle {
       await _applyOverlap(below: blueMove, above: yellowMove);
     } else {
       print("conflict");
-      _applyConflict(blueMove, yellowMove);
+      await _applyConflict(blueMove, yellowMove);
     }
 
     if (!(blueMove.pass && yellowMove.pass)) {
@@ -475,6 +483,7 @@ class TableturfBattle {
     _countBoard();
 
     if (yellowCountNotifier.value != prevYellowCount || blueCountNotifier.value != prevBlueCount) {
+      await audioController.playSfx(SfxType.counterUpdate);
       await Future<void>.delayed(const Duration(milliseconds: 1400));
     }
 
@@ -491,8 +500,9 @@ class TableturfBattle {
     await Future<void>.delayed(const Duration(milliseconds: 100));
     yellow.changeHandCard(yellowMove.card);
     blue.changeHandCard(blueMove.card);
-    await Future<void>.delayed(const Duration(milliseconds: 50));
+    await Future<void>.delayed(const Duration(milliseconds: 200));
     turnCountNotifier.value -= 1;
+    await Future<void>.delayed(const Duration(milliseconds: 1000));
 
     playerControlLock.value = true;
     runBlueAI();
@@ -548,9 +558,11 @@ class TableturfBattle {
   }
 
   Future<void> _applyOverlap({required TableturfMove below, required TableturfMove above}) async {
+    final audioController = AudioController();
+    await audioController.playSfx(below.special ? SfxType.specialMove : SfxType.normalMove);
     _applyMoveToBoard(below);
-
     await Future<void>.delayed(const Duration(milliseconds: 1000));
+    await audioController.playSfx(above.special ? SfxType.specialMove : SfxType.normalMoveOverlap);
 
     final relativePoint = Coords(
         above.x - below.x,
@@ -590,7 +602,7 @@ class TableturfBattle {
     }
   }
 
-  void _applyConflict(TableturfMove move1, TableturfMove move2) {
+  Future<void> _applyConflict(TableturfMove move1, TableturfMove move2) async {
     void applyOneWay(TableturfMove above, TableturfMove below) {
       final relativePoint = Coords(
           above.x - below.x,
@@ -633,6 +645,8 @@ class TableturfBattle {
         }
       }
     }
+    final audioController = AudioController();
+    await audioController.playSfx(SfxType.normalMoveConflict);
     applyOneWay(move1, move2);
     applyOneWay(move2, move1);
   }
@@ -660,6 +674,9 @@ class TableturfBattle {
       compute(_runBlueAI, [plainBoard, blue]),
       Future.delayed(Duration(milliseconds: 1500 + Random().nextInt(500)))
     ]))[0];
+
+    final audioController = AudioController();
+    await audioController.playSfx(SfxType.confirmMoveSucceed);
     blueMoveNotifier.value = blueMove;
   }
 }

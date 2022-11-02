@@ -177,17 +177,22 @@ class MyApp extends StatelessWidget {
                         blueDeck.remove(c);
                       }
                       assert(blueDeck.length == 11);
-                      
+
+                      print("building battle object for map ${stage}");
                       final battle = TableturfBattle(
                         yellow: TableturfPlayer(
+                          name: "You",
                           deck: yellowDeck,
                           hand: yellowHand.map((c) => ValueNotifier(null as TableturfCard?)).toList(),
-                          special: 0,
+                          traits: const YellowTraits(),
+                          special: 1,
                         ),
                         blue: TableturfPlayer(
+                          name: "Rando",
                           deck: blueDeck,
                           hand: blueHand.map((c) => ValueNotifier(c)).toList(),
-                          special: 0,
+                          traits: const BlueTraits(),
+                          special: 3,
                         ),
                         board: board
                       );

@@ -7,13 +7,17 @@ import 'card.dart';
 import 'tile.dart';
 
 class TableturfPlayer {
+  final String name;
   final List<TableturfCard> deck;
   final List<ValueNotifier<TableturfCard?>> hand;
   final ValueNotifier<int> special;
+  final PlayerTraits traits;
 
   TableturfPlayer({
+    required this.name,
     required this.deck,
     required this.hand,
+    required this.traits,
     special = 0
   }): special = ValueNotifier(special);
 

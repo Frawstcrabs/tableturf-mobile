@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:tableturf_mobile/src/audio/audio_controller.dart';
+import 'package:tableturf_mobile/src/audio/sounds.dart';
 
 import '../style/palette.dart';
 
@@ -241,9 +243,11 @@ class _CardWidgetState extends State<CardWidget>
                     ? _buildCard(card!, palette.cardBackgroundSelected)
                     : _buildCard(card!, palette.cardBackground),
                 onTapDown: (details) {
-                  if (widget.battle.yellowMoveNotifier.value != null) {
+                  if (!widget.battle.playerControlLock.value) {
                     return;
                   }
+                  final audioController = AudioController();
+                  audioController.playSfx(SfxType.selectCardNormal);
                   moveCardNotifier.value = card;
                 }
             );
