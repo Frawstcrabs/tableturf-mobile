@@ -17,19 +17,32 @@ enum TileState {
   @JsonValue('b')
   Blue,
   @JsonValue('B')
-  BlueSpecial,
+  BlueSpecial;
+
+  bool get isYellow => this == TileState.Yellow || this == TileState.YellowSpecial;
+  bool get isBlue => this == TileState.Blue || this == TileState.BlueSpecial;
+  bool get isSpecial => this == TileState.YellowSpecial || this == TileState.BlueSpecial;
+  bool get isFilled => this != TileState.Unfilled;
 }
 
-class TableturfTile extends ChangeNotifier {
-  TileState _state;
+class TileStateNotifier extends ChangeNotifier {
+  TileState _value;
 
-  TableturfTile(this._state);
+  TileStateNotifier(this._value);
 
-  TileState get state => _state;
-  set state(TileState newState) {
-    _state = newState;
+  TileState get value => _value;
+  set value(TileState val) {
+    _value = val;
     notifyListeners();
   }
+}
+
+class TableturfTile {
+  final TileStateNotifier state;
+  final ValueNotifier<bool> specialIsActivated = ValueNotifier(false);
+
+  TableturfTile(TileState _state):
+    state = TileStateNotifier(_state);
 
   factory TableturfTile.fromJson(dynamic source) {
   if (source == null) {

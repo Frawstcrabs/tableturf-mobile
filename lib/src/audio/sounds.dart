@@ -20,15 +20,20 @@ List<String> soundTypeToFilename(SfxType type) {
 /// Allows control over loudness of different SFX types.
 double soundTypeToVolume(SfxType type) {
   switch (type) {
+    /*
     case SfxType.cursorMove:
       return 1.0;
     case SfxType.cursorRotate:
       return 0.7;
     case SfxType.confirmMoveSucceed:
     case SfxType.confirmMovePass:
-      return 0.4;
-    case SfxType.cardFlip:
       return 0.5;
+    case SfxType.cardFlip:
+      return 0.8;
+    case SfxType.gainSpecial:
+      return 0.5;
+
+     */
     default:
       return 1.0;
   }

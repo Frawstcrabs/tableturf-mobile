@@ -1,3 +1,5 @@
+import 'dart:ui';
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:tableturf_mobile/src/audio/audio_controller.dart';
@@ -85,8 +87,8 @@ class _CardWidgetState extends State<CardWidget>
   @override
   void initState() {
     _transitionController = AnimationController(
-        duration: const Duration(milliseconds: 125),
-        vsync: this
+      duration: const Duration(milliseconds: 125),
+      vsync: this
     );
     _transitionController.addStatusListener((status) {setState(() {});});
     _transitionController.value = widget.cardNotifier.value == null ? 0.0 : 1.0;
@@ -236,22 +238,33 @@ class _CardWidgetState extends State<CardWidget>
     var reactiveCard = ValueListenableBuilder(
       valueListenable: widget.cardNotifier,
       builder: (_, TableturfCard? card, __) => AnimatedBuilder(
-          animation: moveCardNotifier,
-          builder: (_, __) {
-            return GestureDetector(
-                child: moveCardNotifier.value != null && moveCardNotifier.value == card
-                    ? _buildCard(card!, palette.cardBackgroundSelected)
-                    : _buildCard(card!, palette.cardBackground),
-                onTapDown: (details) {
-                  if (!widget.battle.playerControlLock.value) {
-                    return;
-                  }
-                  final audioController = AudioController();
-                  audioController.playSfx(SfxType.selectCardNormal);
-                  moveCardNotifier.value = card;
-                }
-            );
-          }
+        animation: moveCardNotifier,
+        builder: (_, __) {
+          return GestureDetector(
+            child: moveCardNotifier.value != null && moveCardNotifier.value == card
+                ? _buildCard(card!, palette.cardBackgroundSelected)
+                : _buildCard(card!, palette.cardBackground),
+            onTapDown: (details) {
+              final battle = widget.battle;
+              if (!battle.playerControlLock.value) {
+                return;
+              }
+              if (moveCardNotifier.value != card) {
+                final audioController = AudioController();
+                audioController.playSfx(SfxType.selectCardNormal);
+                moveCardNotifier.value = card;
+              }
+              if (details.kind == PointerDeviceKind.touch
+                  && battle.moveLocationNotifier.value == null
+                  && !battle.movePassNotifier.value) {
+                battle.moveLocationNotifier.value = Coords(
+                  battle.board[0].length ~/ 2,
+                  battle.board.length ~/ 2
+                );
+              }
+            }
+          );
+        }
       )
     );
     switch (_transitionController.status) {

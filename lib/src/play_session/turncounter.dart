@@ -23,7 +23,7 @@ class _TurnCounterState extends State<TurnCounter>
 
   static const duration = Duration(milliseconds: 1300);
   static const darkenAmount = 0.5;
-  static const focusScale = 1.3;
+  static const focusScale = 1.4;
   static final counterBounceHeight = 4.0;
 
   @override

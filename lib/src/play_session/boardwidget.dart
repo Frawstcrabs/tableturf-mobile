@@ -20,55 +20,11 @@ class BoardWidget extends StatelessWidget {
     required this.tileSize,
   });
 
-  void _updateLocation(PointerEvent details, BuildContext context) {
-    if (battle.yellowMoveNotifier.value != null) {
-      return;
-    }
-    final board = battle.board;
-    final newLocation = details.localPosition;
-    final boardTileStep = tileSize - BoardTile.EDGE_WIDTH;
-    final newX = (newLocation.dx / boardTileStep).floor();
-    final newY = (newLocation.dy / boardTileStep).floor();
-    if (
-    newY < 0 ||
-        newY >= board.length ||
-        newX < 0 ||
-        newX >= board[0].length
-    ) {
-      battle.moveLocationNotifier.value = null;
-    } else {
-      final newCoords = Coords(newX, newY);
-      if (battle.moveLocationNotifier.value != newCoords) {
-        final audioController = AudioController();
-        audioController.playSfx(SfxType.cursorMove);
-      }
-      battle.moveLocationNotifier.value = newCoords;
-    }
-  }
-
-  void _onPointerHover(PointerEvent details, BuildContext context) {
-    if (details.kind == PointerDeviceKind.mouse) {
-      _updateLocation(details, context);
-    }
-  }
-
-  void _onPointerMove(PointerEvent details, BuildContext context) {
-    _updateLocation(details, context);
-  }
-
-  void _onPointerDown(PointerEvent details, BuildContext context) {
-    if (details.kind == PointerDeviceKind.mouse) {
-      battle.confirmMove();
-    } else {
-      _updateLocation(details, context);
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     final boardState = battle.board;
     final boardTileStep = tileSize - BoardTile.EDGE_WIDTH;
-    final boardWidget = Stack(
+    return Stack(
       children: boardState.asMap().entries.expand((entry) {
         int y = entry.key;
         var row = entry.value;
@@ -76,19 +32,12 @@ class BoardWidget extends StatelessWidget {
           int x = entry.key;
           var tile = entry.value;
           return Positioned(
-              top: y * boardTileStep,
-              left: x * boardTileStep,
-              child: BoardTile(tile, tileSize: tileSize)
+            top: y * boardTileStep,
+            left: x * boardTileStep,
+            child: BoardTile(tile, tileSize: tileSize)
           );
         }).toList(growable: false);
       }).toList(growable: false)
-    );
-
-    return Listener(
-      onPointerDown: (details) => _onPointerDown(details, context),
-      onPointerMove: (details) => _onPointerMove(details, context),
-      onPointerHover: (details) => _onPointerHover(details, context),
-      child: boardWidget,
     );
   }
 }
@@ -128,7 +77,7 @@ class _BoardTileState extends State<BoardTile>
       )
     ).animate(_flashController);
 
-    widget.tile.addListener(_runFlash);
+    widget.tile.state.addListener(_runFlash);
     super.initState();
   }
 
@@ -139,7 +88,7 @@ class _BoardTileState extends State<BoardTile>
 
   @override
   void dispose() {
-    widget.tile.removeListener(_runFlash);
+    widget.tile.state.removeListener(_runFlash);
     _flashController.dispose();
     super.dispose();
   }
@@ -147,7 +96,7 @@ class _BoardTileState extends State<BoardTile>
   @override
   Widget build(BuildContext context) {
     final palette = context.watch<Palette>();
-    final state = widget.tile.state;
+    final state = widget.tile.state.value;
     return Stack(
       children: [
         Container(
@@ -168,6 +117,30 @@ class _BoardTileState extends State<BoardTile>
           ),
           width: widget.tileSize,
           height: widget.tileSize,
+        ),
+        AnimatedBuilder(
+          animation: widget.tile.specialIsActivated,
+          builder: (_, __) {
+            if (!widget.tile.specialIsActivated.value) {
+              return Container();
+            }
+            return SizedBox(
+              width: widget.tileSize,
+              height: widget.tileSize,
+              child: Center(
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: state == TileState.YellowSpecial ? Color.fromRGBO(225, 255, 17, 1)
+                        : state == TileState.BlueSpecial ? Color.fromRGBO(240, 255, 255, 1)
+                        : throw Exception("Invalid tile colour given for special: ${state}"),
+                    borderRadius: BorderRadius.all(Radius.circular(999))
+                  ),
+                  width: widget.tileSize * (2/3),
+                  height: widget.tileSize * (2/3),
+                ),
+              ),
+            );
+          }
         ),
         AnimatedBuilder(
           animation: _flashController,

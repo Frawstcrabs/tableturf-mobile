@@ -35,22 +35,27 @@ class _SpecialMeterState extends State<SpecialMeter> {
                 ]
             )
         ),
-        Row(
-          children: [
-            for (var i = 0; i < widget.player.special.value; i++)
-              Container(
-                //margin: EdgeInsets.only(top: 4),
-                decoration: BoxDecoration(
-                  color: widget.player.traits.specialColour,
-                  border: Border.all(
-                    width: CardPatternWidget.TILE_EDGE,
-                    color: Colors.black,
-                  ),
-                ),
-                width: 12,
-                height: 12,
-              )
-          ]
+        AnimatedBuilder(
+          animation: widget.player.special,
+          builder: (_, __) {
+            return Row(
+              children: [
+                for (var i = 0; i < widget.player.special.value; i++)
+                  Container(
+                    margin: EdgeInsets.only(left: 4),
+                    decoration: BoxDecoration(
+                      color: widget.player.traits.specialColour,
+                      border: Border.all(
+                        width: CardPatternWidget.TILE_EDGE,
+                        color: Colors.black,
+                      ),
+                    ),
+                    width: 12,
+                    height: 12,
+                  )
+              ]
+            );
+          }
         )
       ]
     );

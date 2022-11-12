@@ -173,33 +173,27 @@ class MyApp extends StatelessWidget {
 
                       final blueDeck = randomSample(cards, 15);
                       final blueHand = randomSample(blueDeck, 4);
-                      for (final c in blueHand) {
-                        blueDeck.remove(c);
-                      }
-                      assert(blueDeck.length == 11);
 
-                      print("building battle object for map ${stage}");
-                      final battle = TableturfBattle(
-                        yellow: TableturfPlayer(
-                          name: "You",
-                          deck: yellowDeck,
-                          hand: yellowHand.map((c) => ValueNotifier(null as TableturfCard?)).toList(),
-                          traits: const YellowTraits(),
-                          special: 1,
-                        ),
-                        blue: TableturfPlayer(
-                          name: "Rando",
-                          deck: blueDeck,
-                          hand: blueHand.map((c) => ValueNotifier(c)).toList(),
-                          traits: const BlueTraits(),
-                          special: 3,
-                        ),
-                        board: board
+                      final yellowPlayer = TableturfPlayer(
+                        name: "You",
+                        deck: yellowDeck,
+                        hand: yellowHand.map((c) => ValueNotifier<TableturfCard?>(null)).toList(),
+                        traits: const YellowTraits(),
+                        special: 0,
+                      );
+                      final bluePlayer = TableturfPlayer(
+                        name: "Rando",
+                        deck: blueDeck,
+                        hand: blueHand.map((c) => ValueNotifier(c)).toList(),
+                        traits: const BlueTraits(),
+                        special: 0,
                       );
 
                       return buildMyTransition<void>(
                         child: PlaySessionScreen(
-                          battle,
+                          yellow: yellowPlayer,
+                          blue: bluePlayer,
+                          board: board,
                           key: const Key('play session'),
                         ),
                         color: context.watch<Palette>().backgroundPlaySession,

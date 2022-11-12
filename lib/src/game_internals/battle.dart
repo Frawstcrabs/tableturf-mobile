@@ -120,10 +120,10 @@ bool _normalMoveIsValid(BoardGrid board, TableturfMove move) {
   for (var y = 0; y < pattern.length; y++) {
     for (var x = 0; x < pattern[y].length; x++) {
       final TileState cardTile = pattern[y][x];
-      if (cardTile != TileState.Unfilled && board[moveY + y][moveX + x].state != TileState.Unfilled) {
+      if (cardTile.isFilled && board[moveY + y][moveX + x].state.value.isFilled) {
         return false;
       }
-      if (!isTouchingYellow && cardTile != TileState.Unfilled) {
+      if (!isTouchingYellow && cardTile.isFilled) {
         for (var modY = -1; modY <= 1; modY++) {
           for (var modX = -1; modX <= 1; modX++) {
             final boardY = moveY + y + modY;
@@ -131,8 +131,8 @@ bool _normalMoveIsValid(BoardGrid board, TableturfMove move) {
             if (boardY < 0 || boardY >= board.length || boardX < 0 || boardX >= board[0].length) {
               continue;
             }
-            final TileState edgeTile = board[boardY][boardX].state;
-            if (edgeTile == TileState.Yellow || edgeTile == TileState.YellowSpecial) {
+            final TileState edgeTile = board[boardY][boardX].state.value;
+            if (edgeTile.isYellow) {
               isTouchingYellow = true;
               break;
             }
@@ -156,15 +156,15 @@ bool _specialMoveIsValid(BoardGrid board, TableturfMove move) {
   for (var y = 0; y < pattern.length; y++) {
     for (var x = 0; x < pattern[y].length; x++) {
       final TileState cardTile = pattern[y][x];
-      final TileState boardTile = board[moveY + y][moveX + x].state;
-      if (cardTile != TileState.Unfilled
+      final TileState boardTile = board[moveY + y][moveX + x].state.value;
+      if (cardTile.isFilled
           && (boardTile == TileState.Empty
               || boardTile == TileState.Wall
               || boardTile == TileState.YellowSpecial
               || boardTile == TileState.BlueSpecial)) {
         return false;
       }
-      if (!isTouchingYellow && cardTile != TileState.Unfilled) {
+      if (!isTouchingYellow && cardTile.isFilled) {
         for (var modY = -1; modY <= 1; modY++) {
           for (var modX = -1; modX <= 1; modX++) {
             final boardY = moveY + y + modY;
@@ -172,7 +172,7 @@ bool _specialMoveIsValid(BoardGrid board, TableturfMove move) {
             if (boardY < 0 || boardY >= board.length || boardX < 0 || boardX >= board[0].length) {
               continue;
             }
-            final TileState edgeTile = board[boardY][boardX].state;
+            final TileState edgeTile = board[boardY][boardX].state.value;
             if (edgeTile == TileState.YellowSpecial) {
               isTouchingYellow = true;
               break;
@@ -202,7 +202,7 @@ BoardGrid _flipBoard(BoardGrid board) {
         TileState.YellowSpecial: TileState.BlueSpecial,
         TileState.Blue: TileState.Yellow,
         TileState.BlueSpecial: TileState.YellowSpecial,
-      }[board[y][x].state]!));
+      }[board[y][x].state.value]!));
     }
   }
   return ret;
@@ -216,10 +216,12 @@ TableturfMove _runBlueAI(List<dynamic> args) {
   print("${DateTime.now()}: rating moves...");
   final TileGrid plainBoard = args[0];
   final board = _flipBoard(plainBoard.map((row) => row.map((t) => TableturfTile(t)).toList()).toList());
-  final TableturfPlayer player = args[1];
+  final List<TableturfCard> hand = args[1];
+  final int special = args[2];
+  final int turnsLeft = args[3];
   final moves = Iterable.generate(4, (i) =>
     TableturfMove(
-      card: player.hand[i].value!,
+      card: hand[i],
       rotation: 0,
       x: 0,
       y: 0,
@@ -227,12 +229,11 @@ TableturfMove _runBlueAI(List<dynamic> args) {
       traits: YellowTraits(),
     )
   ).followedBy(
-    player.hand
-      .expand((card) => getMoves(board, card.value!, special: false))
+    hand.expand((card) => getMoves(board, card, special: false))
   ).followedBy(
-    player.hand
-      .where((card) => card.value!.special <= player.special.value)
-      .expand((card) => getMoves(board, card.value!, special: true))
+    hand
+      .where((card) => card.special <= special)
+      .expand((card) => getMoves(board, card, special: true))
   ).iterator;
   var moveCount = 1;
   moves.moveNext();
@@ -261,6 +262,11 @@ TableturfMove _runBlueAI(List<dynamic> args) {
   );
 }
 
+class SpecialCountReturn {
+  final int yellowCount, blueCount;
+  const SpecialCountReturn({required this.yellowCount, required this.blueCount});
+}
+
 class TableturfBattle {
   static final _log = Logger('TableturfBattle');
   final ValueNotifier<TableturfCard?> moveCardNotifier = ValueNotifier(null);
@@ -279,6 +285,7 @@ class TableturfBattle {
   final ValueNotifier<int> yellowCountNotifier = ValueNotifier(1);
   final ValueNotifier<int> blueCountNotifier = ValueNotifier(1);
   final ValueNotifier<int> turnCountNotifier = ValueNotifier(12);
+  int _yellowSpecialCount = 0, _blueSpecialCount = 0;
 
   final TableturfPlayer yellow;
   final TableturfPlayer blue;
@@ -331,7 +338,7 @@ class TableturfBattle {
       );
       final locationX = location.x - selectPoint.x;
       final locationY = location.y - selectPoint.y;
-      print("trying location $locationX, $locationY: (${board[0].length - pattern[0].length}, ${board.length - pattern.length})");
+      _log.info("trying location $locationX, $locationY: (${board[0].length - pattern[0].length}, ${board.length - pattern.length})");
       if (!(
           locationY >= 0
               && locationY <= board.length - pattern.length
@@ -408,7 +415,7 @@ class TableturfBattle {
     );
     final locationX = location.x - selectPoint.x;
     final locationY = location.y - selectPoint.y;
-    print("trying location $locationX, $locationY");
+    _log.info("trying location $locationX, $locationY");
     if (!(
       locationY >= 0
         && locationY <= board.length - pattern.length
@@ -431,51 +438,69 @@ class TableturfBattle {
   }
 
   Future<void> runTurn() async {
-    print("turn triggered");
+    _log.info("turn triggered");
+    final yellowMove = yellowMoveNotifier.value!;
+    final blueMove = blueMoveNotifier.value!;
+
     final audioController = AudioController();
     await audioController.playSfx(SfxType.cardFlip);
     revealCardsNotifier.value = true;
+    yellow.special.value -= yellowMove.special ? yellowMove.card.special : 0;
+    blue.special.value -= blueMove.special ? blueMove.card.special : 0;
     await Future<void>.delayed(const Duration(milliseconds: 1000));
 
-    final blueMove = blueMoveNotifier.value!;
-    final yellowMove = yellowMoveNotifier.value!;
 
     // apply moves to board
     if (blueMove.pass && yellowMove.pass) {
-      print("no move");
+      _log.info("no move");
       await Future<void>.delayed(const Duration(milliseconds: 1500));
     } else if (blueMove.pass && !yellowMove.pass) {
-      print("yellow move only");
+      _log.info("yellow move only");
       await audioController.playSfx(yellowMove.special ? SfxType.specialMove : SfxType.normalMove);
       _applyMoveToBoard(yellowMove);
     } else if (!blueMove.pass && yellowMove.pass) {
-      print("blue move only");
+      _log.info("blue move only");
       await audioController.playSfx(yellowMove.special ? SfxType.specialMove : SfxType.normalMove);
       _applyMoveToBoard(blueMove);
     } else if (!_checkOverlap(blueMove, yellowMove)) {
-      print("no overlap");
+      _log.info("no overlap");
       await audioController.playSfx(yellowMove.special || blueMove.special ? SfxType.specialMove : SfxType.normalMove);
       _applyMoveToBoard(blueMove);
       _applyMoveToBoard(yellowMove);
     } else if (blueMove.special && !yellowMove.special) {
-      print("blue special over yellow");
+      _log.info("blue special over yellow");
       await _applyOverlap(below: yellowMove, above: blueMove);
     } else if (yellowMove.special && !blueMove.special) {
-      print("yellow special over blue");
+      _log.info("yellow special over blue");
       await _applyOverlap(below: blueMove, above: yellowMove);
     } else if (blueMove.card.count < yellowMove.card.count) {
-      print("blue normal over yellow");
+      _log.info("blue normal over yellow");
       await _applyOverlap(below: yellowMove, above: blueMove);
     } else if (yellowMove.card.count < blueMove.card.count) {
-      print("yellow normal over blue");
+      _log.info("yellow normal over blue");
       await _applyOverlap(below: blueMove, above: yellowMove);
     } else {
-      print("conflict");
+      _log.info("conflict");
       await _applyConflict(blueMove, yellowMove);
     }
 
     if (!(blueMove.pass && yellowMove.pass)) {
       await Future<void>.delayed(const Duration(milliseconds: 1000));
+    }
+
+    final prevYellowSpecialCount = _yellowSpecialCount;
+    final prevBlueSpecialCount = _blueSpecialCount;
+    _countSpecial();
+    if (_yellowSpecialCount != prevYellowSpecialCount || _blueSpecialCount != prevBlueSpecialCount) {
+      audioController.playSfx(SfxType.specialActivate);
+      await Future<void>.delayed(const Duration(milliseconds: 1000));
+    }
+    final prevYellowSpecial = yellow.special.value;
+    final prevBlueSpecial = blue.special.value;
+    yellow.special.value += (_yellowSpecialCount - prevYellowSpecialCount) + (yellowMove.pass ? 1 : 0);
+    blue.special.value += (_blueSpecialCount - prevBlueSpecialCount) + (blueMove.pass ? 1 : 0);
+    if (yellow.special.value != prevYellowSpecial || blue.special.value != prevBlueSpecial) {
+      audioController.playSfx(SfxType.gainSpecial);
     }
 
     final prevYellowCount = yellowCountNotifier.value;
@@ -484,7 +509,7 @@ class TableturfBattle {
 
     if (yellowCountNotifier.value != prevYellowCount || blueCountNotifier.value != prevBlueCount) {
       await audioController.playSfx(SfxType.counterUpdate);
-      await Future<void>.delayed(const Duration(milliseconds: 1400));
+      await Future<void>.delayed(const Duration(milliseconds: 1500));
     }
 
     moveLocationNotifier.value = null;
@@ -506,7 +531,7 @@ class TableturfBattle {
 
     playerControlLock.value = true;
     runBlueAI();
-    print("turn complete");
+    _log.info("turn complete");
   }
 
   bool _checkOverlap(TableturfMove move1, TableturfMove move2) {
@@ -537,9 +562,9 @@ class TableturfBattle {
 
   void _applySquare(TableturfTile tile, TileState newState, PlayerTraits traits) {
     if (newState == TileState.Yellow) {
-      tile.state = traits.normalTile;
+      tile.state.value = traits.normalTile;
     } else if (newState == TileState.YellowSpecial) {
-      tile.state = traits.specialTile;
+      tile.state.value = traits.specialTile;
     }
   }
 
@@ -588,13 +613,16 @@ class TableturfBattle {
             _applySquare(boardTile, aboveTile, above.traits);
             continue;
           }
-          boardTile.state = {
+          final newTile = {
             TileState.Yellow: {
               TileState.Yellow: above.traits.normalTile,
               TileState.YellowSpecial: below.traits.specialTile,
             }[belowTile]!,
             TileState.YellowSpecial: above.traits.specialTile,
           }[aboveTile]!;
+          if (boardTile.state.value != newTile) {
+            boardTile.state.value = newTile;
+          }
         } else {
           _applySquare(boardTile, aboveTile, above.traits);
         }
@@ -629,7 +657,7 @@ class TableturfBattle {
               _applySquare(boardTile, aboveTile, above.traits);
               continue;
             }
-            boardTile.state = {
+            boardTile.state.value = {
               TileState.Yellow: {
                 TileState.Yellow: TileState.Wall,
                 TileState.YellowSpecial: below.traits.specialTile,
@@ -656,7 +684,7 @@ class TableturfBattle {
     var blueCount = 0;
     for (var y = 0; y < board.length; y++) {
       for (var x = 0; x < board[0].length; x++) {
-        final boardTile = board[y][x].state;
+        final boardTile = board[y][x].state.value;
         if (boardTile == TileState.Yellow || boardTile == TileState.YellowSpecial) {
           yellowCount += 1;
         }if (boardTile == TileState.Blue || boardTile == TileState.BlueSpecial) {
@@ -668,10 +696,51 @@ class TableturfBattle {
     blueCountNotifier.value = blueCount;
   }
 
+  void _countSpecial() {
+    _yellowSpecialCount = 0;
+    _blueSpecialCount = 0;
+    for (var y = 0; y < board.length; y++) {
+      for (var x = 0; x < board[0].length; x++) {
+        final boardTile = board[y][x];
+        final boardTileState = boardTile.state.value;
+        if (boardTileState.isSpecial) {
+          bool surrounded = true;
+          for (var dy = -1; dy <= 1; dy++) {
+            for (var dx = -1; dx <= 1; dx++) {
+              final newY = y + dy;
+              final newX = x + dx;
+              if (newY < 0 || newY >= board.length || newX < 0 || newX >= board[0].length) {
+                continue;
+              }
+              final adjacentTile = board[newY][newX].state.value;
+              if (!adjacentTile.isFilled) {
+                surrounded = false;
+                continue;
+              }
+            }
+          }
+          if (surrounded) {
+            boardTile.specialIsActivated.value = true;
+            if (boardTileState == TileState.YellowSpecial) {
+              _yellowSpecialCount += 1;
+            } else {
+              _blueSpecialCount += 1;
+            }
+          }
+        }
+      }
+    }
+  }
+
   Future<void> runBlueAI() async {
-    final plainBoard = board.map((row) => row.map((t) => t.state).toList()).toList();
+    final TileGrid plainBoard = board.map((row) => row.map((t) => t.state.value).toList()).toList();
     final TableturfMove blueMove = (await Future.wait([
-      compute(_runBlueAI, [plainBoard, blue]),
+      compute(_runBlueAI, [
+        plainBoard,
+        blue.hand.map((v) => v.value!).toList(),
+        blue.special.value,
+        turnCountNotifier.value
+      ]),
       Future.delayed(Duration(milliseconds: 1500 + Random().nextInt(500)))
     ]))[0];
 
