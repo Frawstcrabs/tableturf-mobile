@@ -3,7 +3,7 @@ import 'package:provider/provider.dart';
 import 'package:tableturf_mobile/src/audio/sounds.dart';
 import 'package:tableturf_mobile/src/game_internals/battle.dart';
 
-import '../audio/audio_controller.dart';
+import 'package:tableturf_mobile/src/audio/audio_controller.dart';
 
 class TurnCounter extends StatefulWidget {
   final TableturfBattle battle;

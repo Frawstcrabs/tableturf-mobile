@@ -2,6 +2,7 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE file.
 
+import 'dart:async';
 import 'dart:collection';
 import 'dart:math';
 
@@ -19,6 +20,7 @@ class AudioController {
   static final _log = Logger('AudioController');
 
   final AudioPlayer musicPlayer;
+  Timer? _musicLoopTimer, _musicFadeTimer;
 
   final Soundpool _sfxPlayer;
   final Map<SfxType, List<int>> _sfxSources;
@@ -36,10 +38,10 @@ class AudioController {
   }
 
   AudioController._internal():
-        musicPlayer = AudioPlayer(),
-        _sfxPlayer = Soundpool.fromOptions(options: SoundpoolOptions(maxStreams: 8)),
-        _sfxSources = {} {
-  }
+    musicPlayer = AudioPlayer(),
+    _sfxPlayer = Soundpool.fromOptions(options: SoundpoolOptions(maxStreams: 8)),
+    _sfxSources = {}
+  {}
 
   void attachLifecycleNotifier(
       ValueNotifier<AppLifecycleState> lifecycleNotifier) {
@@ -110,6 +112,74 @@ class AudioController {
     final index = _random.nextInt(options.length);
 
     _sfxPlayer.play(options[index]);
+  }
+
+  Future<void> playSong(SongType type) async {
+    final muted = _settings?.muted.value ?? true;
+    if (muted) {
+      _log.info('Ignoring playing sound ($type) because audio is muted.');
+      return;
+    }
+    final musicOn = _settings?.musicOn.value ?? false;
+    if (!musicOn) {
+      _log.info('Ignoring playing song ($type) because music is turned off.');
+      return;
+    }
+    _musicLoopTimer?.cancel();
+    _musicFadeTimer?.cancel();
+
+    final song = songMap[type]!;
+
+    await musicPlayer.setAudioSource(
+      ConcatenatingAudioSource(
+        children: [
+          AudioSource.uri(Uri.parse("asset:///assets/music/${song.introFilename}")),
+          AudioSource.uri(Uri.parse("asset:///assets/music/${song.loopFilename}")),
+        ]
+      )
+    );
+    await musicPlayer.setLoopMode(LoopMode.all);
+    await musicPlayer.setVolume(1.0);
+    musicPlayer.play();
+    _musicLoopTimer = Timer(song.introDuration, () {
+      musicPlayer.setLoopMode(LoopMode.one);
+    });
+  }
+
+  Future<void> stopSong({Duration? fadeDuration}) async {
+    _musicLoopTimer?.cancel();
+    _musicFadeTimer?.cancel();
+    if (fadeDuration == null) {
+      await musicPlayer.stop();
+      return;
+    }
+
+    final retFuture = Completer<void>();
+
+    double vol = 1.0;
+    final fadeTime = fadeDuration.inMilliseconds;
+    int stepLen = max(4, fadeTime ~/ 100);
+    int lastTick = DateTime.now().millisecondsSinceEpoch;
+
+    _musicFadeTimer = Timer.periodic(new Duration(milliseconds: stepLen), ( Timer t ) {
+      var now = DateTime.now().millisecondsSinceEpoch;
+      var tick = (now - lastTick) / fadeTime;
+      lastTick = now;
+      vol -= tick;
+
+      vol = max(0.0, vol);
+      vol = min(1.0, vol);
+
+      musicPlayer.setVolume(vol);
+
+      if (vol == 0.0) {
+        musicPlayer.stop();
+        t.cancel();
+        retFuture.complete();
+      }
+    });
+
+    return await retFuture.future;
   }
 
   void _handleAppLifecycle() {

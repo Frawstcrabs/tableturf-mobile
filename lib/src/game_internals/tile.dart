@@ -5,24 +5,24 @@ import 'card.dart';
 
 enum TileState {
   @JsonValue('X')
-  Empty,
+  empty,
   @JsonValue('.')
-  Unfilled,
+  unfilled,
   @JsonValue('x')
-  Wall,
+  wall,
   @JsonValue('y')
-  Yellow,
+  yellow,
   @JsonValue('Y')
-  YellowSpecial,
+  yellowSpecial,
   @JsonValue('b')
-  Blue,
+  blue,
   @JsonValue('B')
-  BlueSpecial;
+  blueSpecial;
 
-  bool get isYellow => this == TileState.Yellow || this == TileState.YellowSpecial;
-  bool get isBlue => this == TileState.Blue || this == TileState.BlueSpecial;
-  bool get isSpecial => this == TileState.YellowSpecial || this == TileState.BlueSpecial;
-  bool get isFilled => this != TileState.Unfilled;
+  bool get isYellow => this == TileState.yellow || this == TileState.yellowSpecial;
+  bool get isBlue => this == TileState.blue || this == TileState.blueSpecial;
+  bool get isSpecial => this == TileState.yellowSpecial || this == TileState.blueSpecial;
+  bool get isFilled => this != TileState.unfilled;
 }
 
 class TileStateNotifier extends ChangeNotifier {

@@ -6,8 +6,8 @@ part of 'card.dart';
 // JsonSerializableGenerator
 // **************************************************************************
 
-TableturfCard _$TableturfCardFromJson(Map<String, dynamic> json) =>
-    TableturfCard(
+TableturfCardData _$TableturfCardFromJson(Map<String, dynamic> json) =>
+    TableturfCardData(
       json['num'] as int,
       json['name'] as String,
       json['rarity'] as String,
@@ -19,7 +19,7 @@ TableturfCard _$TableturfCardFromJson(Map<String, dynamic> json) =>
           .toList(),
     );
 
-Map<String, dynamic> _$TableturfCardToJson(TableturfCard instance) =>
+Map<String, dynamic> _$TableturfCardToJson(TableturfCardData instance) =>
     <String, dynamic>{
       'num': instance.num,
       'name': instance.name,
@@ -31,11 +31,11 @@ Map<String, dynamic> _$TableturfCardToJson(TableturfCard instance) =>
     };
 
 const _$TileStateEnumMap = {
-  TileState.Empty: 'X',
-  TileState.Unfilled: '.',
-  TileState.Wall: 'x',
-  TileState.Yellow: 'y',
-  TileState.YellowSpecial: 'Y',
-  TileState.Blue: 'b',
-  TileState.BlueSpecial: 'B',
+  TileState.empty: 'X',
+  TileState.unfilled: '.',
+  TileState.wall: 'x',
+  TileState.yellow: 'y',
+  TileState.yellowSpecial: 'Y',
+  TileState.blue: 'b',
+  TileState.blueSpecial: 'B',
 };

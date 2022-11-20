@@ -3,10 +3,10 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
-import '../style/palette.dart';
+import '../../style/palette.dart';
 
-import '../game_internals/battle.dart';
-import '../game_internals/move.dart';
+import '../../game_internals/battle.dart';
+import '../../game_internals/move.dart';
 
 import 'cardwidget.dart';
 import 'flip_card.dart';
@@ -198,17 +198,21 @@ class _CardSelectionWidgetState extends State<CardSelectionWidget>
           if (move == null) {
             return _prevFront;
           }
-          final background = !move.special
-              ? palette.cardBackgroundSelected
-              : Colors.red; //Color.fromRGBO(229, 229, 57, 1);
           final card = move.card;
           var cardFront = Container(
               decoration: BoxDecoration(
-                color: background,
+                color: palette.cardBackgroundSelected,
                 border: Border.all(
                   width: 1.0,
                   color: palette.cardEdge,
                 ),
+                boxShadow: !move.special ? [] : [
+                  BoxShadow(
+                    spreadRadius: 6.0,
+                    blurRadius: 6.0,
+                    color: move.traits.normalColour,
+                  )
+                ]
               ),
               width: CardWidget.CARD_WIDTH,
               height: CardWidget.CARD_HEIGHT,
@@ -425,21 +429,21 @@ class _CardSelectionConfirmButtonState extends State<CardSelectionConfirmButton>
       tileSpecialColour: palette.tileYellowSpecial,
     );
     return Stack(
-        children: [
-          selectionWidget,
-          !active ? Container() : ValueListenableBuilder(
-              valueListenable: widget.battle.moveIsValidNotifier,
-              child: GestureDetector(
-                onTap: _confirmMove,
-                child: _buildButton(context),
-              ),
-              builder: (_, bool highlight, button) => AnimatedOpacity(
-                opacity: highlight ? 1 : 0,
-                duration: const Duration(milliseconds: 150),
-                child: button,
-              )
+      children: [
+        selectionWidget,
+        !active ? Container() : ValueListenableBuilder(
+          valueListenable: widget.battle.moveIsValidNotifier,
+          child: GestureDetector(
+            onTap: _confirmMove,
+            child: _buildButton(context),
+          ),
+          builder: (_, bool highlight, button) => AnimatedOpacity(
+            opacity: highlight ? 1 : 0,
+            duration: const Duration(milliseconds: 150),
+            child: button,
           )
-        ]
+        )
+      ]
     );
   }
 }

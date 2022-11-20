@@ -3,13 +3,14 @@
 // BSD-style license that can be found in the LICENSE file.
 
 import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
 import '../audio/audio_controller.dart';
 import '../audio/sounds.dart';
-import '../games_services/games_services.dart';
+import '../level_selection/level_selection_screen.dart';
 import '../settings/settings.dart';
+import '../settings/settings_screen.dart';
+import '../style/my_transition.dart';
 import '../style/palette.dart';
 import '../style/responsive_screen.dart';
 
@@ -19,7 +20,6 @@ class MainMenuScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final palette = context.watch<Palette>();
-    final gamesServicesController = context.watch<GamesServicesController?>();
     final settingsController = context.watch<SettingsController>();
     final audioController = context.watch<AudioController>();
 
@@ -47,31 +47,22 @@ class MainMenuScreen extends StatelessWidget {
             ElevatedButton(
               onPressed: () {
                 //audioController.playSfx(SfxType.buttonTap);
-                GoRouter.of(context).go('/play');
+                Navigator.of(context).push(buildMyTransition<void>(
+                  child: const LevelSelectionScreen(),
+                  color: palette.backgroundLevelSelection,
+                ));
               },
               child: const Text('Play'),
             ),
             _gap,
-            if (gamesServicesController != null) ...[
-              _hideUntilReady(
-                ready: gamesServicesController.signedIn,
-                child: ElevatedButton(
-                  onPressed: () => gamesServicesController.showAchievements(),
-                  child: const Text('Achievements'),
-                ),
-              ),
-              _gap,
-              _hideUntilReady(
-                ready: gamesServicesController.signedIn,
-                child: ElevatedButton(
-                  onPressed: () => gamesServicesController.showLeaderboard(),
-                  child: const Text('Leaderboard'),
-                ),
-              ),
-              _gap,
-            ],
             ElevatedButton(
-              onPressed: () => GoRouter.of(context).go('/settings'),
+              onPressed: () {
+                Navigator.of(context).push(
+                  MaterialPageRoute(builder: (context) {
+                    return const SettingsScreen(key: Key('settings'));
+                  })
+                );
+              },
               child: const Text('Settings'),
             ),
             _gap,

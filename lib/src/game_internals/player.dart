@@ -6,6 +6,21 @@ import 'package:flutter/foundation.dart';
 import 'card.dart';
 import 'tile.dart';
 
+extension RandomChoice<T> on List<T> {
+  T random() => this[Random().nextInt(this.length)];
+
+  List<T> randomSample(int count) {
+    assert(this.length >= count);
+    final rng = Random();
+    final ret = <T>[];
+    final indexes = Iterable<int>.generate(this.length).toList();
+    for (var i = 0; i < count; i++) {
+      ret.add(this[indexes.removeAt(rng.nextInt(indexes.length))]);
+    }
+    return ret;
+  }
+}
+
 class TableturfPlayer {
   final String name;
   final List<TableturfCard> deck;
@@ -21,8 +36,21 @@ class TableturfPlayer {
     special = 0
   }): special = ValueNotifier(special);
 
-  void changeHandCard(TableturfCard card) {
-    hand[hand.indexWhere((element) => element.value == card)].value = deck.removeAt(Random().nextInt(deck.length));
+  void refreshHand() {
+    print(deck.map((card) => !card.isHeld).toList());
+    print(deck.map((card) => !card.hasBeenPlayed).toList());
+    for (var i = 0; i < hand.length; i++) {
+      final card = hand[i].value;
+      if (card == null) {
+        continue;
+      }
+      if (card.hasBeenPlayed) {
+        final newCard = deck.where((card) => !card.isHeld && !card.hasBeenPlayed).toList().random();
+        card.isHeld = false;
+        newCard.isHeld = true;
+        hand[i].value = newCard;
+      }
+    }
   }
 }
 
@@ -39,8 +67,8 @@ abstract class PlayerTraits {
 }
 
 class YellowTraits implements PlayerTraits {
-  final normalTile = TileState.Yellow;
-  final specialTile = TileState.YellowSpecial;
+  final normalTile = TileState.yellow;
+  final specialTile = TileState.yellowSpecial;
 
   final normalColour = const Color.fromRGBO(255, 255, 17, 1);
   final specialColour = const Color.fromRGBO(255, 159, 4, 1);
@@ -53,8 +81,8 @@ class YellowTraits implements PlayerTraits {
 }
 
 class BlueTraits implements PlayerTraits {
-  final normalTile = TileState.Blue;
-  final specialTile = TileState.BlueSpecial;
+  final normalTile = TileState.blue;
+  final specialTile = TileState.blueSpecial;
 
   final normalColour = const Color.fromRGBO(71, 92, 255, 1);
   final specialColour = const Color.fromRGBO(10, 255, 255, 1);

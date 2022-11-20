@@ -128,6 +128,7 @@ class _ScoreCounterState extends State<ScoreCounter>
 
   Future<void> onScoreUpdate() async {
     final newScore = widget.scoreNotifier.value;
+    if (!mounted) return;
     setState(() {
       _scoreDiff = newScore - _prevScore;
     });
@@ -138,9 +139,11 @@ class _ScoreCounterState extends State<ScoreCounter>
       });
       await showSumController.forward(from: 0.0).orCancel;
     } catch (err) {}
-    setState(() {
-      _prevScore = newScore;
-    });
+    if (mounted) {
+      setState(() {
+        _prevScore = newScore;
+      });
+    }
   }
 
   @override

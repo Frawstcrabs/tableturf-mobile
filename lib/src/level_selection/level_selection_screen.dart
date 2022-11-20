@@ -3,11 +3,13 @@
 // BSD-style license that can be found in the LICENSE file.
 
 import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
+import 'package:tableturf_mobile/src/game_internals/player.dart';
 
 import '../audio/audio_controller.dart';
 import '../audio/sounds.dart';
+import '../game_internals/card.dart';
+import '../play_session/build_game_session_page.dart';
 import '../player_progress/player_progress.dart';
 import '../style/palette.dart';
 import '../style/responsive_screen.dart';
@@ -43,20 +45,19 @@ class LevelSelectionScreen extends StatelessWidget {
                   for (final map in maps.keys)
                     ListTile(
                       onTap: () {
-                        //final audioController = context.read<AudioController>();
-                        //audioController.playSfx(SfxType.buttonTap);
-
-                        GoRouter.of(context)
-                            .go('/play/session/$map');
+                        Navigator.of(context).push(buildGameSessionPage(
+                          context: context,
+                          stage: map,
+                          yellowDeck: cards.randomSample(15),
+                          blueDeck: cards.randomSample(15),
+                        ));
                       },
                       title: Text(
                         map.splitMapJoin("_",
                           onMatch: (s) => " ",
                           onNonMatch: (s) => "${s[0].toUpperCase()}${s.substring(1).toLowerCase()}"
                         ),
-                        style: TextStyle(
-                          fontFamily: "Splatfont2"
-                        )
+                        style: TextStyle(fontFamily: "Splatfont2")
                       )
                     )
                 ],
@@ -66,7 +67,7 @@ class LevelSelectionScreen extends StatelessWidget {
         ),
         rectangularMenuArea: ElevatedButton(
           onPressed: () {
-            GoRouter.of(context).pop();
+            Navigator.of(context).pop();
           },
           child: const Text('Back'),
         ),

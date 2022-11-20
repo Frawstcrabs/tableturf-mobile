@@ -12,7 +12,7 @@ int countLayout(List<List<TileState>> pattern) {
   int layout_amount = 0;
   for (final row in pattern) {
     for (final value in row) {
-      if (value != TileState.Unfilled) {
+      if (value != TileState.unfilled) {
         layout_amount += 1;
       }
     }
@@ -26,7 +26,7 @@ TileGrid getMinPattern(TileGrid pattern) {
   // trim top edge
   while (true) {
     final edge = retPattern[0];
-    if (edge.every((e) => e == TileState.Unfilled)) {
+    if (edge.every((e) => e == TileState.unfilled)) {
       retPattern.removeAt(0);
     } else {
       break;
@@ -36,7 +36,7 @@ TileGrid getMinPattern(TileGrid pattern) {
   // trim bottom edge
   while (true) {
     final edge = retPattern.last;
-    if (edge.every((e) => e == TileState.Unfilled)) {
+    if (edge.every((e) => e == TileState.unfilled)) {
       retPattern.removeLast();
     } else {
       break;
@@ -46,7 +46,7 @@ TileGrid getMinPattern(TileGrid pattern) {
   // trim left edge
   while (true) {
     final edge = retPattern.map((row) => row[0]);
-    if (edge.every((e) => e == TileState.Unfilled)) {
+    if (edge.every((e) => e == TileState.unfilled)) {
       for (final row in retPattern) {
         row.removeAt(0);
       }
@@ -58,7 +58,7 @@ TileGrid getMinPattern(TileGrid pattern) {
   // trim right edge
   while (true) {
     final edge = retPattern.map((row) => row.last);
-    if (edge.every((e) => e == TileState.Unfilled)) {
+    if (edge.every((e) => e == TileState.unfilled)) {
       for (final row in retPattern) {
         row.removeLast();
       }
@@ -71,7 +71,7 @@ TileGrid getMinPattern(TileGrid pattern) {
 }
 
 @JsonSerializable()
-class TableturfCard {
+class TableturfCardData {
   final int num;
   final String name;
   final String rarity;
@@ -81,7 +81,7 @@ class TableturfCard {
   final int count;
   final Coords selectPoint;
 
-  TableturfCard(this.num, this.name, this.rarity, this.special, this.pattern):
+  TableturfCardData(this.num, this.name, this.rarity, this.special, this.pattern):
       count = countLayout(pattern),
       minPattern = getMinPattern(pattern),
       selectPoint = Coords(
@@ -89,10 +89,10 @@ class TableturfCard {
         (getMinPattern(pattern).length / 2 - 1).ceil()
       );
 
-  factory TableturfCard.fromJson(Map<String, dynamic> json) => _$TableturfCardFromJson(json);
+  factory TableturfCardData.fromJson(Map<String, dynamic> json) => _$TableturfCardFromJson(json);
 
   bool operator==(Object other) {
-    return other is TableturfCard && other.num == this.num;
+    return other is TableturfCardData && other.num == this.num;
   }
 
   Map<String, dynamic> toJson() => _$TableturfCardToJson(this);
@@ -115,12 +115,27 @@ class Coords {
 }
 
 bool cardsLoaded = false;
-late final List<TableturfCard> cards;
+late final List<TableturfCardData> cards;
 
 Future<void> loadCards() async {
   if (!cardsLoaded) {
     final List<dynamic> jsonData = jsonDecode(await rootBundle.loadString("assets/cards.json"));
-    cards = jsonData.map((e) => TableturfCard.fromJson(e as Map<String, dynamic>)).toList(growable: false);
+    cards = jsonData.map((e) => TableturfCardData.fromJson(e as Map<String, dynamic>)).toList(growable: false);
     cardsLoaded = true;
   }
+}
+
+class TableturfCard {
+  final TableturfCardData data;
+  bool isPlayable = false, isPlayableSpecial = false, isHeld = false, hasBeenPlayed = false;
+  TableturfCard(this.data);
+
+  int get num => data.num;
+  String get name => data.name;
+  String get rarity => data.rarity;
+  int get special => data.special;
+  TileGrid get pattern => data.pattern;
+  TileGrid get minPattern => data.minPattern;
+  int get count => data.count;
+  Coords get selectPoint => data.selectPoint;
 }

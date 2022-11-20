@@ -3,13 +3,13 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
-import '../audio/audio_controller.dart';
-import '../audio/sounds.dart';
-import '../style/palette.dart';
+import '../../audio/audio_controller.dart';
+import '../../audio/sounds.dart';
+import '../../style/palette.dart';
 
-import '../game_internals/battle.dart';
-import '../game_internals/tile.dart';
-import '../game_internals/card.dart';
+import '../../game_internals/battle.dart';
+import '../../game_internals/tile.dart';
+import '../../game_internals/card.dart';
 
 class BoardWidget extends StatelessWidget {
   final TableturfBattle battle;
@@ -101,16 +101,16 @@ class _BoardTileState extends State<BoardTile>
       children: [
         Container(
           decoration: BoxDecoration(
-            color: state == TileState.Unfilled ? palette.tileUnfilled
-                : state == TileState.Wall ? palette.tileWall
-                : state == TileState.Yellow ? palette.tileYellow
-                : state == TileState.YellowSpecial ? palette.tileYellowSpecial
-                : state == TileState.Blue ? palette.tileBlue
-                : state == TileState.BlueSpecial ? palette.tileBlueSpecial
+            color: state == TileState.unfilled ? palette.tileUnfilled
+                : state == TileState.wall ? palette.tileWall
+                : state == TileState.yellow ? palette.tileYellow
+                : state == TileState.yellowSpecial ? palette.tileYellowSpecial
+                : state == TileState.blue ? palette.tileBlue
+                : state == TileState.blueSpecial ? palette.tileBlueSpecial
                 : Color.fromRGBO(0, 0, 0, 0),
             border: Border.all(
                 width: BoardTile.EDGE_WIDTH,
-                color: state == TileState.Empty
+                color: state == TileState.empty
                     ? Color.fromRGBO(0, 0, 0, 0)
                     : palette.tileEdge
             ),
@@ -130,8 +130,8 @@ class _BoardTileState extends State<BoardTile>
               child: Center(
                 child: Container(
                   decoration: BoxDecoration(
-                    color: state == TileState.YellowSpecial ? Color.fromRGBO(225, 255, 17, 1)
-                        : state == TileState.BlueSpecial ? Color.fromRGBO(240, 255, 255, 1)
+                    color: state == TileState.yellowSpecial ? Color.fromRGBO(225, 255, 17, 1)
+                        : state == TileState.blueSpecial ? Color.fromRGBO(240, 255, 255, 1)
                         : throw Exception("Invalid tile colour given for special: ${state}"),
                     borderRadius: BorderRadius.all(Radius.circular(999))
                   ),
