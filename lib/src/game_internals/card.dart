@@ -70,6 +70,67 @@ TileGrid getMinPattern(TileGrid pattern) {
   return retPattern;
 }
 
+TileGrid rotatePattern(TileGrid pattern, int rotation) {
+  TileGrid ret = [];
+  rotation %= 4;
+
+  final lengthY = pattern.length;
+  final lengthX = pattern[0].length;
+
+  switch (rotation) {
+    case 0:
+      for (var y = 0; y < lengthY; y++) {
+        ret.add([]);
+        for (var x = 0; x < lengthX; x++) {
+          ret.last.add(pattern[y][x]);
+        }
+      }
+      break;
+    case 1:
+      for (var y = 0; y < lengthX; y++) {
+        ret.add([]);
+        for (var x = lengthY - 1; x >= 0; x--) {
+          ret.last.add(pattern[x][y]);
+        }
+      }
+      break;
+    case 2:
+      for (var y = lengthY - 1; y >= 0; y--) {
+        ret.add([]);
+        for (var x = lengthX - 1; x >= 0; x--) {
+          ret.last.add(pattern[y][x]);
+        }
+      }
+      break;
+    case 3:
+      for (var y = lengthX - 1; y >= 0; y--) {
+        ret.add([]);
+        for (var x = 0; x < lengthY; x++) {
+          ret.last.add(pattern[x][y]);
+        }
+      }
+      break;
+  }
+  return ret;
+}
+
+Coords rotatePatternPoint(Coords point, int height, int width, int rot) {
+  final edgeEdgeOffset = height.isEven && width.isEven ? 1 : 0;
+  rot %= 4;
+  switch (rot) {
+    case 0:
+      return point;
+    case 1:
+      return Coords(height-point.y - 1, point.x + edgeEdgeOffset);
+    case 2:
+      return Coords(width-point.x - 1 + edgeEdgeOffset, height-point.y - 1 + edgeEdgeOffset);
+    case 3:
+      return Coords(point.y + edgeEdgeOffset, width-point.x - 1);
+    default:
+      throw Exception("unreachable");
+  }
+}
+
 @JsonSerializable()
 class TableturfCardData {
   final int num;
@@ -95,6 +156,8 @@ class TableturfCardData {
     return other is TableturfCardData && other.num == this.num;
   }
 
+  int get hashCode => num.hashCode;
+
   Map<String, dynamic> toJson() => _$TableturfCardToJson(this);
 }
 
@@ -107,6 +170,24 @@ class Coords {
 
   bool operator==(Object other) {
     return other is Coords && other.x == x && other.y == y;
+  }
+
+  int get hashCode {
+    // jenkins hash functions
+    // stolen unashamedly from the library `quiver`
+    int _combine(int hash, int value) {
+      hash = 0x1fffffff & (hash + value);
+      hash = 0x1fffffff & (hash + ((0x0007ffff & hash) << 10));
+      return hash ^ (hash >> 6);
+    }
+
+    int _finish(int hash) {
+      hash = 0x1fffffff & (hash + ((0x03ffffff & hash) << 3));
+      hash = hash ^ (hash >> 11);
+      return 0x1fffffff & (hash + ((0x00003fff & hash) << 15));
+    }
+
+    return _finish(_combine(_combine(0, x.hashCode), y.hashCode));
   }
 
   String toString() {

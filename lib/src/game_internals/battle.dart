@@ -9,263 +9,15 @@ import 'package:logging/logging.dart';
 import '../audio/audio_controller.dart';
 import '../audio/songs.dart';
 import '../audio/sounds.dart';
+
+import 'opponentAI.dart';
 import 'card.dart';
 import 'tile.dart';
 import 'move.dart';
 import 'player.dart';
 
-TileGrid rotatePattern(TileGrid pattern, int rotation) {
-  TileGrid ret = [];
-  rotation %= 4;
-
-  final lengthY = pattern.length;
-  final lengthX = pattern[0].length;
-
-  switch (rotation) {
-    case 0:
-      for (var y = 0; y < lengthY; y++) {
-        ret.add([]);
-        for (var x = 0; x < lengthX; x++) {
-          //print("Getting pattern[$y][$x]");
-          ret.last.add(pattern[y][x]);
-        }
-      }
-      break;
-    case 1:
-      for (var y = 0; y < lengthX; y++) {
-        ret.add([]);
-        for (var x = lengthY - 1; x >= 0; x--) {
-          //for (var x = lengthX - 1; x >= 0; x--) {
-          //print("Getting pattern[$x][$y]");
-          ret.last.add(pattern[x][y]);
-        }
-      }
-      break;
-    case 2:
-      for (var y = lengthY - 1; y >= 0; y--) {
-        ret.add([]);
-        for (var x = lengthX - 1; x >= 0; x--) {
-          //for (var x = lengthX - 1; x >= 0; x--) {
-          //print("Getting pattern[$y][$x]");
-          ret.last.add(pattern[y][x]);
-        }
-      }
-      break;
-    case 3:
-      for (var y = lengthX - 1; y >= 0; y--) {
-        ret.add([]);
-        for (var x = 0; x < lengthY; x++) {
-          //for (var x = lengthX - 1; x >= 0; x--) {
-          //print("Getting pattern[$x][$y]");
-          ret.last.add(pattern[x][y]);
-        }
-      }
-      break;
-  }
-  return ret;
-}
-
-Coords rotatePatternPoint(Coords point, int height, int width, int rot) {
-  switch (rot) {
-    case 0:
-      return point;
-    case 1:
-      return Coords(height-point.y - 1, point.x);
-    case 2:
-      return Coords(width-point.x - 1, height-point.y - 1);
-    case 3:
-      return Coords(point.y, width-point.x - 1);
-    default:
-      throw Exception("invalid rotation value: $rot");
-  }
-}
-
 int clamp(int x, int _min, int _max) {
   return min(_max, max(_min, x));
-}
-
-Iterable<TableturfMove> getMoves(BoardGrid board, TableturfCard card, {bool special = false}) sync* {
-  for (var rot = 0; rot < 4; rot++) {
-    var pattern = rotatePattern(card.minPattern, rot);
-    for (var moveY = 0; moveY < board.length - pattern.length + 1; moveY++) {
-      for (var moveX = 0; moveX < board[0].length - pattern[0].length + 1; moveX++) {
-        final move = TableturfMove(
-          card: card,
-          rotation: rot,
-          x: moveX,
-          y: moveY,
-          special: special,
-        );
-        if (moveIsValid(board, move)) {
-          yield move;
-        }
-      }
-    }
-  }
-}
-
-bool moveIsValid(BoardGrid board, TableturfMove move) {
-  if (!move.special) {
-    return _normalMoveIsValid(board, move);
-  } else {
-    return _specialMoveIsValid(board, move);
-  }
-}
-
-bool _normalMoveIsValid(BoardGrid board, TableturfMove move) {
-  final pattern = rotatePattern(move.card.minPattern, move.rotation);
-  final moveY = move.y;
-  final moveX = move.x;
-
-  bool isTouchingYellow = false;
-  for (var y = 0; y < pattern.length; y++) {
-    for (var x = 0; x < pattern[y].length; x++) {
-      final TileState cardTile = pattern[y][x];
-      if (cardTile.isFilled && board[moveY + y][moveX + x].state.value.isFilled) {
-        return false;
-      }
-      if (!isTouchingYellow && cardTile.isFilled) {
-        for (var modY = -1; modY <= 1; modY++) {
-          for (var modX = -1; modX <= 1; modX++) {
-            final boardY = moveY + y + modY;
-            final boardX = moveX + x + modX;
-            if (boardY < 0 || boardY >= board.length || boardX < 0 || boardX >= board[0].length) {
-              continue;
-            }
-            final TileState edgeTile = board[boardY][boardX].state.value;
-            if (edgeTile.isYellow) {
-              isTouchingYellow = true;
-              break;
-            }
-          }
-          if (isTouchingYellow) {
-            break;
-          }
-        }
-      }
-    }
-  }
-  return isTouchingYellow;
-}
-
-bool _specialMoveIsValid(BoardGrid board, TableturfMove move) {
-  final pattern = rotatePattern(move.card.minPattern, move.rotation);
-  final moveY = move.y;
-  final moveX = move.x;
-
-  bool isTouchingYellow = false;
-  for (var y = 0; y < pattern.length; y++) {
-    for (var x = 0; x < pattern[y].length; x++) {
-      final TileState cardTile = pattern[y][x];
-      final TileState boardTile = board[moveY + y][moveX + x].state.value;
-      if (cardTile.isFilled
-          && (boardTile == TileState.empty
-              || boardTile == TileState.wall
-              || boardTile == TileState.yellowSpecial
-              || boardTile == TileState.blueSpecial)) {
-        return false;
-      }
-      if (!isTouchingYellow && cardTile.isFilled) {
-        for (var modY = -1; modY <= 1; modY++) {
-          for (var modX = -1; modX <= 1; modX++) {
-            final boardY = moveY + y + modY;
-            final boardX = moveX + x + modX;
-            if (boardY < 0 || boardY >= board.length || boardX < 0 || boardX >= board[0].length) {
-              continue;
-            }
-            final TileState edgeTile = board[boardY][boardX].state.value;
-            if (edgeTile == TileState.yellowSpecial) {
-              isTouchingYellow = true;
-              break;
-            }
-          }
-          if (isTouchingYellow) {
-            break;
-          }
-        }
-      }
-    }
-  }
-  return isTouchingYellow;
-}
-
-BoardGrid _flipBoard(BoardGrid board) {
-  BoardGrid ret = [];
-  for (var y = board.length - 1; y >= 0; y--) {
-    ret.add([]);
-    for (var x = board[0].length - 1; x >= 0; x--) {
-      //print("Getting pattern[$y][$x]");
-      ret.last.add(TableturfTile({
-        TileState.empty: TileState.empty,
-        TileState.unfilled: TileState.unfilled,
-        TileState.wall: TileState.wall,
-        TileState.yellow: TileState.blue,
-        TileState.yellowSpecial: TileState.blueSpecial,
-        TileState.blue: TileState.yellow,
-        TileState.blueSpecial: TileState.yellowSpecial,
-      }[board[y][x].state.value]!));
-    }
-  }
-  return ret;
-}
-
-double _rateMove(BoardGrid board, TableturfMove move) {
-  return Random().nextDouble();
-}
-
-TableturfMove _runBlueAI(List<dynamic> args) {
-  print("${DateTime.now()}: rating moves...");
-  final TileGrid plainBoard = args[0];
-  final board = _flipBoard(plainBoard.map((row) => row.map((t) => TableturfTile(t)).toList()).toList());
-  final List<TableturfCard> hand = args[1];
-  final int special = args[2];
-  final int turnsLeft = args[3];
-  final moves = Iterable.generate(4, (i) =>
-    TableturfMove(
-      card: hand[i],
-      rotation: 0,
-      x: 0,
-      y: 0,
-      pass: true,
-      traits: YellowTraits(),
-    )
-  ).followedBy(
-    hand.expand((card) => getMoves(board, card, special: false))
-  ).followedBy(
-    hand
-      .where((card) => card.special <= special)
-      .expand((card) => getMoves(board, card, special: true))
-  ).iterator;
-  var moveCount = 1;
-  moves.moveNext();
-  var bestMove = moves.current;
-  var bestMoveRating = _rateMove(board, bestMove);
-  while (moves.moveNext()) {
-    moveCount += 1;
-    var nextMove = moves.current;
-    var nextMoveRating = _rateMove(board, nextMove);
-    if (nextMoveRating > bestMoveRating) {
-      bestMove = nextMove;
-      bestMoveRating = nextMoveRating;
-    }
-  }
-  print("${DateTime.now()}: went through $moveCount moves");
-  final newRot = const [2, 3, 0, 1][bestMove.rotation];
-  final pattern = rotatePattern(bestMove.card.minPattern, newRot);
-  return TableturfMove(
-    card: bestMove.card,
-    rotation: newRot,
-    x: (board[0].length - 1) - bestMove.x - pattern[0].length + 1,
-    y: (board.length - 1) - bestMove.y - pattern.length + 1,
-    pass: bestMove.pass,
-    special: bestMove.special,
-    traits: const BlueTraits(),
-  );
-}
-
-class SpecialCountReturn {
-  final int yellowCount, blueCount;
-  const SpecialCountReturn({required this.yellowCount, required this.blueCount});
 }
 
 class TableturfBattle {
@@ -464,18 +216,18 @@ class TableturfBattle {
     } else if (blueMove.pass && !yellowMove.pass) {
       _log.info("yellow move only");
       await audioController.playSfx(yellowMove.special ? SfxType.specialMove : SfxType.normalMove);
-      _applyMoveToBoard(yellowMove);
+      applyMoveToBoard(board, yellowMove);
 
     } else if (!blueMove.pass && yellowMove.pass) {
       _log.info("blue move only");
       await audioController.playSfx(blueMove.special ? SfxType.specialMove : SfxType.normalMove);
-      _applyMoveToBoard(blueMove);
+      applyMoveToBoard(board, blueMove);
 
     } else if (!_checkOverlap(blueMove, yellowMove)) {
       _log.info("no overlap");
       await audioController.playSfx(yellowMove.special || blueMove.special ? SfxType.specialMove : SfxType.normalMove);
-      _applyMoveToBoard(blueMove);
-      _applyMoveToBoard(yellowMove);
+      applyMoveToBoard(board, blueMove);
+      applyMoveToBoard(board, yellowMove);
 
     } else if (blueMove.special && !yellowMove.special) {
       _log.info("blue special over yellow");
@@ -593,32 +345,10 @@ class TableturfBattle {
     return false;
   }
 
-  void _applySquare(TableturfTile tile, TileState newState, PlayerTraits traits) {
-    if (newState == TileState.yellow) {
-      tile.state.value = traits.normalTile;
-    } else if (newState == TileState.yellowSpecial) {
-      tile.state.value = traits.specialTile;
-    }
-  }
-
-  void _applyMoveToBoard(TableturfMove move) {
-    if (!move.pass) {
-      var pattern = rotatePattern(
-          move.card.minPattern, move.rotation);
-      for (var y = 0; y < pattern.length; y++) {
-        for (var x = 0; x < pattern[0].length; x++) {
-          final cardTile = pattern[y][x];
-          final boardTile = board[y + move.y][x + move.x];
-          _applySquare(boardTile, cardTile, move.traits);
-        }
-      }
-    }
-  }
-
   Future<void> _applyOverlap({required TableturfMove below, required TableturfMove above}) async {
     final audioController = AudioController();
     await audioController.playSfx(below.special ? SfxType.specialMove : SfxType.normalMove);
-    _applyMoveToBoard(below);
+    applyMoveToBoard(board, below);
     await Future<void>.delayed(const Duration(milliseconds: 1000));
     await audioController.playSfx(above.special ? SfxType.specialMove : SfxType.normalMoveOverlap);
 
@@ -643,7 +373,7 @@ class TableturfBattle {
             && relativeX < belowPattern[0].length) {
           final belowTile = belowPattern[relativeY][relativeX];
           if (belowTile == TileState.unfilled) {
-            _applySquare(boardTile, aboveTile, above.traits);
+            applySquare(boardTile, aboveTile, above.traits);
             continue;
           }
           final newTile = {
@@ -657,7 +387,7 @@ class TableturfBattle {
             boardTile.state.value = newTile;
           }
         } else {
-          _applySquare(boardTile, aboveTile, above.traits);
+          applySquare(boardTile, aboveTile, above.traits);
         }
       }
     }
@@ -683,11 +413,11 @@ class TableturfBattle {
               && relativeX < belowPattern[0].length) {
             final belowTile = belowPattern[relativeY][relativeX];
             if (aboveTile == TileState.unfilled) {
-              _applySquare(boardTile, belowTile, below.traits);
+              applySquare(boardTile, belowTile, below.traits);
               continue;
             }
             if (belowTile == TileState.unfilled) {
-              _applySquare(boardTile, aboveTile, above.traits);
+              applySquare(boardTile, aboveTile, above.traits);
               continue;
             }
             boardTile.state.value = {
@@ -701,7 +431,7 @@ class TableturfBattle {
               }[belowTile]!,
             }[aboveTile]!;
           } else {
-            _applySquare(boardTile, aboveTile, above.traits);
+            applySquare(boardTile, aboveTile, above.traits);
           }
         }
       }
@@ -768,11 +498,12 @@ class TableturfBattle {
   Future<void> runBlueAI() async {
     final TileGrid plainBoard = board.map((row) => row.map((t) => t.state.value).toList()).toList();
     final TableturfMove blueMove = (await Future.wait([
-      compute(_runBlueAI, [
+      compute(findBestBlueMove, [
         plainBoard,
         blue.hand.map((v) => v.value!).toList(),
         blue.special.value,
-        turnCountNotifier.value
+        turnCountNotifier.value,
+        AILevel.level3,
       ]),
       Future.delayed(Duration(milliseconds: 1500 + Random().nextInt(500)))
     ]))[0];
