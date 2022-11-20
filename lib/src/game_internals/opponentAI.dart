@@ -263,7 +263,8 @@ double _rateMove({
 
   // adds lookahead to the scoring
   // needs optimising tho, this takes way too fucking long to search
-  if (false && turnsLeft > 1 && hand.length > 1) {
+  /*
+  if (turnsLeft > 1 && hand.length > 1) {
     const discountFactor = 0.7;
     special += (afterBoardStats.yellowSpecial - boardStats.yellowSpecial)
         - (move.special ? move.card.special : 0);
@@ -277,6 +278,7 @@ double _rateMove({
       boardStats: afterBoardStats,
     ).score;
   }
+  */
 
   return moveScore;
 }
