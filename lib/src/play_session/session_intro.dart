@@ -7,6 +7,7 @@ import 'package:provider/provider.dart';
 
 import 'package:tableturf_mobile/src/audio/audio_controller.dart';
 import 'package:tableturf_mobile/src/game_internals/battle.dart';
+import 'package:tableturf_mobile/src/game_internals/opponentAI.dart';
 import 'package:tableturf_mobile/src/game_internals/player.dart';
 import 'package:tableturf_mobile/src/game_internals/tile.dart';
 import 'package:tableturf_mobile/src/style/palette.dart';
@@ -19,12 +20,14 @@ import 'components/build_board_widget.dart';
 class PlaySessionIntro extends StatefulWidget {
   final TableturfPlayer yellow, blue;
   final List<List<TableturfTile>> board;
+  final AILevel aiLevel;
 
   const PlaySessionIntro({
     super.key,
     required this.yellow,
     required this.blue,
     required this.board,
+    required this.aiLevel,
   });
 
   @override
@@ -48,7 +51,8 @@ class _PlaySessionIntroState extends State<PlaySessionIntro>
     battle = TableturfBattle(
       yellow: widget.yellow,
       blue: widget.blue,
-      board: widget.board
+      board: widget.board,
+      aiLevel: widget.aiLevel,
     );
     _playInitSequence();
   }

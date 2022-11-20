@@ -8,12 +8,14 @@ import 'tile.dart';
 enum AILevel {
   level1,
   level2,
-  level3;
+  level3,
+  level4;
 
   double get ratingError => {
-    level1: 1.0,
-    level2: 0.5,
-    level3: 0.0,
+    level1: 3.0,
+    level2: 2.0,
+    level3: 1.0,
+    level4: 0.1,
   }[this]!;
 }
 
@@ -56,7 +58,7 @@ double _calcBoardDistances({
   Set<Coords> newEdgeTiles = Set();
   Set<Coords> searchedTiles = Set();
 
-  void addEdgeTiles(Coords tileCoords) {
+  void addEdgeTiles(Coords tileCoords, Set<Coords> newEdgeTiles) {
     for (var dY = -1; dY <= 1; dY++) {
       for (var dX = -1; dX <= 1; dX++) {
         final newY = tileCoords.y + dY;
@@ -77,10 +79,10 @@ double _calcBoardDistances({
   }
 
   for (var y = 0; y < board.length; y++) {
-    for (var x = 0; x < board[y].length; x++) {
+    for (var x = 0; x < board[0].length; x++) {
       final tile = board[y][x].state.value;
       if (isMatched(tile)) {
-        addEdgeTiles(Coords(y, x));
+        addEdgeTiles(Coords(x, y), newEdgeTiles);
       }
     }
   }
@@ -92,7 +94,7 @@ double _calcBoardDistances({
     edgeTiles = newEdgeTiles;
     newEdgeTiles = Set();
     for (final coords in edgeTiles) {
-      addEdgeTiles(coords);
+      addEdgeTiles(coords, newEdgeTiles);
     }
     dist += 1;
   }
@@ -177,15 +179,21 @@ BoardStats _calcBoardStats(BoardGrid board) {
     specialTile: TileState.blueSpecial,
   );
 
+  var yellowDistance = _calcBoardDistances(
+    board: board,
+    isMatched: (tile) => tile.isYellow,
+  );
+  var blueDistance = _calcBoardDistances(
+    board: board,
+    isMatched: (tile) => tile.isBlue,
+  );
+
   return BoardStats(
     yellowArea: _calcBoardCoverage(
       board: board,
       isMatched: (tile) => tile.isYellow,
     ),
-    yellowDistance: _calcBoardDistances(
-      board: board,
-      isMatched: (tile) => tile.isYellow,
-    ),
+    yellowDistance: yellowDistance,
     yellowSpecial: yellowSpecialStats.fullSpecials,
     yellowSpecialScore: (
       (yellowSpecialStats.fullSpecials * fullSpecialScore)
@@ -195,10 +203,7 @@ BoardStats _calcBoardStats(BoardGrid board) {
       board: board,
       isMatched: (tile) => tile.isBlue,
     ),
-    blueDistance: _calcBoardDistances(
-      board: board,
-      isMatched: (tile) => tile.isBlue,
-    ),
+    blueDistance: blueDistance,
     blueSpecial: blueSpecialStats.fullSpecials,
     blueSpecialScore: (
         (blueSpecialStats.fullSpecials * fullSpecialScore)
@@ -216,6 +221,9 @@ double _rateMove({
   required AILevel aiLevel,
   BoardStats? boardStats,
 }) {
+  if (move.pass) {
+    return 2.0;
+  }
   boardStats ??= _calcBoardStats(board);
   final newBoard = board.map(
     (row) => row.map(
@@ -226,18 +234,19 @@ double _rateMove({
   final afterBoardStats = _calcBoardStats(newBoard);
 
   final areaScore = (
-    (afterBoardStats.yellowArea - afterBoardStats.blueArea)
-      - (boardStats.yellowArea - boardStats.blueArea)
+    (afterBoardStats.yellowArea - boardStats.yellowArea)
+      - (afterBoardStats.blueArea - boardStats.blueArea)
   ).toDouble();
 
-  final distanceScore = (
-    (afterBoardStats.yellowDistance - afterBoardStats.blueDistance)
-      - (boardStats.yellowDistance - boardStats.blueDistance)
+  final distanceScore = -(
+    (afterBoardStats.yellowDistance - boardStats.yellowDistance)
+      - (afterBoardStats.blueDistance - boardStats.blueDistance)
   );
 
   final specialScore = (
-    (afterBoardStats.yellowSpecialScore - afterBoardStats.blueSpecialScore)
-      - (boardStats.yellowSpecialScore - boardStats.blueSpecialScore)
+    (afterBoardStats.yellowSpecialScore - boardStats.yellowSpecialScore)
+      - (afterBoardStats.blueSpecialScore - boardStats.blueSpecialScore)
+      - (move.special ? move.card.special : 0)
   );
 
   double moveScore;
@@ -252,7 +261,9 @@ double _rateMove({
   final ratingError = aiLevel.ratingError;
   moveScore += (Random().nextDouble() * ratingError * 2) - ratingError;
 
-  if (turnsLeft > 1 && hand.length > 1) {
+  // adds lookahead to the scoring
+  // needs optimising tho, this takes way too fucking long to search
+  if (false && turnsLeft > 1 && hand.length > 1) {
     const discountFactor = 0.7;
     special += (afterBoardStats.yellowSpecial - boardStats.yellowSpecial)
         - (move.special ? move.card.special : 0);
@@ -323,6 +334,7 @@ BestMove findBestMove({
       special: special,
       turnsLeft: turnsLeft,
       aiLevel: aiLevel,
+      boardStats: boardStats,
     );
     if (nextMoveRating > bestMoveRating) {
       bestMove = nextMove;

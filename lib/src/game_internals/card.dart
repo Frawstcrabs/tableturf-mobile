@@ -115,17 +115,17 @@ TileGrid rotatePattern(TileGrid pattern, int rotation) {
 }
 
 Coords rotatePatternPoint(Coords point, int height, int width, int rot) {
-  final edgeEdgeOffset = height.isEven && width.isEven ? 1 : 0;
+  final edgeEdgeOffset = height.isEven && width.isEven ? -1 : 0;
   rot %= 4;
   switch (rot) {
     case 0:
       return point;
     case 1:
-      return Coords(height-point.y - 1, point.x + edgeEdgeOffset);
+      return Coords(height-point.y - 1 + edgeEdgeOffset, point.x);
     case 2:
       return Coords(width-point.x - 1 + edgeEdgeOffset, height-point.y - 1 + edgeEdgeOffset);
     case 3:
-      return Coords(point.y + edgeEdgeOffset, width-point.x - 1);
+      return Coords(point.y, width-point.x - 1 + edgeEdgeOffset);
     default:
       throw Exception("unreachable");
   }
@@ -145,10 +145,13 @@ class TableturfCardData {
   TableturfCardData(this.num, this.name, this.rarity, this.special, this.pattern):
       count = countLayout(pattern),
       minPattern = getMinPattern(pattern),
-      selectPoint = Coords(
-        (getMinPattern(pattern)[0].length / 2 - 1).ceil(),
-        (getMinPattern(pattern).length / 2 - 1).ceil()
-      );
+      selectPoint = (() {
+        final minPattern = getMinPattern(pattern);
+        return Coords(
+          (minPattern[0].length / 2 - 1).ceil(),
+          (minPattern.length / 2 - 1).ceil()
+        );
+      }());
 
   factory TableturfCardData.fromJson(Map<String, dynamic> json) => _$TableturfCardFromJson(json);
 

@@ -43,6 +43,7 @@ class TableturfBattle {
 
   final TableturfPlayer yellow;
   final TableturfPlayer blue;
+  final AILevel aiLevel;
 
   final BoardGrid board;
 
@@ -50,6 +51,7 @@ class TableturfBattle {
     required this.yellow,
     required this.blue,
     required this.board,
+    required this.aiLevel,
   }) {
     moveCardNotifier.addListener(_updateMoveHighlight);
     moveLocationNotifier.addListener(_updateMoveHighlight);
@@ -503,7 +505,7 @@ class TableturfBattle {
         blue.hand.map((v) => v.value!).toList(),
         blue.special.value,
         turnCountNotifier.value,
-        AILevel.level3,
+        aiLevel,
       ]),
       Future.delayed(Duration(milliseconds: 1500 + Random().nextInt(500)))
     ]))[0];

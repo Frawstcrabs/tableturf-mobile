@@ -8,6 +8,7 @@ import 'package:tableturf_mobile/src/level_selection/levels.dart';
 import 'package:tableturf_mobile/src/style/my_transition.dart';
 import 'package:tableturf_mobile/src/style/palette.dart';
 
+import '../game_internals/opponentAI.dart';
 import 'session_intro.dart';
 
 PageRouteBuilder<T> buildGameSessionPage<T>({
@@ -15,6 +16,7 @@ PageRouteBuilder<T> buildGameSessionPage<T>({
   required String stage,
   required List<TableturfCardData> yellowDeck,
   required List<TableturfCardData> blueDeck,
+  required AILevel aiLevel,
   Palette palette = const Palette(),
 }) {
 
@@ -56,6 +58,7 @@ PageRouteBuilder<T> buildGameSessionPage<T>({
       yellow: yellowPlayer,
       blue: bluePlayer,
       board: board,
+      aiLevel: aiLevel,
       key: const Key('play session intro'),
     ),
     color: palette.backgroundPlaySession,
