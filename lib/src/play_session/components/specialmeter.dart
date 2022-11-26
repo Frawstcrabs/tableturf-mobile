@@ -1,57 +1,123 @@
+import 'dart:math';
+
 import 'package:flutter/material.dart';
 import 'package:tableturf_mobile/src/game_internals/player.dart';
 
 import 'cardwidget.dart';
 
-class SpecialMeter extends StatefulWidget {
+class SpecialTile extends StatefulWidget {
+  static const TILE_SIZE = 12.0;
+  final Color colour;
+  const SpecialTile(this.colour, {super.key});
+
+  @override
+  State<SpecialTile> createState() => _SpecialTileState();
+}
+
+class _SpecialTileState extends State<SpecialTile>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _introAnimation;
+  late final Animation<double> introScale, introFade;
+
+  @override
+  void initState() {
+    super.initState();
+
+    _introAnimation = AnimationController(
+      duration: const Duration(milliseconds: 250),
+      vsync: this
+    );
+
+    introScale = Tween(
+      begin: 2.0,
+      end: 1.0,
+    ).chain(
+      CurveTween(curve: Curves.easeOutBack)
+    ).animate(_introAnimation);
+    introFade = Tween(
+      begin: 0.0,
+      end: 1.0,
+    ).chain(
+        CurveTween(curve: Curves.easeOut)
+    ).animate(_introAnimation);
+
+    _introAnimation.forward();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: _introAnimation,
+      child: Container(
+        decoration: BoxDecoration(
+          color: widget.colour,
+          border: Border.all(
+            width: CardPatternWidget.TILE_EDGE,
+            color: Colors.black,
+          ),
+        ),
+        width: SpecialTile.TILE_SIZE,
+        height: SpecialTile.TILE_SIZE,
+      ),
+      builder: (context, child) {
+        return ScaleTransition(
+          scale: introScale,
+          child: FadeTransition(
+            opacity: introFade,
+            child: child,
+          )
+        );
+      }
+    );
+  }
+}
+
+
+class SpecialMeter extends StatelessWidget {
   final TableturfPlayer player;
   const SpecialMeter({required this.player, super.key});
 
-  @override
-  State<SpecialMeter> createState() => _SpecialMeterState();
-}
-
-class _SpecialMeterState extends State<SpecialMeter> {
-  @override
   Widget build(BuildContext context) {
     return Column(
-      mainAxisAlignment: MainAxisAlignment.center,
+      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-            widget.player.name,
-            style: TextStyle(
-                fontFamily: "Splatfont1",
-                fontStyle: FontStyle.italic,
-                color: Colors.white,
-                fontSize: 16,
-                height: 1,
-                letterSpacing: 0.6,
-                shadows: [
-                  Shadow(
-                    color: Color.fromRGBO(128, 128, 128, 1),
-                    offset: Offset(1, 1),
-                  )
-                ]
-            )
+          player.name,
+          style: TextStyle(
+            fontFamily: "Splatfont1",
+            fontStyle: FontStyle.italic,
+            color: Colors.white,
+            fontSize: 16,
+            height: 1,
+            letterSpacing: 0.6,
+            shadows: [
+              Shadow(
+                color: Color.fromRGBO(128, 128, 128, 1),
+                offset: Offset(1, 1),
+              )
+            ]
+          )
         ),
         AnimatedBuilder(
-          animation: widget.player.special,
+          animation: player.special,
           builder: (_, __) {
             return Row(
               children: [
-                for (var i = 0; i < widget.player.special.value; i++)
+                for (var i = 0; i < max(player.special.value, 4); i++)
                   Container(
-                    margin: EdgeInsets.only(left: 4),
-                    decoration: BoxDecoration(
-                      color: widget.player.traits.specialColour,
-                      border: Border.all(
-                        width: CardPatternWidget.TILE_EDGE,
-                        color: Colors.black,
-                      ),
+                    margin: const EdgeInsets.only(right: 4),
+                    child: Stack(
+                      children: [
+                        Container(
+                          color: Color.fromRGBO(0, 0, 0, max((4 - i) / 4, 0)),
+                          width: SpecialTile.TILE_SIZE,
+                          height: SpecialTile.TILE_SIZE,
+                        ),
+                        if (i < player.special.value)
+                          SpecialTile(player.traits.specialColour)
+                      ]
                     ),
-                    width: 12,
-                    height: 12,
                   )
               ]
             );
@@ -59,6 +125,5 @@ class _SpecialMeterState extends State<SpecialMeter> {
         )
       ]
     );
-
   }
 }

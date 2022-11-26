@@ -117,6 +117,7 @@ class _PlaySessionEndState extends State<PlaySessionEnd>
 
     final boardWidget = buildBoardWidget(
       battle: widget.battle,
+      flightIdentifier: "outro"
     );
 
     final screen = Container(

@@ -16,18 +16,20 @@ double getTileSize(double pixelSize, int tileCount, double edgeWidth) {
  * Mostly just to keep all this in one place since this
  * needs to be built across 3 different pages
  */
-Widget buildBoardWidget({required TableturfBattle battle, Key? key, Function(double)? onTileSize}) {
+Widget buildBoardWidget({required TableturfBattle battle, Key? key, Function(double)? onTileSize, required String flightIdentifier}) {
   final boardBuilder = LayoutBuilder(
     builder: (context, constraints) {
       final mediaQuery = MediaQuery.of(context);
       final board = battle.board;
+      final height = constraints.maxHeight.isFinite ? constraints.maxHeight : mediaQuery.size.height;
+      final width = constraints.maxWidth.isFinite ? constraints.maxHeight : mediaQuery.size.width;
       final boardTileSize = min(
         min(
-          getTileSize(constraints.maxHeight, board.length, BoardTile.EDGE_WIDTH),
+          getTileSize(height, board.length, BoardTile.EDGE_WIDTH),
           (mediaQuery.size.height * 0.8) / board.length,
         ),
         min(
-          getTileSize(constraints.maxWidth, board[0].length, BoardTile.EDGE_WIDTH),
+          getTileSize(width, board[0].length, BoardTile.EDGE_WIDTH),
           (mediaQuery.size.width * 0.8) / board[0].length,
         )
       );
@@ -63,6 +65,7 @@ Widget buildBoardWidget({required TableturfBattle battle, Key? key, Function(dou
       // the board won't change in size as it moves between pages, which we want
       // this makes it so the in-flight board is in the flight context, which does
       // change size between page
+      print("Building flight of screen $flightIdentifier");
       return boardBuilder;
     },
     child: boardBuilder,

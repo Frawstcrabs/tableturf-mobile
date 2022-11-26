@@ -50,10 +50,10 @@ class LevelSelectionScreen extends StatelessWidget {
                         Navigator.of(context).push(buildGameSessionPage(
                           context: context,
                           stage: map,
-                          yellowDeck: starterDeck.map((i) => cards[i]).toList(),
-                          blueDeck: starterDeck.map((i) => cards[i]).toList(),
-                          //yellowDeck: cards.randomSample(15),
-                          //blueDeck: cards.randomSample(15),
+                          //yellowDeck: starterDeck.map((i) => cards[i]).toList(),
+                          //blueDeck: starterDeck.map((i) => cards[i]).toList(),
+                          yellowDeck: cards.randomSample(15),
+                          blueDeck: cards.randomSample(15),
                           aiLevel: AILevel.level3,
                         ));
                       },

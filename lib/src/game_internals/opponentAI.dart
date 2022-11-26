@@ -1,4 +1,5 @@
 import 'dart:math';
+import 'package:collection/collection.dart';
 
 import 'player.dart';
 import 'card.dart';
@@ -10,13 +11,6 @@ enum AILevel {
   level2,
   level3,
   level4;
-
-  double get ratingError => {
-    level1: 3.0,
-    level2: 2.0,
-    level3: 1.0,
-    level4: 0.1,
-  }[this]!;
 }
 
 BoardGrid _flipBoard(BoardGrid board) {
@@ -50,7 +44,14 @@ int _calcBoardCoverage({
   });
 }
 
-double _calcBoardDistances({
+class DistanceStats {
+  final double averageDistance;
+  final int reachableArea;
+
+  const DistanceStats(this.averageDistance, this.reachableArea);
+}
+
+DistanceStats _calcBoardDistances({
   required BoardGrid board,
   required bool Function(TileState) isMatched,
 }) {
@@ -98,7 +99,7 @@ double _calcBoardDistances({
     }
     dist += 1;
   }
-  return distCount / searchedTiles.length;
+  return DistanceStats(distCount / searchedTiles.length, searchedTiles.length);
 }
 
 class SpecialStats {
@@ -151,7 +152,7 @@ SpecialStats _calcSpecialStats({
 class BoardStats {
   final int yellowArea, blueArea;
   final int yellowSpecial, blueSpecial;
-  final double yellowDistance, blueDistance;
+  final DistanceStats yellowDistance, blueDistance;
   final double yellowSpecialScore, blueSpecialScore;
 
   const BoardStats({
@@ -239,9 +240,14 @@ double _rateMove({
   ).toDouble();
 
   final distanceScore = -(
-    (afterBoardStats.yellowDistance - boardStats.yellowDistance)
-      - (afterBoardStats.blueDistance - boardStats.blueDistance)
+    (afterBoardStats.yellowDistance.averageDistance - boardStats.yellowDistance.averageDistance)
+      - (afterBoardStats.blueDistance.averageDistance - boardStats.blueDistance.averageDistance)
   );
+
+  final reachabilityScore = (
+    (afterBoardStats.yellowDistance.reachableArea - boardStats.yellowDistance.reachableArea)
+      - (afterBoardStats.blueDistance.reachableArea - boardStats.blueDistance.reachableArea)
+  ) / 5;
 
   final specialScore = (
     (afterBoardStats.yellowSpecialScore - boardStats.yellowSpecialScore)
@@ -250,15 +256,76 @@ double _rateMove({
   );
 
   double moveScore;
-  if (turnsLeft == 1) {
-    moveScore = areaScore;
-  } else if (move.special) {
-    moveScore = (areaScore * 0.8) + (distanceScore * 1.5) + (specialScore * 0.5);
-  } else {
-    moveScore = areaScore + distanceScore + specialScore;
+
+  switch (aiLevel) {
+    case AILevel.level1:
+      /*
+      moveScore = (
+        (areaScore * 1.0)
+          + (distanceScore * 0.2)
+          + (reachabilityScore * 0.1)
+          + (specialScore * 0.5)
+      );
+      break;
+
+       */
+    case AILevel.level2:
+      /*
+      moveScore = (
+        (areaScore * 1.0)
+          + (distanceScore * 0.5)
+          + (reachabilityScore * 0.4)
+          + (specialScore * 0.8)
+      );
+      break;
+        */
+    case AILevel.level3:
+      /*
+      final specialScoreDesire = 1.0 + ((12 - turnsLeft) / 8);
+      if (move.special) {
+        moveScore = (
+            (areaScore * 1.0)
+                + (distanceScore * 0.6)
+                + (reachabilityScore * 0.6)
+                + (specialScore * max(0.0, specialScoreDesire + 0.3))
+        );
+      } else {
+        moveScore = (
+            (areaScore * 1.0)
+                + (distanceScore * 0.5)
+                + (reachabilityScore * 0.7)
+                + (specialScore * max(0.0, specialScoreDesire))
+        );
+      }
+      break;
+
+       */
+    case AILevel.level4:
+      final specialScoreDesire = 1.0 + ((12 - turnsLeft) / 8);
+      if (turnsLeft == 1) {
+        moveScore = areaScore;
+      } else if (move.special) {
+        moveScore = (
+            (areaScore * 0.8)
+                + (distanceScore * 1.5)
+                + (reachabilityScore * 0.8)
+                + (specialScore * max(0.0, specialScoreDesire - 0.4))
+        );
+      } else {
+        moveScore = (
+            (areaScore * 1.0)
+                + (distanceScore * 1.0)
+                + (reachabilityScore * 1.0)
+                + (specialScore * max(0.0, specialScoreDesire))
+        );
+      }
+      break;
   }
 
-  final ratingError = aiLevel.ratingError;
+  // add some variance to the AI results
+  // hopefully to prevent the exact same moves being played in the exact same scenarios
+  // without hindering its ability
+  const ratingError = 0.1;
   moveScore += (Random().nextDouble() * ratingError * 2) - ratingError;
 
   // adds lookahead to the scoring
@@ -283,14 +350,24 @@ double _rateMove({
   return moveScore;
 }
 
-class BestMove {
+class RatedMove {
   final TableturfMove move;
   final double score;
 
-  const BestMove(this.move, this.score);
+  const RatedMove(this.move, this.score);
 }
 
-BestMove findBestMove({
+extension IterableZip<T> on Iterable<T> {
+  Iterable<S> zip<U, S>(Iterable<U> other, S Function(T, U) combine) sync* {
+    final iteratorA = this.iterator;
+    final iteratorB = other.iterator;
+    while (iteratorA.moveNext() && iteratorB.moveNext()) {
+      yield combine(iteratorA.current, iteratorB.current);
+    }
+  }
+}
+
+RatedMove findBestMove({
   required BoardGrid board,
   required List<TableturfCard> hand,
   required int special,
@@ -314,8 +391,56 @@ BestMove findBestMove({
     hand
       .where((card) => card.special <= special)
       .expand((card) => getMoves(board, card, special: true))
-  ).iterator;
+  );
 
+  final List<RatedMove> ratedMoves = [];
+  for (final move in moves) {
+    final moveRating = _rateMove(
+      move: move,
+      board: board,
+      hand: hand,
+      special: special,
+      turnsLeft: turnsLeft,
+      aiLevel: aiLevel,
+      boardStats: boardStats,
+    );
+    final ratedMove = RatedMove(move, moveRating);
+
+    final insertLocation = lowerBound(
+      ratedMoves,
+      ratedMove,
+      compare: (RatedMove a, RatedMove b) => a.score.compareTo(b.score)
+    );
+    ratedMoves.insert(insertLocation, ratedMove);
+  }
+
+  switch (aiLevel) {
+    case AILevel.level1:
+      const lowerBound = 0.5;
+      const upperBound = 0.9;
+      final selection = lowerBound + (Random().nextDouble() * (upperBound - lowerBound));
+      return ratedMoves[(ratedMoves.length * selection).floor()];
+
+    case AILevel.level2:
+      const lowerBound = 0.7;
+      const upperBound = 0.95;
+      final selection = lowerBound + (Random().nextDouble() * (upperBound - lowerBound));
+      return ratedMoves[(ratedMoves.length * selection).floor()];
+
+    case AILevel.level3:
+      const lowerBound = 0.8;
+      const upperBound = 1.0;
+      final selection = lowerBound + (Random().nextDouble() * (upperBound - lowerBound));
+      return ratedMoves[(ratedMoves.length * selection).floor()];
+
+    case AILevel.level4:
+      const lowerBound = 0.98;
+      const upperBound = 1.0;
+      final selection = lowerBound + (Random().nextDouble() * (upperBound - lowerBound));
+      return ratedMoves[(ratedMoves.length * selection).floor()];
+  }
+
+  /*
   moves.moveNext();
   var bestMove = moves.current;
   var bestMoveRating = _rateMove(
@@ -343,19 +468,22 @@ BestMove findBestMove({
       bestMoveRating = nextMoveRating;
     }
   }
-  return BestMove(bestMove, bestMoveRating);
+  return RatedMove(bestMove, bestMoveRating);
+  */
 }
 
 TableturfMove findBestBlueMove(List<dynamic> args) {
   print("${DateTime.now()}: rating moves...");
   final TileGrid plainBoard = args[0];
-  final board = _flipBoard(plainBoard.map((row) => row.map(TableturfTile.new).toList()).toList());
   final List<TableturfCard> hand = args[1];
   final int special = args[2];
   final int turnsLeft = args[3];
   final AILevel aiLevel = args[4];
+  final bool flipBoard = args.length == 6 ? args[5] : true;
 
   final startTime = DateTime.now().microsecondsSinceEpoch;
+  final tempBoard = plainBoard.map((row) => row.map(TableturfTile.new).toList()).toList();
+  final board = flipBoard ? _flipBoard(tempBoard) : tempBoard;
   final bestMove = findBestMove(
     board: board,
     hand: hand,
@@ -365,6 +493,10 @@ TableturfMove findBestBlueMove(List<dynamic> args) {
   ).move;
   final endTime = DateTime.now().microsecondsSinceEpoch;
   print("Calculated best move in ${(endTime - startTime) / 1000000} seconds");
+
+  if (!flipBoard) {
+    return bestMove;
+  }
 
   final newRot = const [2, 3, 0, 1][bestMove.rotation];
   final pattern = rotatePattern(bestMove.card.minPattern, newRot);

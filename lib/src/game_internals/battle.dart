@@ -94,7 +94,6 @@ class TableturfBattle {
       );
       final locationX = location.x - selectPoint.x;
       final locationY = location.y - selectPoint.y;
-      _log.info("trying location $locationX, $locationY: (${board[0].length - pattern[0].length}, ${board.length - pattern.length})");
       if (!(
           locationY >= 0
               && locationY <= board.length - pattern.length
@@ -303,9 +302,7 @@ class TableturfBattle {
     yellowMoveNotifier.value = null;
     blueMoveNotifier.value = null;
     await Future<void>.delayed(const Duration(milliseconds: 100));
-    print("yellow refresh hand");
     yellow.refreshHand();
-    print("blue refresh hand");
     blue.refreshHand();
     await Future<void>.delayed(const Duration(milliseconds: 200));
     turnCountNotifier.value -= 1;
@@ -318,6 +315,7 @@ class TableturfBattle {
     }
     playerControlLock.value = true;
     runBlueAI();
+    //runYellowAI();
     _log.info("turn complete");
   }
 
@@ -506,6 +504,7 @@ class TableturfBattle {
         blue.special.value,
         turnCountNotifier.value,
         aiLevel,
+        true,
       ]),
       Future.delayed(Duration(milliseconds: 1500 + Random().nextInt(500)))
     ]))[0];
@@ -520,6 +519,33 @@ class TableturfBattle {
       pass: blueMove.pass,
       special: blueMove.special,
       traits: blueMove.traits,
+    );
+  }
+
+  Future<void> runYellowAI() async {
+    final TileGrid plainBoard = board.map((row) => row.map((t) => t.state.value).toList()).toList();
+    final TableturfMove yellowMove = (await Future.wait([
+      compute(findBestBlueMove, [
+        plainBoard,
+        yellow.hand.map((v) => v.value!).toList(),
+        yellow.special.value,
+        turnCountNotifier.value,
+        AILevel.level4,
+        false,
+      ]),
+      Future.delayed(Duration(milliseconds: 1500 + Random().nextInt(500)))
+    ]))[0];
+
+    final audioController = AudioController();
+    await audioController.playSfx(SfxType.confirmMoveSucceed);
+    yellowMoveNotifier.value = TableturfMove(
+      card: yellow.hand.firstWhere((card) => card.value!.data == yellowMove.card.data).value!,
+      rotation: yellowMove.rotation,
+      x: yellowMove.x,
+      y: yellowMove.y,
+      pass: yellowMove.pass,
+      special: yellowMove.special,
+      traits: yellowMove.traits,
     );
   }
 }

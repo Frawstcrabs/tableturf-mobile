@@ -37,8 +37,6 @@ class TableturfPlayer {
   }): special = ValueNotifier(special);
 
   void refreshHand() {
-    print(deck.map((card) => !card.isHeld).toList());
-    print(deck.map((card) => !card.hasBeenPlayed).toList());
     for (var i = 0; i < hand.length; i++) {
       final card = hand[i].value;
       if (card == null) {
@@ -67,29 +65,29 @@ abstract class PlayerTraits {
 }
 
 class YellowTraits implements PlayerTraits {
-  final normalTile = TileState.yellow;
-  final specialTile = TileState.yellowSpecial;
+  get normalTile => TileState.yellow;
+  get specialTile => TileState.yellowSpecial;
 
-  final normalColour = const Color.fromRGBO(255, 255, 17, 1);
-  final specialColour = const Color.fromRGBO(255, 159, 4, 1);
+  get normalColour => const Color.fromRGBO(255, 255, 17, 1);
+  get specialColour => const Color.fromRGBO(255, 159, 4, 1);
 
-  final scoreCountBackground = const Color.fromRGBO(129, 128, 5, 1.0);
-  final scoreCountText = const Color.fromRGBO(233, 255, 122, 1);
-  final scoreCountShadow = const Color.fromRGBO(167, 171, 15, 1.0);
+  get scoreCountBackground => const Color.fromRGBO(129, 128, 5, 1.0);
+  get scoreCountText => const Color.fromRGBO(233, 255, 122, 1);
+  get scoreCountShadow => const Color.fromRGBO(167, 171, 15, 1.0);
 
   const YellowTraits();
 }
 
 class BlueTraits implements PlayerTraits {
-  final normalTile = TileState.blue;
-  final specialTile = TileState.blueSpecial;
+  get normalTile => TileState.blue;
+  get specialTile => TileState.blueSpecial;
 
-  final normalColour = const Color.fromRGBO(71, 92, 255, 1);
-  final specialColour = const Color.fromRGBO(10, 255, 255, 1);
+  get normalColour => const Color.fromRGBO(71, 92, 255, 1);
+  get specialColour => const Color.fromRGBO(10, 255, 255, 1);
 
-  final scoreCountBackground = const Color.fromRGBO(33, 5, 139, 1);
-  final scoreCountText = const Color.fromRGBO(102, 124, 255, 1);
-  final scoreCountShadow = const Color.fromRGBO(57, 69, 147, 1);
+  get scoreCountBackground => const Color.fromRGBO(33, 5, 139, 1);
+  get scoreCountText => const Color.fromRGBO(102, 124, 255, 1);
+  get scoreCountShadow => const Color.fromRGBO(57, 69, 147, 1);
 
   const BlueTraits();
 }

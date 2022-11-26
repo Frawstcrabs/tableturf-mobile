@@ -20,10 +20,17 @@ class SpeenWidget extends StatefulWidget {
 
 class _SpeenWidgetState extends State<SpeenWidget>
     with SingleTickerProviderStateMixin {
-  late final AnimationController _controller = AnimationController(
-      vsync: this,
-      duration: Duration(milliseconds: 1000)
-  )..repeat();
+  late final AnimationController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+        vsync: this,
+        duration: Duration(milliseconds: 1000)
+    );
+    _controller.repeat();
+  }
 
   @override
   void dispose() {
@@ -33,19 +40,24 @@ class _SpeenWidgetState extends State<SpeenWidget>
 
   @override
   Widget build(BuildContext context) {
-    return AnimatedBuilder(
-        animation: _controller,
-        builder: (_, child) {
-          return Transform.rotate(
-            angle: _controller.value * 2 * pi,
-            child: child,
-          );
-        },
-        child: Image.asset(
-          "assets/images/loading.png",
-          width: 48,
-          height: 48,
-        )
+    return RotationTransition(
+      turns: _controller,
+      // /*
+      child: Icon(
+        Icons.refresh,
+        size: 36.0,
+        color: Color.fromRGBO(255, 255, 255, 0.2),
+      )
+
+       //*/
+        /*
+      child: Container(
+        height: 36,
+        width: 12,
+        color: Colors.green,
+      )
+
+         */
     );
   }
 }
@@ -270,8 +282,8 @@ class _CardSelectionWidgetState extends State<CardSelectionWidget>
                                       color: Colors.black,
                                     ),
                                   ),
-                                  width: CardPatternWidget.TILE_SIZE,
-                                  height: CardPatternWidget.TILE_SIZE,
+                                  width: 8.0,
+                                  height: 8.0,
                                 );
                               }).toList(growable: false)
                           ),
@@ -327,7 +339,12 @@ class _CardSelectionWidgetState extends State<CardSelectionWidget>
       case AnimationStatus.dismissed:
         return _buildAwaiting(context);
       case AnimationStatus.completed:
-        return _buildCard(context);
+        return Stack(
+          children: [
+            _buildAwaiting(context),
+            _buildCard(context),
+          ],
+        );
       case AnimationStatus.forward:
         return Stack(
             children: [
@@ -366,7 +383,7 @@ class _CardSelectionWidgetState extends State<CardSelectionWidget>
   }
 }
 
-class CardSelectionConfirmButton extends StatefulWidget {
+class CardSelectionConfirmButton extends StatelessWidget {
   final TableturfBattle battle;
 
   const CardSelectionConfirmButton({
@@ -374,33 +391,8 @@ class CardSelectionConfirmButton extends StatefulWidget {
     required this.battle,
   });
 
-  @override
-  State<CardSelectionConfirmButton> createState() => _CardSelectionConfirmButtonState();
-}
-
-class _CardSelectionConfirmButtonState extends State<CardSelectionConfirmButton> {
-  bool active = true;
-
-  @override
-  void initState() {
-    super.initState();
-    widget.battle.yellowMoveNotifier.addListener(onMoveChange);
-  }
-
-  @override
-  void dispose() {
-    widget.battle.yellowMoveNotifier.removeListener(onMoveChange);
-    super.dispose();
-  }
-
-  void onMoveChange() {
-    setState(() {
-      active = widget.battle.yellowMoveNotifier.value == null;
-    });
-  }
-
   void _confirmMove() {
-    widget.battle.confirmMove();
+    battle.confirmMove();
   }
 
   Widget _buildButton(BuildContext context) {
@@ -413,8 +405,8 @@ class _CardSelectionConfirmButtonState extends State<CardSelectionConfirmButton>
           color: palette.cardEdge,
         ),
       ),
-      width: CardWidget.CARD_WIDTH,
-      height: CardWidget.CARD_HEIGHT,
+      //width: CardWidget.CARD_WIDTH,
+      //height: CardWidget.CARD_HEIGHT,
       child: Center(child: Text("Confirm")),
     );
   }
@@ -423,26 +415,35 @@ class _CardSelectionConfirmButtonState extends State<CardSelectionConfirmButton>
   Widget build(BuildContext context) {
     final palette = context.watch<Palette>();
     final selectionWidget = CardSelectionWidget(
-      battle: widget.battle,
-      moveNotifier: widget.battle.yellowMoveNotifier,
+      battle: battle,
+      moveNotifier: battle.yellowMoveNotifier,
       tileColour: palette.tileYellow,
       tileSpecialColour: palette.tileYellowSpecial,
     );
     return Stack(
       children: [
         selectionWidget,
-        !active ? Container() : ValueListenableBuilder(
-          valueListenable: widget.battle.moveIsValidNotifier,
-          child: GestureDetector(
-            onTap: _confirmMove,
-            child: _buildButton(context),
+        AnimatedBuilder(
+          animation: battle.yellowMoveNotifier,
+          child: ValueListenableBuilder(
+            valueListenable: battle.moveIsValidNotifier,
+            child: GestureDetector(
+              onTap: _confirmMove,
+              child: _buildButton(context),
+            ),
+            builder: (_, bool highlight, button) => AnimatedOpacity(
+              opacity: highlight ? 1 : 0,
+              duration: const Duration(milliseconds: 150),
+              child: button,
+            )
           ),
-          builder: (_, bool highlight, button) => AnimatedOpacity(
-            opacity: highlight ? 1 : 0,
-            duration: const Duration(milliseconds: 150),
-            child: button,
-          )
-        )
+          builder: (context, child) {
+            if (battle.yellowMoveNotifier.value != null) {
+              return Container();
+            }
+            return child!;
+          }
+        ),
       ]
     );
   }

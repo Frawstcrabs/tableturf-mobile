@@ -63,13 +63,13 @@ class _PlaySessionIntroState extends State<PlaySessionIntro>
     final overlayState = Overlay.of(context)!;
     final animationLayer = OverlayEntry(builder: (_) {
       return Container(
-          color: Color.fromRGBO(0, 0, 0, 0.5),
-          child: Center(
-              child: RotationTransition(
-                  turns: _introAnimator,
-                  child: Container(width: 20, height: 80, color: Colors.green)
-              )
+        color: Color.fromRGBO(0, 0, 0, 0.5),
+        child: Center(
+          child: RotationTransition(
+            turns: _introAnimator,
+            child: Container(width: 20, height: 80, color: Colors.green)
           )
+        )
       );
     });
     overlayState.insert(animationLayer);
@@ -118,6 +118,7 @@ class _PlaySessionIntroState extends State<PlaySessionIntro>
       color: palette.backgroundPlaySession,
       child: buildBoardWidget(
         battle: battle,
+        flightIdentifier: "intro",
       ),
     );
 

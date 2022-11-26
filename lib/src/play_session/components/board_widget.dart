@@ -34,7 +34,11 @@ class BoardWidget extends StatelessWidget {
           return Positioned(
             top: y * boardTileStep,
             left: x * boardTileStep,
-            child: BoardTile(tile, tileSize: tileSize)
+            child: BoardTile(
+              tile,
+              battle: battle,
+              tileSize: tileSize,
+            )
           );
         }).toList(growable: false);
       }).toList(growable: false)
@@ -46,10 +50,12 @@ class BoardTile extends StatefulWidget {
   static const EDGE_WIDTH = 0.5;
   final TableturfTile tile;
   final double tileSize;
+  final TableturfBattle battle;
 
   const BoardTile(this.tile, {
     super.key,
     required this.tileSize,
+    required this.battle,
   });
 
   @override
@@ -133,7 +139,7 @@ class _BoardTileState extends State<BoardTile>
                     color: state == TileState.yellowSpecial ? Color.fromRGBO(225, 255, 17, 1)
                         : state == TileState.blueSpecial ? Color.fromRGBO(240, 255, 255, 1)
                         : throw Exception("Invalid tile colour given for special: ${state}"),
-                    borderRadius: BorderRadius.all(Radius.circular(999))
+                    borderRadius: BorderRadius.circular(999)
                   ),
                   width: widget.tileSize * (2/3),
                   height: widget.tileSize * (2/3),
@@ -143,13 +149,36 @@ class _BoardTileState extends State<BoardTile>
           }
         ),
         AnimatedBuilder(
+          animation: Listenable.merge([
+            widget.battle.moveSpecialNotifier,
+            widget.battle.yellowMoveNotifier,
+          ]),
+          child: Container(
+            width: widget.tileSize,
+            height: widget.tileSize,
+            color: const Color.fromRGBO(0, 0, 0, 0.4),
+          ),
+          builder: (_, child) {
+            final specialDarken = (
+              widget.battle.yellowMoveNotifier.value == null
+                && widget.battle.moveSpecialNotifier.value
+                && !state.isSpecial
+                && state != TileState.empty
+            );
+            if (!specialDarken) {
+              return Container();
+            }
+            return child!;
+          }
+        ),
+        AnimatedBuilder(
           animation: _flashController,
           builder: (_, __) => Container(
             width: widget.tileSize,
             height: widget.tileSize,
             decoration: _flashAnimation.value,
           )
-        )
+        ),
       ]
     );
   }

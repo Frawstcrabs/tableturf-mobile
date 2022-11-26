@@ -42,6 +42,10 @@ class _PlaySessionScreenState extends State<PlaySessionScreen>
   static final _log = Logger('PlaySessionScreenState');
 
   final GlobalKey _boardTileKey = GlobalKey(debugLabel: "InputArea");
+  final GlobalKey _blueSelectionKey = GlobalKey(debugLabel: "BlueSelectionWidget");
+  final GlobalKey _yellowSelectionKey = GlobalKey(debugLabel: "YellowSelectionWidget");
+  final GlobalKey _blueScoreKey = GlobalKey(debugLabel: "BlueScoreWidget");
+  final GlobalKey _yellowScoreKey = GlobalKey(debugLabel: "YellowScoreWidget");
   double tileSize = 22.0;
   Offset? piecePosition;
   bool _tapTimeExceeded = true,
@@ -140,6 +144,7 @@ class _PlaySessionScreenState extends State<PlaySessionScreen>
       _lockInputs = false;
     });
     widget.battle.runBlueAI();
+    //widget.battle.runYellowAI();
   }
 
   Future<void> _dealHand() async {
@@ -394,282 +399,347 @@ class _PlaySessionScreenState extends State<PlaySessionScreen>
       battle: battle,
       key: _boardTileKey,
       onTileSize: (ts) => tileSize = ts,
+      flightIdentifier: "session",
     );
 
-    final screenContents = Column(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        Container(
-            height: mediaQuery.padding.top + 10
-        ),
-        Container(
-          padding: EdgeInsets.symmetric(horizontal: 15),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Row(
-                children: [
-                  AnimatedBuilder(
-                    animation: _scoreFadeController,
-                    child: ScoreCounter(
-                      scoreNotifier: battle.blueCountNotifier,
-                      traits: const BlueTraits()
-                    ),
-                    builder: (_, child) {
-                      return Transform.scale(
-                        scale: scoreSize.value,
-                        child: Opacity(
-                          opacity: scoreFade.value,
-                          child: child,
-                        ),
-                      );
-                    }
-                  ),
-                  Container(width: 5),
-                  SpecialMeter(player: battle.blue),
-                ],
-              ),
-              AnimatedBuilder(
-                animation: _turnFadeController,
-                child: TurnCounter(
-                  battle: battle,
-                ),
-                builder: (_, child) {
-                  return Transform.scale(
-                    scale: turnSize.value,
-                    child: Opacity(
-                      opacity: turnFade.value,
-                      child: child,
-                    ),
-                  );
-                }
-              ),
-            ]
+    final turnCounter = AnimatedBuilder(
+      animation: _turnFadeController,
+      child: TurnCounter(
+        battle: battle,
+      ),
+      builder: (_, child) {
+        return Transform.scale(
+          scale: turnSize.value,
+          child: Opacity(
+            opacity: turnFade.value,
+            child: child,
+          ),
+        );
+      }
+    );
+    var blueScore = AnimatedBuilder(
+      animation: _scoreFadeController,
+      child: ScoreCounter(
+          key: _blueScoreKey,
+          scoreNotifier: battle.blueCountNotifier,
+          traits: const BlueTraits()
+      ),
+      builder: (_, child) {
+        return Transform.scale(
+          scale: scoreSize.value,
+          child: Opacity(
+            opacity: scoreFade.value,
+            child: child,
+          ),
+        );
+      }
+    );
+    final yellowScore = AnimatedBuilder(
+      animation: _scoreFadeController,
+      child: ScoreCounter(
+        key: _yellowScoreKey,
+        scoreNotifier: battle.yellowCountNotifier,
+        traits: const YellowTraits()
+      ),
+      builder: (_, child) {
+        return Transform.scale(
+          scale: scoreSize.value,
+          child: Opacity(
+            opacity: scoreFade.value,
+            child: child,
+          ),
+        );
+      }
+    );
+
+    final cardWidgets = Iterable.generate(battle.yellow.hand.length, (i) {
+      return Center(
+        child: Padding(
+          padding: EdgeInsets.all(
+            mediaQuery.orientation == Orientation.landscape
+              ? mediaQuery.size.width * 0.005
+              : mediaQuery.size.height * 0.005
+          ),
+          child: CardWidget(
+            cardNotifier: battle.yellow.hand[i],
+            battle: battle,
           ),
         ),
+      );
+    }).toList(growable: false);
+
+    final handWidget = Column(
+      children: [
         Expanded(
-          child: boardWidget,
-        ),
-        Container(
-          padding: EdgeInsets.symmetric(horizontal: 15),
           child: Row(
-              mainAxisAlignment: MainAxisAlignment.start,
+            children: [
+              Expanded(child: cardWidgets[0]),
+              Expanded(child: cardWidgets[1]),
+            ]
+          )
+        ),
+        Expanded(
+          child: Row(
+            children: [
+              Expanded(child: cardWidgets[2]),
+              Expanded(child: cardWidgets[3]),
+            ]
+          )
+        ),
+      ]
+    );
+
+    final passButton = GestureDetector(
+      onTap: () {
+        if (!battle.playerControlLock.value) {
+          return;
+        }
+        battle.moveCardNotifier.value = null;
+        battle.moveLocationNotifier.value = null;
+        battle.movePassNotifier.value = !battle.movePassNotifier.value;
+        battle.moveSpecialNotifier.value = false;
+      },
+      child: AnimatedBuilder(
+        animation: battle.movePassNotifier,
+        builder: (_, __) => AnimatedContainer(
+          duration: const Duration(milliseconds: 200),
+          decoration: BoxDecoration(
+            color: battle.movePassNotifier.value
+                ? palette.buttonSelected
+                : palette.buttonUnselected,
+            borderRadius: BorderRadius.all(Radius.circular(4)),
+            border: Border.all(
+              width: BoardTile.EDGE_WIDTH,
+              color: Colors.black,
+            ),
+          ),
+          height: mediaQuery.orientation == Orientation.portrait ? CardWidget.CARD_HEIGHT : 30,
+          width: mediaQuery.orientation == Orientation.landscape ? CardWidget.CARD_WIDTH : 64,
+          child: Center(child: Text("Pass"))
+        )
+      )
+    );
+
+    Widget blockCursorMovement({Widget? child}) {
+      return IgnorePointer(
+        ignoring: _lockInputs,
+        child: Listener(
+          onPointerDown: (details) {
+            _buttonPressed = true;
+          },
+          onPointerUp: (details) {},
+          child: child,
+        )
+      );
+    }
+
+    Widget fadeOnControlLock({Widget? child}) {
+      return AnimatedBuilder(
+        animation: battle.playerControlLock,
+        child: child,
+        builder: (context, child) {
+          return AnimatedOpacity(
+            duration: const Duration(milliseconds: 200),
+            opacity: battle.playerControlLock.value ? 1.0 : 0.5,
+            child: child,
+          );
+        }
+      );
+    }
+
+    final specialButton = GestureDetector(
+      onTap: () {
+        if (!battle.playerControlLock.value) {
+          return;
+        }
+        battle.moveCardNotifier.value = null;
+        battle.moveLocationNotifier.value = null;
+        battle.moveSpecialNotifier.value = !battle.moveSpecialNotifier.value;
+        battle.movePassNotifier.value = false;
+      },
+      child: AnimatedBuilder(
+        animation: battle.moveSpecialNotifier,
+        builder: (_, __) => AnimatedContainer(
+          duration: const Duration(milliseconds: 200),
+          decoration: BoxDecoration(
+            color: battle.moveSpecialNotifier.value
+                ? Color.fromRGBO(216, 216, 0, 1)
+                : Color.fromRGBO(109, 161, 198, 1),
+            borderRadius: BorderRadius.all(Radius.circular(4)),
+            border: Border.all(
+              width: BoardTile.EDGE_WIDTH,
+              color: Colors.black,
+            ),
+          ),
+          height: mediaQuery.orientation == Orientation.portrait ? CardWidget.CARD_HEIGHT : 30,
+          width: mediaQuery.orientation == Orientation.landscape ? CardWidget.CARD_WIDTH : 64,
+          child: Center(child: Text("Special")),
+        )
+      )
+    );
+
+    final blueCardSelection = CardSelectionWidget(
+      key: _blueSelectionKey,
+      battle: battle,
+      moveNotifier: battle.blueMoveNotifier,
+      tileColour: palette.tileBlue,
+      tileSpecialColour: palette.tileBlueSpecial,
+    );
+    final yellowCardSelection = CardSelectionConfirmButton(
+      key: _yellowSelectionKey,
+      battle: battle
+    );
+
+    late final screenContents;
+    if (mediaQuery.orientation == Orientation.portrait) {
+      screenContents = Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Container(
+            height: mediaQuery.padding.top + 10
+          ),
+          Container(
+            padding: EdgeInsets.symmetric(horizontal: 15),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Row(
                   children: [
-                    AnimatedBuilder(
-                      animation: _scoreFadeController,
-                      child: ScoreCounter(
-                        scoreNotifier: battle.yellowCountNotifier,
-                        traits: const YellowTraits()
-                      ),
-                      builder: (_, child) {
-                        return Transform.scale(
-                          scale: scoreSize.value,
-                          child: Opacity(
-                            opacity: scoreFade.value,
-                            child: child,
-                          ),
-                        );
-                      }
-                    ),
+                    blueScore,
                     Container(width: 5),
-                    SpecialMeter(player: battle.yellow),
+                    SpecialMeter(player: battle.blue),
                   ],
                 ),
+                turnCounter,
               ]
+            ),
           ),
-        ),
-        IgnorePointer(
-          ignoring: _lockInputs,
-          child: Listener(
-            onPointerDown: (details) {
-              _buttonPressed = true;
-            },
-            onPointerUp: (details) {},
-            child: SizedBox(
-              height: 310,
+          Expanded(
+            flex: 3,
+            child: boardWidget,
+          ),
+          Container(
+            padding: EdgeInsets.symmetric(horizontal: 15),
+            child: Row(
+              children: [
+                yellowScore,
+                Container(width: 5),
+                SpecialMeter(player: battle.yellow),
+              ],
+            ),
+          ),
+          Expanded(
+            flex: 2,
+            child: blockCursorMovement(
               child: Container(
                 padding: EdgeInsets.all(10),
-                child: Column(
-                  children: [
-                    AnimatedBuilder(
-                      animation: battle.playerControlLock,
-                      child: Row(
-                        //mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                          children: [
-                            Expanded(
-                              child: GridView.count(
-                                  crossAxisCount: 2,
-                                  shrinkWrap: true,
-                                  padding: EdgeInsets.zero,
-                                  //physics: NeverScrollableScrollPhysics(),
-                                  childAspectRatio: (CardWidget.CARD_WIDTH + 20) / (CardWidget.CARD_HEIGHT + 20),
-                                  children: Iterable.generate(battle.yellow.hand.length, (i) {
-                                    return Center(
-                                      child: CardWidget(
-                                        cardNotifier: battle.yellow.hand[i],
-                                        battle: battle,
-                                      ),
-                                    );
-                                  }).toList(growable: false)
-                              ),
-                            ),
-                            Column(
-                                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                                children: [
-                                  Row(
-                                      children: [
-                                        GestureDetector(
-                                            onTap: () {
-                                              if (!battle.playerControlLock.value) {
-                                                return;
-                                              }
-                                              battle.rotateLeft();
-                                            },
-                                            child: Container(
-                                                width: 32,
-                                                height: 32,
-                                                decoration: BoxDecoration(
-                                                    borderRadius: BorderRadius.all(Radius.circular(999)),
-                                                    border: Border.all(
-                                                      color: Colors.black,
-                                                      width: BoardTile.EDGE_WIDTH,
-                                                    ),
-                                                    color: Color.fromRGBO(109, 161, 198, 1)
-                                                ),
-                                                child: Center(
-                                                    child: Text("L")
-                                                )
-                                            )
-                                        ),
-                                        Container(
-                                          width: 10,
-                                        ),
-                                        GestureDetector(
-                                            onTap: () {
-                                              if (!battle.playerControlLock.value) {
-                                                return;
-                                              }
-                                              battle.rotateRight();
-                                            },
-                                            child: Container(
-                                                width: 32,
-                                                height: 32,
-                                                decoration: BoxDecoration(
-                                                    borderRadius: BorderRadius.all(Radius.circular(999)),
-                                                    border: Border.all(
-                                                      color: Colors.black,
-                                                      width: BoardTile.EDGE_WIDTH,
-                                                    ),
-                                                    color: Color.fromRGBO(109, 161, 198, 1)
-                                                ),
-                                                child: Center(
-                                                    child: Text("R")
-                                                )
-                                            )
-                                        ),
-                                      ]
+                child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                    children: [
+                      Expanded(
+                        flex: 3,
+                        child: fadeOnControlLock(
+                            child: Row(
+                              children: [
+                                Expanded(
+                                  flex: 2,
+                                  child: handWidget,
+                                ),
+                                Expanded(
+                                  flex: 1,
+                                  child: Column(
+                                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                                    children: [passButton, specialButton],
                                   ),
-                                  GestureDetector(
-                                      onTap: () {
-                                        if (!battle.playerControlLock.value) {
-                                          return;
-                                        }
-                                        battle.moveCardNotifier.value = null;
-                                        battle.moveLocationNotifier.value = null;
-                                        battle.movePassNotifier.value = !battle.movePassNotifier.value;
-                                        battle.moveSpecialNotifier.value = false;
-                                      },
-                                      child: AnimatedBuilder(
-                                          animation: battle.movePassNotifier,
-                                          builder: (_, __) => Container(
-                                              decoration: BoxDecoration(
-                                                color: battle.movePassNotifier.value
-                                                    ? palette.buttonSelected
-                                                    : palette.buttonUnselected,
-                                                borderRadius: BorderRadius.all(Radius.circular(4)),
-                                                border: Border.all(
-                                                  width: BoardTile.EDGE_WIDTH,
-                                                  color: Colors.black,
-                                                ),
-                                              ),
-                                              height: 80,
-                                              width: 64,
-                                              child: Center(child: Text("Pass"))
-                                          )
-                                      )
-                                  ),
-                                  GestureDetector(
-                                      onTap: () {
-                                        if (!battle.playerControlLock.value) {
-                                          return;
-                                        }
-                                        battle.moveCardNotifier.value = null;
-                                        battle.moveLocationNotifier.value = null;
-                                        battle.moveSpecialNotifier.value = !battle.moveSpecialNotifier.value;
-                                        battle.movePassNotifier.value = false;
-                                      },
-                                      child: AnimatedBuilder(
-                                          animation: battle.moveSpecialNotifier,
-                                          builder: (_, __) => Container(
-                                            decoration: BoxDecoration(
-                                              color: battle.moveSpecialNotifier.value
-                                                  ? Color.fromRGBO(216, 216, 0, 1)
-                                                  : Color.fromRGBO(109, 161, 198, 1),
-                                              borderRadius: BorderRadius.all(Radius.circular(4)),
-                                              border: Border.all(
-                                                width: BoardTile.EDGE_WIDTH,
-                                                color: Colors.black,
-                                              ),
-                                            ),
-                                            height: 80,
-                                            width: 64,
-                                            child: Center(child: Text("Special")),
-                                          )
-                                      )
-                                  ),
-                                  //Container(height: 1)
-                                ]
-                            ),
-                            Container(
-                              margin: EdgeInsets.only(left: 15),
-                              child: Column(
-                                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                                  children: [
-                                    CardSelectionWidget(
-                                      battle: battle,
-                                      moveNotifier: battle.blueMoveNotifier,
-                                      tileColour: palette.tileBlue,
-                                      tileSpecialColour: palette.tileBlueSpecial,
-                                    ),
-                                    CardSelectionConfirmButton(
-                                        battle: battle
-                                    )
-                                  ]
-                              ),
+                                ),
+                              ],
                             )
-                          ]
-                      ),
-                      builder: (_, child) => Expanded(
-                        child: AnimatedOpacity(
-                          duration: const Duration(milliseconds: 200),
-                          opacity: battle.playerControlLock.value ? 1.0 : 0.5,
-                          child: child,
                         ),
                       ),
-                    ),
-                  ],
+                      Expanded(
+                        flex: 1,
+                        child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.center,
+                            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                            children: [blueCardSelection, yellowCardSelection]
+                        ),
+                      )
+                    ]
                 ),
               ),
             ),
           ),
-        ),
-        Container(
-          height: mediaQuery.padding.bottom + 5,
-        )
-      ],
-    );
+          Container(
+            height: mediaQuery.padding.bottom + 5,
+          )
+        ],
+      );
+    } else {
+      screenContents = Column(
+        children: [
+          Container(
+            height: mediaQuery.padding.top + 10
+          ),
+          Expanded(
+            child: Row(
+              children: [
+                Expanded(
+                  flex: 3,
+                  child: Container(
+                    margin: const EdgeInsets.symmetric(horizontal: 5.0),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.spaceAround,
+                      children: [
+                        SpecialMeter(player: battle.blue),
+                        Expanded(
+                          child: blockCursorMovement(
+                            child: fadeOnControlLock(
+                              child: Column(
+                                children: [
+                                  Expanded(
+                                      child: handWidget
+                                  ),
+                                  Row(
+                                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                                    children: [passButton, specialButton],
+                                  )
+                                ]
+                              ),
+                            ),
+                          ),
+                        ),
+                        SpecialMeter(player: battle.yellow),
+                      ],
+                    ),
+                  ),
+                ),
+                Column(
+                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                  children: [turnCounter, blueScore, yellowScore],
+                ),
+                Expanded(
+                  flex: 7,
+                  child: boardWidget
+                ),
+                Expanded(
+                  flex: 2,
+                  child: blockCursorMovement(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                      children: [blueCardSelection, yellowCardSelection]
+                    ),
+                  )
+                )
+              ]
+            ),
+          ),
+          Container(
+            height: mediaQuery.padding.bottom + 5,
+          )
+        ],
+      );
+    }
 
     final screen = Container(
       color: palette.backgroundPlaySession,

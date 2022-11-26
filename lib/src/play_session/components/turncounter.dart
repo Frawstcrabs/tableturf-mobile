@@ -24,7 +24,7 @@ class _TurnCounterState extends State<TurnCounter>
   static const duration = Duration(milliseconds: 1300);
   static const darkenAmount = 0.5;
   static const focusScale = 1.4;
-  static final counterBounceHeight = 4.0;
+  static const counterBounceHeight = 0.14;
 
   @override
   void initState() {
@@ -37,7 +37,7 @@ class _TurnCounterState extends State<TurnCounter>
       vsync: this,
     );
 
-    final darkenColor = const Color.fromRGBO(0, 0, 0, darkenAmount);
+    const darkenColor = const Color.fromRGBO(0, 0, 0, darkenAmount);
     _backgroundDarken = TweenSequence([
       TweenSequenceItem(
         tween: DecorationTween(
@@ -123,113 +123,107 @@ class _TurnCounterState extends State<TurnCounter>
 
   Future<void> _onTurnCountChange() async {
     final newValue = widget.battle.turnCountNotifier.value;
-    var tempValue = turnCount;
     final audioController = AudioController();
     final context = _key.currentContext!;
     final globalPos = (context.findRenderObject()! as RenderBox).localToGlobal(Offset.zero);
     final overlayState = Overlay.of(context)!;
 
+    final backgroundLayer = OverlayEntry(builder: (_) {
+      return DecoratedBoxTransition(
+        decoration: _backgroundDarken,
+        child: Container()
+      );
+    });
     final animationLayer = OverlayEntry(builder: (_) {
-      return AnimatedBuilder(
-        animation: _tickController,
-        builder: (_, __) => Stack(
-          children: [
-            SizedBox(
-              width: double.infinity,
-              height: double.infinity,
-              child: DecoratedBoxTransition(
-                decoration: _backgroundDarken,
-                child: Container()
-              )
-            ),
-            Positioned(
-                top: globalPos.dy,
-                left: globalPos.dx,
-                child: Transform.scale(
-                  scale: _counterScale.value,
-                  child: Container(
-                      width: 40,
-                      height: 40,
-                      decoration: BoxDecoration(
-                          borderRadius: BorderRadius.all(Radius.circular(999)),
-                          color: Color.fromRGBO(128, 128, 128, 1)
-                      ),
-                      child: Center(
-                        child: Transform.translate(
-                          offset: Offset(0.5, _counterMove.value - 1),
-                          child: DefaultTextStyle(
-                            style: TextStyle(
-                              fontFamily: "Splatfont1",
-                              color: tempValue > 3
-                                  ? Colors.white
-                                  : Colors.red,
-                              fontSize: 20,
-                              letterSpacing: 0.6,
-                              shadows: [
-                                Shadow(
-                                  color: Color.fromRGBO(0, 0, 0, 0.4),
-                                  offset: Offset(2, 2),
-                                )
-                              ]
-                            ),
-                            child: Text(
-                              tempValue.toString(),
-                            ),
-                          ),
-                        ),
-                      )
-                  ),
-                )
-            )
-          ],
+      return Positioned(
+        top: globalPos.dy,
+        left: globalPos.dx,
+        child: _buildCounter(
+          context: context,
         )
       );
     });
+    overlayState.insert(backgroundLayer);
     overlayState.insert(animationLayer);
 
     _tickController.value = 0.0;
     audioController.playSfx(newValue <= 3 ? SfxType.turnCountEnding : SfxType.turnCountNormal);
     await _tickController.animateTo(360/duration.inMilliseconds);
-    tempValue = newValue;
     setState(() {
       turnCount = newValue;
     });
+    animationLayer.markNeedsBuild();
     await _tickController.forward(from: 360/duration.inMilliseconds);
     animationLayer.remove();
+    backgroundLayer.remove();
   }
 
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      key: _key,
-      width: 40,
-      height: 40,
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.all(Radius.circular(999)),
-        color: Color.fromRGBO(128, 128, 128, 1)
+  Widget _buildCounter({
+    required BuildContext context,
+    Key? key,
+  }) {
+    final mediaQuery = MediaQuery.of(context);
+    final diameter = mediaQuery.orientation == Orientation.landscape
+      ? mediaQuery.size.width * 0.06
+      : mediaQuery.size.height * 0.06;
+    print("diameter=$diameter");
+
+    final turnText = DefaultTextStyle(
+      style: TextStyle(
+        fontFamily: "Splatfont1",
+        color: turnCount > 3
+            ? Colors.white
+            : Colors.red,
+        letterSpacing: 0.6,
+        shadows: [
+          Shadow(
+            color: Color.fromRGBO(0, 0, 0, 0.4),
+            offset: Offset(1, 1),
+          )
+        ]
       ),
-      child: Center(
-        child: Transform.translate(
-          offset: Offset(0.5, -1),
-          child: Text(
-            turnCount.toString(),
-            style: TextStyle(
-              fontFamily: "Splatfont1",
-              color: turnCount > 3
-                  ? Colors.white
-                  : Colors.red,
-              fontSize: 20,
-              letterSpacing: 0.6,
-              shadows: [
-                Shadow(
-                  color: Color.fromRGBO(0, 0, 0, 0.4),
-                  offset: Offset(2, 2),
-                )
-              ]
+      child: Text(
+        turnCount.toString(),
+      ),
+    );
+
+    return AnimatedBuilder(
+      animation: _tickController,
+      builder: (_, __) => Transform.scale(
+        scale: _counterScale.value,
+        child: SizedBox(
+          key: key,
+          width: diameter,
+          height: diameter,
+          child: DecoratedBox(
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(999),
+              color: Color.fromRGBO(128, 128, 128, 1)
+            ),
+            child: Center(
+              child: Transform.translate(
+                offset: Offset(0, diameter * _counterMove.value),
+                child: FractionallySizedBox(
+                  heightFactor: 0.9,
+                  widthFactor: 0.9,
+                  child: FittedBox(
+                    fit: BoxFit.fitHeight,
+                    child: turnText,
+                  )
+                ),
+              ),
             )
           ),
         ),
       )
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return _buildCounter(
+      context: context,
+      key: _key,
     );
   }
 }
