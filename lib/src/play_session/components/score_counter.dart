@@ -66,7 +66,7 @@ class _ScoreCounterState extends State<ScoreCounter>
     ]).animate(showDiffController);
     showDiffEndMoveX = Tween<double>(
       begin: 0,
-      end: -15,
+      end: -0.375,
     ).animate(
       CurvedAnimation(
         parent: showDiffController,
@@ -78,7 +78,7 @@ class _ScoreCounterState extends State<ScoreCounter>
     );
     showDiffEndMoveY = Tween<double>(
       begin: 0,
-      end: 10,
+      end: 0.25,
     ).animate(
       CurvedAnimation(
         parent: showDiffController,
@@ -148,37 +148,41 @@ class _ScoreCounterState extends State<ScoreCounter>
 
   @override
   Widget build(BuildContext buildContext) {
+    final mediaQuery = MediaQuery.of(context);
+    final diameter = mediaQuery.orientation == Orientation.landscape
+        ? mediaQuery.size.width * 0.06
+        : mediaQuery.size.height * 0.06;
     final scoreDiffDisplay = Container(
-        width: 20,
-        height: 20,
-        decoration: BoxDecoration(
-            borderRadius: BorderRadius.all(Radius.circular(999)),
-            color: _scoreDiff > 0 ? widget.traits.scoreCountShadow : Colors.grey,
-        ),
-        child: Scaffold(
-          backgroundColor: Colors.transparent,
-          body: Transform.translate(
-            offset: Offset(-1, -0.5),
-            child: Center(
-                child: Text(
-                    (_scoreDiff > 0 ? "+" : "") + _scoreDiff.toString(),
-                    style: TextStyle(
-                        fontFamily: "Splatfont1",
-                        fontStyle: FontStyle.italic,
-                        color: _scoreDiff > 0 ? Colors.white : Colors.grey[800],
-                        fontSize: 10,
-                        letterSpacing: 0.3,
-                        shadows: [
-                          Shadow(
-                            color: Colors.grey[600]!,
-                            offset: Offset(1, 1),
-                          )
-                        ]
+      width: diameter/2,
+      height: diameter/2,
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(999),
+        color: _scoreDiff > 0 ? widget.traits.scoreCountShadow : Colors.grey,
+      ),
+      child: Center(
+        child: FractionallySizedBox(
+          heightFactor: 0.9,
+          widthFactor: 0.9,
+          child: FittedBox(
+            fit: BoxFit.fitHeight,
+            child: Text(
+              (_scoreDiff > 0 ? "+" : "") + _scoreDiff.toString(),
+                style: TextStyle(
+                  fontFamily: "Splatfont1",
+                  fontStyle: FontStyle.italic,
+                  color: _scoreDiff > 0 ? Colors.white : Colors.grey[800],
+                  letterSpacing: 0.3,
+                  shadows: [
+                    Shadow(
+                      color: Colors.grey[600]!,
+                      offset: Offset(1, 1),
                     )
+                  ]
                 )
             ),
           ),
         )
+      )
     );
     return Stack(
       children: [
@@ -189,28 +193,34 @@ class _ScoreCounterState extends State<ScoreCounter>
             body: Transform.translate(
               offset: Offset(-2, -1),
               child: Center(
-                child: Text(
-                  _prevScore.toString(),
-                  style: TextStyle(
-                    fontFamily: "Splatfont1",
-                    fontStyle: FontStyle.italic,
-                    color: widget.traits.scoreCountText,
-                    fontSize: 22,
-                    letterSpacing: 0.6,
-                    shadows: [
-                      Shadow(
-                        color: widget.traits.scoreCountShadow,
-                        offset: Offset(2, 2),
+                child: FractionallySizedBox(
+                  heightFactor: 0.9,
+                  widthFactor: 0.9,
+                  child: FittedBox(
+                    fit: BoxFit.fitHeight,
+                    child: Text(
+                      _prevScore.toString(),
+                      style: TextStyle(
+                        fontFamily: "Splatfont1",
+                        fontStyle: FontStyle.italic,
+                        color: widget.traits.scoreCountText,
+                        letterSpacing: 0.6,
+                        shadows: [
+                          Shadow(
+                            color: widget.traits.scoreCountShadow,
+                            offset: Offset(1, 1),
+                          )
+                        ]
                       )
-                    ]
+                    ),
                   )
                 )
               ),
             ),
           ),
           builder: (_, child) => Container(
-            width: 44,
-            height: 44,
+            width: diameter,
+            height: diameter,
             decoration: BoxDecoration(
               borderRadius: BorderRadius.all(Radius.circular(999)),
               color: widget.traits.scoreCountBackground
@@ -221,22 +231,22 @@ class _ScoreCounterState extends State<ScoreCounter>
             )
           )
         ),
-        Transform.translate(
-          offset: Offset(30, -5),
-          child: AnimatedBuilder(
-            animation: showDiffController,
-            child: scoreDiffDisplay,
-            builder: (_, sdd) => Transform.scale(
-              scale: showDiffScale.value,
-              child: Opacity(
-                opacity: showDiffEndFade.value,
-                child: Transform.translate(
-                  offset: Offset(showDiffEndMoveX.value, showDiffEndMoveY.value),
-                  child: sdd,
-                )
-              )
-            )
+        AnimatedBuilder(
+          animation: showDiffController,
+          builder: (_, sdd) => Transform.translate(
+            offset: Offset(
+              diameter * (0.75 + showDiffEndMoveX.value),
+              diameter * (-0.1 + showDiffEndMoveY.value)
+            ),
+            child: Opacity(
+              opacity: showDiffEndFade.value,
+              child: Transform.scale(
+                scale: showDiffScale.value,
+                child: sdd,
+              ),
+            ),
           ),
+          child: scoreDiffDisplay,
         )
       ]
     );

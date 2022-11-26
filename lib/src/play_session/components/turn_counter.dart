@@ -166,7 +166,6 @@ class _TurnCounterState extends State<TurnCounter>
     final diameter = mediaQuery.orientation == Orientation.landscape
       ? mediaQuery.size.width * 0.06
       : mediaQuery.size.height * 0.06;
-    print("diameter=$diameter");
 
     final turnText = DefaultTextStyle(
       style: TextStyle(

@@ -8,7 +8,7 @@ import '../../style/palette.dart';
 import '../../game_internals/battle.dart';
 import '../../game_internals/move.dart';
 
-import 'cardwidget.dart';
+import 'card_widget.dart';
 import 'flip_card.dart';
 
 class SpeenWidget extends StatefulWidget {

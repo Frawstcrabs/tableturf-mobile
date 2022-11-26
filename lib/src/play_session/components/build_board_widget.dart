@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 
 import '../../game_internals/battle.dart';
 import 'board_widget.dart';
-import 'moveoverlay.dart';
+import 'move_overlay.dart';
 
 double getTileSize(double pixelSize, int tileCount, double edgeWidth) {
   final innerSize = (pixelSize - (edgeWidth * (tileCount + 1))) / tileCount;

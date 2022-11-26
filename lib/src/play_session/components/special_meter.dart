@@ -3,7 +3,7 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:tableturf_mobile/src/game_internals/player.dart';
 
-import 'cardwidget.dart';
+import 'card_widget.dart';
 
 class SpecialTile extends StatefulWidget {
   static const TILE_SIZE = 12.0;

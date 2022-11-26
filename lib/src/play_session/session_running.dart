@@ -18,12 +18,12 @@ import 'package:tableturf_mobile/src/style/my_transition.dart';
 
 import 'session_end.dart';
 import 'components/build_board_widget.dart';
-import 'components/specialmeter.dart';
-import 'components/turncounter.dart';
+import 'components/special_meter.dart';
+import 'components/turn_counter.dart';
 import 'components/board_widget.dart';
-import 'components/cardwidget.dart';
-import 'components/cardselection.dart';
-import 'components/scorecounter.dart';
+import 'components/card_widget.dart';
+import 'components/card_selection.dart';
+import 'components/score_counter.dart';
 
 class PlaySessionScreen extends StatefulWidget {
   final TableturfBattle battle;
