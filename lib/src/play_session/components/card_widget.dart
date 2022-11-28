@@ -245,50 +245,54 @@ class _CardWidgetState extends State<CardWidget>
                     color: Palette().cardEdge,
                   ),
                 ),
-                child: Flex(
-                  direction: isLandscape ? Axis.horizontal : Axis.vertical,
-                  children: [
-                    AspectRatio(
+              ),
+              Opacity(
+                opacity: 0.7,
+                child: Image.asset("assets/images/card_sprites/${card.num}.png")
+              ),
+              Flex(
+                direction: isLandscape ? Axis.horizontal : Axis.vertical,
+                children: [
+                  AspectRatio(
                       aspectRatio: 1.0,
                       child: Center(
-                        child: FractionallySizedBox(
-                          heightFactor: 0.9,
-                          widthFactor: 0.9,
-                          child: CardPatternWidget(pattern, const YellowTraits())
-                        )
+                          child: FractionallySizedBox(
+                              heightFactor: 0.9,
+                              widthFactor: 0.9,
+                              child: CardPatternWidget(pattern, const YellowTraits())
+                          )
                       )
-                    ),
-                    Expanded(
-                      child: Align(
-                        alignment: isLandscape ? Alignment.centerLeft : Alignment.topCenter,
-                        child: FractionallySizedBox(
-                          heightFactor: isLandscape ? 0.8 : 0.9,
-                          widthFactor: isLandscape ? 0.9 : 0.9,
-                          child: Flex(
-                            direction: isLandscape ? Axis.vertical : Axis.horizontal,
-                            mainAxisAlignment: MainAxisAlignment.spaceAround,
-                            crossAxisAlignment: CrossAxisAlignment.center,
-                            children: isLandscape ? [
-                              Expanded(
-                                child: Center(
-                                  child: specialCountGrid,
-                                ),
+                  ),
+                  Expanded(
+                    child: Align(
+                      alignment: isLandscape ? Alignment.centerLeft : Alignment.topCenter,
+                      child: FractionallySizedBox(
+                        heightFactor: isLandscape ? 0.8 : 0.9,
+                        widthFactor: isLandscape ? 0.9 : 0.9,
+                        child: Flex(
+                          direction: isLandscape ? Axis.vertical : Axis.horizontal,
+                          mainAxisAlignment: MainAxisAlignment.spaceAround,
+                          crossAxisAlignment: CrossAxisAlignment.center,
+                          children: isLandscape ? [
+                            Expanded(
+                              child: Center(
+                                child: specialCountGrid,
                               ),
-                              countBox,
-                            ] : [
-                              countBox,
-                              Expanded(
-                                child: Center(
-                                  child: specialCountGrid,
-                                ),
+                            ),
+                            countBox,
+                          ] : [
+                            countBox,
+                            Expanded(
+                              child: Center(
+                                child: specialCountGrid,
                               ),
-                            ],
-                          ),
+                            ),
+                          ],
                         ),
                       ),
                     ),
-                  ],
-                ),
+                  ),
+                ],
               ),
               if (!isSelectable) DecoratedBox(
                 decoration: BoxDecoration(
