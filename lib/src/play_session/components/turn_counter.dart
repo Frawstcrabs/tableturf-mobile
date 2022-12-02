@@ -125,7 +125,8 @@ class _TurnCounterState extends State<TurnCounter>
     final newValue = widget.battle.turnCountNotifier.value;
     final audioController = AudioController();
     final context = _key.currentContext!;
-    final globalPos = (context.findRenderObject()! as RenderBox).localToGlobal(Offset.zero);
+    final renderBox = context.findRenderObject()! as RenderBox;
+    final globalPos = renderBox.localToGlobal(Offset.zero);
     final overlayState = Overlay.of(context)!;
 
     final backgroundLayer = OverlayEntry(builder: (_) {
@@ -138,8 +139,12 @@ class _TurnCounterState extends State<TurnCounter>
       return Positioned(
         top: globalPos.dy,
         left: globalPos.dx,
-        child: _buildCounter(
-          context: context,
+        child: SizedBox(
+          height: renderBox.size.height,
+          width: renderBox.size.width,
+          child: _buildCounter(
+            context: context,
+          ),
         )
       );
     });
@@ -164,7 +169,7 @@ class _TurnCounterState extends State<TurnCounter>
   }) {
     final mediaQuery = MediaQuery.of(context);
     final diameter = mediaQuery.orientation == Orientation.landscape
-      ? mediaQuery.size.width * 0.06
+      ? mediaQuery.size.width * 0.08
       : mediaQuery.size.height * 0.06;
 
     final turnText = DefaultTextStyle(
@@ -190,28 +195,29 @@ class _TurnCounterState extends State<TurnCounter>
       animation: _tickController,
       builder: (_, __) => Transform.scale(
         scale: _counterScale.value,
-        child: SizedBox(
-          key: key,
-          width: diameter,
-          height: diameter,
-          child: DecoratedBox(
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(999),
-              color: Color.fromRGBO(128, 128, 128, 1)
-            ),
-            child: Center(
-              child: Transform.translate(
-                offset: Offset(0, diameter * _counterMove.value),
-                child: FractionallySizedBox(
-                  heightFactor: 0.9,
-                  widthFactor: 0.9,
-                  child: FittedBox(
-                    fit: BoxFit.fitHeight,
-                    child: turnText,
-                  )
-                ),
+        child: AspectRatio(
+          aspectRatio: 1,
+          child: SizedBox(
+            key: key,
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(999),
+                color: Color.fromRGBO(128, 128, 128, 1)
               ),
-            )
+              child: Center(
+                child: Transform.translate(
+                  offset: Offset(0, diameter * _counterMove.value),
+                  child: FractionallySizedBox(
+                    heightFactor: 0.9,
+                    widthFactor: 0.9,
+                    child: FittedBox(
+                      fit: BoxFit.fitHeight,
+                      child: turnText,
+                    )
+                  ),
+                ),
+              )
+            ),
           ),
         ),
       )

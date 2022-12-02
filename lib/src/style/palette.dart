@@ -48,7 +48,7 @@ class Palette {
   Color get cardBackgroundSelectable => const Color.fromRGBO(64, 64, 64, 1);
   Color get cardBackgroundSelected => const Color.fromRGBO(140, 140, 140, 1);
   Color get cardEdge => const Color.fromRGBO(0, 0, 0, 1);
-  Color get cardTileUnfilled => const Color.fromRGBO(32, 32, 32, 0.7);
+  Color get cardTileUnfilled => const Color.fromRGBO(32, 32, 32, 0.4);
   Color get cardTileEdge => const Color.fromRGBO(120, 120, 120, 1);
 
   Color get buttonSelected => const Color.fromRGBO(216, 216, 0, 1);

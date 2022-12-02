@@ -22,15 +22,15 @@ Widget buildBoardWidget({required TableturfBattle battle, Key? key, Function(dou
       final mediaQuery = MediaQuery.of(context);
       final board = battle.board;
       final height = constraints.maxHeight.isFinite ? constraints.maxHeight : mediaQuery.size.height;
-      final width = constraints.maxWidth.isFinite ? constraints.maxHeight : mediaQuery.size.width;
+      final width = constraints.maxWidth.isFinite ? constraints.maxWidth : mediaQuery.size.width;
       final boardTileSize = min(
         min(
           getTileSize(height, board.length, BoardTile.EDGE_WIDTH),
-          (mediaQuery.size.height * 0.8) / board.length,
+          (mediaQuery.size.height * 0.95) / board.length,
         ),
         min(
           getTileSize(width, board[0].length, BoardTile.EDGE_WIDTH),
-          (mediaQuery.size.width * 0.8) / board[0].length,
+          (mediaQuery.size.width * 0.95) / board[0].length,
         )
       );
 

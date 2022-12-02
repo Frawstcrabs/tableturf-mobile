@@ -46,14 +46,15 @@ class LevelSelectionScreen extends StatelessWidget {
                   for (final map in maps.keys)
                     ListTile(
                       onTap: () {
-                        const starterDeck = [5, 33, 158, 12, 44, 136, 21, 51, 140, 27, 54, 102, 39, 55, 91];
+                        //const starterDeck = [5, 33, 158, 12, 44, 136, 21, 51, 140, 27, 54, 102, 39, 55, 91];
+                        const starterDeck = [97, 98, 158, 12, 44, 136, 21, 51, 140, 27, 54, 102, 39, 55, 91];
                         Navigator.of(context).push(buildGameSessionPage(
                           context: context,
                           stage: map,
-                          //yellowDeck: starterDeck.map((i) => cards[i]).toList(),
-                          //blueDeck: starterDeck.map((i) => cards[i]).toList(),
-                          yellowDeck: cards.randomSample(15),
-                          blueDeck: cards.randomSample(15),
+                          yellowDeck: starterDeck.map((i) => cards[i]).toList(),
+                          blueDeck: starterDeck.map((i) => cards[i]).toList(),
+                          //yellowDeck: cards.randomSample(15),
+                          //blueDeck: cards.randomSample(15),
                           aiLevel: AILevel.level3,
                         ));
                       },

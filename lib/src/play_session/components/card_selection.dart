@@ -2,7 +2,9 @@ import 'dart:math';
 
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:tableturf_mobile/src/game_internals/player.dart';
 
+import '../../game_internals/card.dart';
 import '../../style/palette.dart';
 
 import '../../game_internals/battle.dart';
@@ -45,19 +47,258 @@ class _SpeenWidgetState extends State<SpeenWidget>
       // /*
       child: Icon(
         Icons.refresh,
-        size: 36.0,
+        size: 50.0,
         color: Color.fromRGBO(255, 255, 255, 0.2),
       )
+    );
+  }
+}
 
-       //*/
-        /*
-      child: Container(
-        height: 36,
-        width: 12,
-        color: Colors.green,
-      )
+class CardFrontWidget extends StatelessWidget {
+  final TableturfCardData card;
+  final PlayerTraits traits;
 
-         */
+  const CardFrontWidget({
+    required this.card,
+    required this.traits,
+    super.key
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = context.watch<Palette>();
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final sizeRatio = constraints.maxHeight/CardWidget.CARD_HEIGHT;
+        final cornerRadius = CardWidget.CORNER_RADIUS * sizeRatio;
+        print("sizeRatio=$sizeRatio");
+
+        final countTextStyle = TextStyle(
+          fontFamily: "Splatfont1",
+          fontSize: 28.0 * sizeRatio,
+          letterSpacing: 3.5 * sizeRatio,
+          shadows: [],
+          color: Colors.white,
+        );
+
+        return Stack(
+          children: [
+            Image.asset("assets/images/card_components/bg_${card.rarity}_lv1.png"),
+            Image.asset(card.designSprite),
+            Align(
+              alignment: Alignment(0.0, -0.85),
+              child: FractionallySizedBox(
+                widthFactor: 0.8,
+                heightFactor: 0.2,
+                child: LayoutBuilder(
+                  builder: (context, constraints) {
+                    final fontSize = 36.0 * sizeRatio;
+                    final textStyle = TextStyle(
+                      fontFamily: "Splatfont1",
+                      fontSize: fontSize,
+                      letterSpacing: 0.3,
+                      shadows: [],
+                      color: Colors.white,
+                    );
+                    final Size textSize = (TextPainter(
+                      text: TextSpan(text: card.name, style: textStyle),
+                      maxLines: 1,
+                      textScaleFactor: MediaQuery.of(context).textScaleFactor,
+                      textDirection: TextDirection.ltr)
+                        ..layout()
+                    ).size;
+
+                    late final Widget colouredText;
+                    switch (card.rarity) {
+                      case "rare":
+                        colouredText = ShaderMask(
+                          shaderCallback: (bounds) {
+                            return LinearGradient(
+                              colors: const [
+                                Color.fromRGBO(254, 210, 0, 1.0),
+                                Color.fromRGBO(255, 251, 207, 1.0),
+                                Color.fromRGBO(223, 170, 13, 1.0),
+                                Color.fromRGBO(255, 252, 209, 1.0),
+                              ],
+                              stops: const [
+                                0.0,
+                                0.2,
+                                0.6,
+                                0.9,
+                              ],
+                              begin: const Alignment(-1.0, 0.2),
+                              end: const Alignment(0.9, -0.2),
+                            ).createShader(bounds);
+                          },
+                          child: Text(
+                            card.name,
+                            textAlign: TextAlign.center,
+                            style: textStyle,
+                          )
+                        );
+                        break;
+                      case "fresh":
+                        colouredText = ShaderMask(
+                          shaderCallback: (bounds) {
+                            return LinearGradient(
+                              colors: const [
+                                Color.fromRGBO(255, 147, 221, 1.0),
+                                Color.fromRGBO(254, 245, 153, 1.0),
+                                Color.fromRGBO(198, 59, 142, 1.0),
+                                Color.fromRGBO(28, 253, 194, 1.0),
+                                Color.fromRGBO(255, 149, 219, 1.0),
+                                Color.fromRGBO(255, 239, 159, 1.0),
+                              ],
+                              stops: const [
+                                0.0,
+                                0.2,
+                                0.5,
+                                0.7,
+                                0.8,
+                                0.9,
+                              ],
+                              begin: const Alignment(-1.0, -0.4),
+                              end: const Alignment(1.0, 0.4),
+                            ).createShader(bounds);
+                          },
+                          child: Text(
+                            card.name,
+                            textAlign: TextAlign.center,
+                            style: textStyle,
+                          )
+                        );
+                        break;
+                      default:
+                        colouredText = Text(
+                          card.name,
+                          textAlign: TextAlign.center,
+                          style: textStyle.copyWith(
+                            color: const Color.fromRGBO(96, 58, 255, 1.0),
+                          ),
+                        );
+                        break;
+                    }
+                    var strokeText = Stack(
+                      children: [
+                        Text(
+                          card.name,
+                          textAlign: TextAlign.center,
+                          style: textStyle.copyWith(
+                            foreground: Paint()
+                              ..style = PaintingStyle.stroke
+                              ..strokeWidth = 6.0 * sizeRatio
+                              ..strokeJoin = StrokeJoin.round
+                              ..color = Colors.black,
+                          )
+                        ),
+                        colouredText,
+                      ],
+                    );
+                    return FittedBox(
+                      fit: textSize.width <= constraints.maxWidth
+                          ? BoxFit.contain
+                          : BoxFit.fill,
+                      child: strokeText,
+                    );
+                  }
+                ),
+              )
+            ),
+            Align(
+              alignment: Alignment(0.0, 0.95),
+              child: FractionallySizedBox(
+                widthFactor: 0.95,
+                heightFactor: 0.3,
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  verticalDirection: VerticalDirection.down,
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Expanded(
+                      flex: 5,
+                      child: AspectRatio(
+                        aspectRatio: 1.0,
+                        child: Stack(
+                          children: [
+                            Image.asset("assets/images/card_components/count_${card.rarity}.png"),
+                            Center(
+                              child: Stack(
+                                children: [
+                                  Text(
+                                    card.count.toString(),
+                                    textAlign: TextAlign.center,
+                                    style: countTextStyle.copyWith(
+                                        foreground: Paint()
+                                          ..style = PaintingStyle.stroke
+                                          ..strokeWidth = 4.0 * sizeRatio
+                                          ..strokeJoin = StrokeJoin.round
+                                          ..color = {
+                                            "common": const Color.fromRGBO(60, 16, 153, 1.0),
+                                            "rare": const Color.fromRGBO(129, 116, 0, 1.0),
+                                            "fresh": const Color.fromRGBO(48, 11, 124, 1.0),
+                                          }[card.rarity] ?? Colors.black,
+                                      )
+                                  ),
+                                  Text(
+                                    card.count.toString(),
+                                    textAlign: TextAlign.center,
+                                    style: countTextStyle
+                                  ),
+                                ],
+                              )
+                            )
+                          ]
+                        ),
+                      ),
+                    ),
+                    Expanded(
+                      flex: 6,
+                      child: FractionallySizedBox(
+                        widthFactor: 0.9,
+                        heightFactor: 0.6,
+                        child: Center(
+                          child: FractionallySizedBox(
+                            heightFactor: 0.5,
+                            child: GridView.count(
+                              crossAxisCount: 5,
+                              reverse: true,
+                              padding: EdgeInsets.zero,
+                              crossAxisSpacing: 3.0 * sizeRatio,
+                              mainAxisSpacing: 5.0 * sizeRatio,
+                              children: Iterable.generate(card.special, (_) {
+                                return DecoratedBox(
+                                  decoration: BoxDecoration(
+                                    color: traits.specialColour,
+                                    border: Border.all(
+                                      width: CardPatternWidget.TILE_EDGE,
+                                      color: Colors.black,
+                                    ),
+                                  ),
+                                );
+                              }).toList(growable: false)
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                    Expanded(
+                      flex: 8,
+                      child: FractionallySizedBox(
+                        heightFactor: 0.8,
+                        widthFactor: 0.8,
+                        child: Transform.rotate(
+                          angle: 0.05 * pi,
+                          child: CardPatternWidget(card.pattern, traits)
+                        ),
+                      ),
+                    ),
+                  ]
+                ),
+              )
+            ),
+          ]
+        );
+      }
     );
   }
 }
@@ -65,11 +306,13 @@ class _SpeenWidgetState extends State<SpeenWidget>
 class CardSelectionWidget extends StatefulWidget {
   final ValueNotifier<TableturfMove?> moveNotifier;
   final TableturfBattle battle;
+  final TableturfPlayer player;
   final Color tileColour, tileSpecialColour;
 
   const CardSelectionWidget({
     super.key,
     required this.moveNotifier,
+    required this.player,
     required this.battle,
     required this.tileColour,
     required this.tileSpecialColour,
@@ -78,6 +321,7 @@ class CardSelectionWidget extends StatefulWidget {
   @override
   State<CardSelectionWidget> createState() => _CardSelectionWidgetState();
 }
+
 
 class _CardSelectionWidgetState extends State<CardSelectionWidget>
     with TickerProviderStateMixin {
@@ -100,7 +344,7 @@ class _CardSelectionWidgetState extends State<CardSelectionWidget>
       vsync: this,
     );
     confirmMoveIn = Tween<double>(
-      begin: -50,
+      begin: -0.45,
       end: 0,
     ).animate(
         CurvedAnimation(
@@ -109,7 +353,7 @@ class _CardSelectionWidgetState extends State<CardSelectionWidget>
         )
     );
     confirmMoveOut = Tween<double>(
-      begin: 50,
+      begin: 0.45,
       end: 0,
     ).animate(
         CurvedAnimation(
@@ -171,152 +415,80 @@ class _CardSelectionWidgetState extends State<CardSelectionWidget>
   }
 
   Widget _buildAwaiting(BuildContext context) {
-    final palette = context.watch<Palette>();
-    return Container(
-      decoration: BoxDecoration(
-        color: Color.fromRGBO(32, 32, 32, 0.8),
-        border: Border.all(
-          width: 1.0,
-          color: palette.cardEdge,
-        ),
-      ),
-      width: CardWidget.CARD_WIDTH,
-      height: CardWidget.CARD_HEIGHT,
-      child: Center(child: SpeenWidget()),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final palette = context.watch<Palette>();
+        final cornerRadius = CardWidget.CORNER_RADIUS * (constraints.maxHeight/CardWidget.CARD_HEIGHT);
+        return DecoratedBox(
+          decoration: BoxDecoration(
+            color: Color.fromRGBO(32, 32, 32, 0.8),
+            border: Border.all(
+              width: 1.0,
+              color: palette.cardEdge,
+            ),
+            borderRadius: BorderRadius.circular(cornerRadius),
+          ),
+          child: Center(child: SpeenWidget()),
+        );
+      }
     );
   }
 
   Widget _buildCardBack(BuildContext context) {
-    final palette = context.watch<Palette>();
-    return Container(
-      decoration: BoxDecoration(
-        color: palette.cardBackgroundSelected,
-        border: Border.all(
-          width: 1.0,
-          color: palette.cardEdge,
-        ),
-      ),
-      width: CardWidget.CARD_WIDTH,
-      height: CardWidget.CARD_HEIGHT,
-      child: Center(child: Text("Selected")),
-    );
+    return Image.asset(widget.player.cardSleeve);
   }
 
   Widget _buildCardFront(BuildContext context) {
     return ValueListenableBuilder(
-        valueListenable: widget.moveNotifier,
-        builder: (_, TableturfMove? move, __) {
-          final palette = context.watch<Palette>();
-          if (move == null) {
-            return _prevFront;
-          }
-          final card = move.card;
-          var cardFront = Container(
-              decoration: BoxDecoration(
-                color: palette.cardBackgroundSelected,
-                border: Border.all(
-                  width: 1.0,
-                  color: palette.cardEdge,
-                ),
-                boxShadow: !move.special ? [] : [
-                  BoxShadow(
-                    spreadRadius: 6.0,
-                    blurRadius: 6.0,
-                    color: move.traits.normalColour,
-                  )
-                ]
-              ),
-              width: CardWidget.CARD_WIDTH,
-              height: CardWidget.CARD_HEIGHT,
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                children: [
-                  CardPatternWidget(card.pattern, move.traits),
-                  Container(
-                    margin: EdgeInsets.only(left: 5),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.start,
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Material(
-                          color: Colors.transparent,
-                          child: Stack(
-                            children: [
-                              Container(
-                                  height: 24,
-                                  width: 24,
-                                  decoration: BoxDecoration(
-                                    color: Colors.black,
-                                    borderRadius: BorderRadius.all(Radius.circular(4)),
-                                  )
-                              ),
-                              SizedBox(
-                                  height: 24,
-                                  width: 24,
-                                  child: Center(
-                                      child: Text(
-                                          card.count.toString(),
-                                          style: TextStyle(
-                                              fontFamily: "Splatfont1",
-                                              color: Colors.white,
-                                              //fontStyle: FontStyle.italic,
-                                              fontSize: 12,
-                                              letterSpacing: 3.5
-                                          )
-                                      )
-                                  )
-                              )
-                            ],
-                          ),
-                        ),
-                        Container(
-                          margin: EdgeInsets.only(left: 3),
-                          child: Row(
-                              children: Iterable.generate(card.special, (_) {
-                                return Container(
-                                  margin: EdgeInsets.only(top: 4),
-                                  decoration: BoxDecoration(
-                                    color: move.traits.specialColour,
-                                    border: Border.all(
-                                      width: CardPatternWidget.TILE_EDGE,
-                                      color: Colors.black,
-                                    ),
-                                  ),
-                                  width: 8.0,
-                                  height: 8.0,
-                                );
-                              }).toList(growable: false)
-                          ),
-                        )
-                      ],
-                    ),
-                  ),
-                ],
-              )
-          );
-          late final newFront;
-          if (move.pass) {
-            newFront = Stack(
-                children: [
-                  cardFront,
-                  Container(
-                      height: CardWidget.CARD_HEIGHT,
-                      width: CardWidget.CARD_WIDTH,
-                      decoration: BoxDecoration(
-                        color: Color.fromRGBO(0, 0, 0, 0.4),
-                      ),
-                      child: Center(
-                          child: Text("Pass")
-                      )
-                  )
-                ]
-            );
-          } else {
-            newFront = cardFront;
-          }
-          _prevFront = newFront;
-          return newFront;
+      valueListenable: widget.moveNotifier,
+      builder: (_, TableturfMove? move, __) {
+        if (move == null) {
+          return _prevFront;
         }
+        final newFront = LayoutBuilder(
+          builder: (context, constraints) {
+            final cornerRadius = CardWidget.CORNER_RADIUS * (constraints.maxHeight/CardWidget.CARD_HEIGHT);
+            return Stack(
+              fit: StackFit.expand,
+              children: [
+                if (move.special) DecoratedBox(
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(cornerRadius),
+                    boxShadow: [
+                      BoxShadow(
+                        spreadRadius: 6.0,
+                        blurRadius: 6.0,
+                        color: move.traits.normalColour,
+                      )
+                    ]
+                  )
+                ),
+                CardFrontWidget(
+                  card: move.card.data,
+                  traits: move.traits,
+                ),
+                if (move.special) DecoratedBox(
+                  decoration: BoxDecoration(
+                    color: move.traits.normalColour.withOpacity(0.2),
+                    borderRadius: BorderRadius.circular(cornerRadius),
+                  )
+                ),
+                if (move.pass) DecoratedBox(
+                  decoration: BoxDecoration(
+                    color: Color.fromRGBO(0, 0, 0, 0.5),
+                    borderRadius: BorderRadius.circular(cornerRadius),
+                  ),
+                  child: Center(
+                    child: Text("Pass")
+                  )
+                )
+              ]
+            );
+          }
+        );
+        _prevFront = newFront;
+        return newFront;
+      }
     );
   }
 
@@ -324,62 +496,65 @@ class _CardSelectionWidgetState extends State<CardSelectionWidget>
     final front = _buildCardFront(context);
     final back = _buildCardBack(context);
     return AnimatedBuilder(
-        animation: _flipController,
-        builder: (_, __) => FlipCard(
-          skew: (1 - _flipController.value),
-          front: front,
-          back: back,
-        )
+      animation: _flipController,
+      builder: (_, __) => FlipCard(
+        skew: (1 - _flipController.value),
+        front: front,
+        back: back,
+      )
     );
   }
 
   @override
   Widget build(BuildContext context) {
-    switch (_confirmController.status) {
-      case AnimationStatus.dismissed:
-        return _buildAwaiting(context);
-      case AnimationStatus.completed:
-        return Stack(
-          children: [
-            _buildAwaiting(context),
-            _buildCard(context),
-          ],
-        );
-      case AnimationStatus.forward:
-        return Stack(
+    return LayoutBuilder(builder: (context, constraints) {
+      final height = constraints.maxHeight;
+      switch (_confirmController.status) {
+        case AnimationStatus.dismissed:
+          return _buildAwaiting(context);
+        case AnimationStatus.completed:
+          return Stack(
+            children: [
+              _buildAwaiting(context),
+              _buildCard(context),
+            ],
+          );
+        case AnimationStatus.forward:
+          return Stack(
             children: [
               _buildAwaiting(context),
               AnimatedBuilder(
-                  animation: _confirmController,
-                  child: _buildCard(context),
-                  builder: (_, child) => Opacity(
-                      opacity: confirmFadeIn.value,
-                      child: Transform.translate(
-                          offset: Offset(0, confirmMoveIn.value),
-                          child: child
-                      )
+                animation: _confirmController,
+                child: _buildCard(context),
+                builder: (_, child) => Opacity(
+                  opacity: confirmFadeIn.value,
+                  child: Transform.translate(
+                    offset: Offset(0, height * confirmMoveIn.value),
+                    child: child
                   )
+                )
               )
             ]
-        );
-      case AnimationStatus.reverse:
-        return Stack(
+          );
+        case AnimationStatus.reverse:
+          return Stack(
             children: [
               _buildAwaiting(context),
               AnimatedBuilder(
-                  animation: _confirmController,
-                  child: _buildCard(context),
-                  builder: (_, child) => Opacity(
-                      opacity: confirmFadeOut.value,
-                      child: Transform.translate(
-                          offset: Offset(confirmMoveOut.value, 0),
-                          child: child
-                      )
+                animation: _confirmController,
+                child: _buildCard(context),
+                builder: (_, child) => Opacity(
+                  opacity: confirmFadeOut.value,
+                  child: Transform.translate(
+                    offset: Offset(height * confirmMoveOut.value, 0),
+                    child: child
                   )
+                )
               )
             ]
-        );
-    }
+          );
+      }
+    });
   }
 }
 
@@ -397,18 +572,20 @@ class CardSelectionConfirmButton extends StatelessWidget {
 
   Widget _buildButton(BuildContext context) {
     final palette = context.watch<Palette>();
-    return Container(
-      decoration: BoxDecoration(
-        color: palette.buttonSelected,
-        border: Border.all(
-          width: 1.0,
-          color: palette.cardEdge,
+    return LayoutBuilder(builder: (context, constraints) {
+      final cornerRadius = CardWidget.CORNER_RADIUS * (constraints.maxHeight/CardWidget.CARD_HEIGHT);
+      return Container(
+        decoration: BoxDecoration(
+          color: palette.buttonSelected,
+          border: Border.all(
+            width: 1.0,
+            color: palette.cardEdge,
+          ),
+          borderRadius: BorderRadius.circular(cornerRadius),
         ),
-      ),
-      //width: CardWidget.CARD_WIDTH,
-      //height: CardWidget.CARD_HEIGHT,
-      child: Center(child: Text("Confirm")),
-    );
+        child: Center(child: Text("Confirm")),
+      );
+    });
   }
 
   @override
@@ -416,13 +593,32 @@ class CardSelectionConfirmButton extends StatelessWidget {
     final palette = context.watch<Palette>();
     final selectionWidget = CardSelectionWidget(
       battle: battle,
+      player: battle.yellow,
       moveNotifier: battle.yellowMoveNotifier,
       tileColour: palette.tileYellow,
       tileSpecialColour: palette.tileYellowSpecial,
     );
     return Stack(
+      fit: StackFit.expand,
       children: [
         selectionWidget,
+        AnimatedBuilder(
+          animation: Listenable.merge([
+            battle.moveCardNotifier,
+            battle.yellowMoveNotifier,
+          ]),
+          builder: (context, child) {
+            final card = battle.moveCardNotifier.value;
+            final move = battle.yellowMoveNotifier.value;
+            if (card == null || move != null) {
+              return Container();
+            }
+            return CardFrontWidget(
+              card: card.data,
+              traits: battle.yellow.traits,
+            );
+          }
+        ),
         AnimatedBuilder(
           animation: battle.yellowMoveNotifier,
           child: ValueListenableBuilder(

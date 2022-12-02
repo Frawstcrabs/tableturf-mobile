@@ -43,6 +43,7 @@ PageRouteBuilder<T> buildGameSessionPage<T>({
     deck: yellowDeckCards,
     hand: Iterable.generate(4, (c) => ValueNotifier<TableturfCard?>(null)).toList(),
     traits: const YellowTraits(),
+    cardSleeve: "assets/images/card_components/sleeve_cool.png",
     special: 0,
   );
   final bluePlayer = TableturfPlayer(

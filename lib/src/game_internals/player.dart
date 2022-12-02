@@ -26,6 +26,7 @@ class TableturfPlayer {
   final List<TableturfCard> deck;
   final List<ValueNotifier<TableturfCard?>> hand;
   final ValueNotifier<int> special;
+  final String cardSleeve;
   final PlayerTraits traits;
 
   TableturfPlayer({
@@ -33,7 +34,8 @@ class TableturfPlayer {
     required this.deck,
     required this.hand,
     required this.traits,
-    special = 0
+    this.cardSleeve = "assets/images/card_components/sleeve_default.png",
+    special = 0,
   }): special = ValueNotifier(special);
 
   void refreshHand() {

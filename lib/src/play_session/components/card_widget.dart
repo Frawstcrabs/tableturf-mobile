@@ -71,8 +71,9 @@ class CardPatternWidget extends StatelessWidget {
 }
 
 class CardWidget extends StatefulWidget {
-  static final double CARD_HEIGHT = 110;
-  static final double CARD_WIDTH = 80;
+  static final double CARD_HEIGHT = 472;
+  static final double CARD_WIDTH = 339;
+  static final double CORNER_RADIUS = 25;
   final ValueNotifier<TableturfCard?> cardNotifier;
   final TableturfBattle battle;
 
@@ -183,7 +184,7 @@ class _CardWidgetState extends State<CardWidget>
                   decoration: BoxDecoration(
                     color: Colors.black,
                     borderRadius: BorderRadius.all(Radius.circular(
-                      constraints.maxHeight * (20/CardWidget.CARD_HEIGHT)
+                      constraints.maxHeight * (80/CardWidget.CARD_HEIGHT)
                     )),
                   ),
                   child: Center(
@@ -248,20 +249,20 @@ class _CardWidgetState extends State<CardWidget>
               ),
               Opacity(
                 opacity: 0.7,
-                child: Image.asset("assets/images/card_sprites/${card.num}.png")
+                child: Image.asset(card.designSprite)
               ),
               Flex(
                 direction: isLandscape ? Axis.horizontal : Axis.vertical,
                 children: [
                   AspectRatio(
-                      aspectRatio: 1.0,
-                      child: Center(
-                          child: FractionallySizedBox(
-                              heightFactor: 0.9,
-                              widthFactor: 0.9,
-                              child: CardPatternWidget(pattern, const YellowTraits())
-                          )
+                    aspectRatio: 1.0,
+                    child: Center(
+                      child: FractionallySizedBox(
+                        heightFactor: 0.9,
+                        widthFactor: 0.9,
+                        child: CardPatternWidget(pattern, const YellowTraits())
                       )
+                    )
                   ),
                   Expanded(
                     child: Align(
@@ -316,13 +317,6 @@ class _CardWidgetState extends State<CardWidget>
     );
   }
 
-  Widget _buildAwaiting(BuildContext context) {
-    return Container(
-      width: CardWidget.CARD_WIDTH,
-      height: CardWidget.CARD_HEIGHT,
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     final palette = context.watch<Palette>();
@@ -370,42 +364,32 @@ class _CardWidgetState extends State<CardWidget>
     );
     switch (_transitionController.status) {
       case AnimationStatus.dismissed:
-        return _buildAwaiting(context);
+        return Container();
       case AnimationStatus.completed:
         return reactiveCard;
       case AnimationStatus.forward:
-        return Stack(
-          children: [
-            _buildAwaiting(context),
-            AnimatedBuilder(
-              animation: _transitionController,
+        return AnimatedBuilder(
+          animation: _transitionController,
+          child: reactiveCard,
+          builder: (_, child) => Transform.translate(
+            offset: Offset(0, transitionInMove.value),
+            child: Opacity(
+              opacity: transitionInFade.value,
               child: reactiveCard,
-              builder: (_, child) => Transform.translate(
-                offset: Offset(0, transitionInMove.value),
-                child: Opacity(
-                  opacity: transitionInFade.value,
-                  child: reactiveCard,
-                )
-              )
             )
-          ]
+          )
         );
       case AnimationStatus.reverse:
-        return Stack(
-          children: [
-            _buildAwaiting(context),
-            AnimatedBuilder(
-              animation: _transitionController,
-              child: _prevWidget,
-              builder: (_, child) => Opacity(
-                opacity: transitionOutFade.value,
-                child: Transform.scale(
-                  scale: transitionOutShrink.value,
-                  child: child,
-                )
-              )
-            ),
-          ]
+        return AnimatedBuilder(
+          animation: _transitionController,
+          child: _prevWidget,
+          builder: (_, child) => Opacity(
+            opacity: transitionOutFade.value,
+            child: Transform.scale(
+              scale: transitionOutShrink.value,
+              child: child,
+            )
+          )
         );
     }
   }

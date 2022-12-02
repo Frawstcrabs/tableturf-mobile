@@ -25,6 +25,45 @@ import 'components/card_widget.dart';
 import 'components/card_selection.dart';
 import 'components/score_counter.dart';
 
+class SpecialBackgroundPainter extends CustomPainter {
+  final bool isLandscape;
+  final Color paintColor;
+
+  static const shortSideSize = 3/4;
+
+  const SpecialBackgroundPainter(this.isLandscape, this.paintColor);
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    late final Path path;
+    final paint = Paint()
+      ..color = paintColor
+      ..style = PaintingStyle.fill;
+    if (isLandscape) {
+      path = Path()
+        ..moveTo(size.width * (1 - shortSideSize), size.height)
+        ..lineTo(size.width, size.height)
+        ..lineTo(size.width * shortSideSize, 0.0)
+        ..lineTo(0.0, 0.0)
+        ..close();
+    } else {
+      path = Path()
+        ..moveTo(0.0, size.height * (1 - shortSideSize))
+        ..moveTo(0.0, 0.0)
+        ..moveTo(size.width, size.height * shortSideSize)
+        ..moveTo(size.width, size.height)
+        ..close();
+    }
+    canvas.drawShadow(path, const Color.fromRGBO(0, 0, 0, 0.4), 5, false);
+    canvas.drawPath(path, paint);
+  }
+
+  @override
+  bool shouldRepaint(SpecialBackgroundPainter oldPainter) {
+    return true;
+  }
+}
+
 class PlaySessionScreen extends StatefulWidget {
   final TableturfBattle battle;
 
@@ -54,14 +93,17 @@ class _PlaySessionScreenState extends State<PlaySessionScreen>
       _lockInputs = true;
   Timer? tapTimer;
 
-  late final AnimationController _outroController, _turnFadeController, _scoreFadeController;
+  late final AnimationController _outroController, _turnFadeController, _scoreFadeController, _specialMoveController, _specialMovePulseController;
   late final Animation<double> scoreFade, scoreSize, turnFade, turnSize;
   late final Animation<double> outroScale, outroMove;
+  late final Animation<double> specialMoveFade, specialMoveScale;
+  late final Animation<Color?> specialMoveYellowPulse, specialMoveBluePulse;
 
   @override
   void initState() {
     super.initState();
     widget.battle.endOfGameNotifier.addListener(_onGameEnd);
+    widget.battle.specialMoveNotifier.addListener(_onSpecialMove);
 
     _scoreFadeController = AnimationController(
       duration: const Duration(milliseconds: 100),
@@ -131,6 +173,43 @@ class _PlaySessionScreenState extends State<PlaySessionScreen>
         weight: 50,
       )
     ]).animate(_outroController);
+
+    _specialMoveController = AnimationController(
+      duration: const Duration(milliseconds: 2000),
+      vsync: this
+    );
+    _specialMovePulseController = AnimationController(
+      duration: const Duration(milliseconds: 200),
+      vsync: this
+    )..repeat(reverse: true);
+
+    specialMoveYellowPulse = ColorTween(
+      begin: Colors.yellow,
+      end: Colors.orange,
+    )
+        .chain(CurveTween(curve: Curves.easeInOut))
+        .animate(_specialMovePulseController);
+    specialMoveBluePulse = ColorTween(
+      begin: Colors.blue,
+      end: Colors.purple,
+    )
+        .chain(CurveTween(curve: Curves.easeInOut))
+        .animate(_specialMovePulseController);
+    specialMoveFade = TweenSequence([
+      TweenSequenceItem(
+        tween: Tween(begin: 0.0, end: 1.0),
+        weight: 5,
+      ),
+      TweenSequenceItem(
+        tween: ConstantTween(1.0),
+        weight: 90,
+      ),
+      TweenSequenceItem(
+        tween: Tween(begin: 1.0, end: 0.0),
+        weight: 5,
+      ),
+    ]).animate(_specialMoveController);
+
     _playInitSequence();
   }
 
@@ -167,7 +246,71 @@ class _PlaySessionScreenState extends State<PlaySessionScreen>
   void dispose() {
     AudioController().musicPlayer.stop();
     widget.battle.endOfGameNotifier.removeListener(_onGameEnd);
+    widget.battle.specialMoveNotifier.removeListener(_onSpecialMove);
     super.dispose();
+  }
+
+  Future<void> _onSpecialMove() async {
+    _log.info("special move sequence started");
+    final overlayState = Overlay.of(context)!;
+    final animationLayer = OverlayEntry(builder: (_) {
+      final mediaQuery = MediaQuery.of(context);
+      final isLandscape = mediaQuery.orientation == Orientation.landscape;
+      final blueMove = widget.battle.blueMoveNotifier.value!;
+      return AnimatedBuilder(
+        animation: _specialMoveController,
+        builder: (_, __) {
+          return Opacity(
+            opacity: specialMoveFade.value,
+            child: Stack(
+              children: [
+                Align(
+                  alignment: isLandscape
+                      ? Alignment(0.2, -0.3)
+                      : Alignment(0.3, -0.2),
+                  child: FractionallySizedBox(
+                    heightFactor: isLandscape ? 0.6 : 0.1,
+                    widthFactor: isLandscape ? 0.1 : 0.6,
+                    child: AnimatedBuilder(
+                      animation: specialMoveBluePulse,
+                      builder: (_, __) {
+                        return CustomPaint(
+                          painter: SpecialBackgroundPainter(isLandscape, specialMoveBluePulse.value!)
+                        );
+                      }
+                    ),
+                  )
+                ),
+                Align(
+                  alignment: isLandscape
+                      ? Alignment(0.2, -0.3)
+                      : Alignment(0.3, -0.2),
+                  child: FractionallySizedBox(
+                    heightFactor: isLandscape ? 0.6 : 0.1,
+                    widthFactor: isLandscape ? 0.1 : 0.6,
+                    child: Transform.rotate(
+                      angle: -0.05 * pi,
+                      child: Image.asset(blueMove.card.designSprite)
+                    ),
+                  )
+                ),
+                Align(
+                  alignment: Alignment.center,
+                  child: Transform.rotate(
+                    angle: 0.45 * pi,
+                    child: Text("Special Attack!"),
+                  )
+                ),
+              ]
+            ),
+          );
+        }
+      );
+    });
+    overlayState.insert(animationLayer);
+    await _specialMoveController.forward(from: 0.0);
+    animationLayer.remove();
+    _log.info("special move sequence finished");
   }
 
   Future<void> _onGameEnd() async {
@@ -513,8 +656,6 @@ class _PlaySessionScreenState extends State<PlaySessionScreen>
               color: Colors.black,
             ),
           ),
-          height: mediaQuery.orientation == Orientation.portrait ? CardWidget.CARD_HEIGHT : 30,
-          width: mediaQuery.orientation == Orientation.landscape ? CardWidget.CARD_WIDTH : 64,
           child: Center(child: Text("Pass"))
         )
       )
@@ -571,8 +712,8 @@ class _PlaySessionScreenState extends State<PlaySessionScreen>
               color: Colors.black,
             ),
           ),
-          height: mediaQuery.orientation == Orientation.portrait ? CardWidget.CARD_HEIGHT : 30,
-          width: mediaQuery.orientation == Orientation.landscape ? CardWidget.CARD_WIDTH : 64,
+          //height: mediaQuery.orientation == Orientation.portrait ? CardWidget.CARD_HEIGHT : 30,
+          //width: mediaQuery.orientation == Orientation.landscape ? CardWidget.CARD_WIDTH : 64,
           child: Center(child: Text("Special")),
         )
       )
@@ -581,6 +722,7 @@ class _PlaySessionScreenState extends State<PlaySessionScreen>
     final blueCardSelection = CardSelectionWidget(
       key: _blueSelectionKey,
       battle: battle,
+      player: battle.blue,
       moveNotifier: battle.blueMoveNotifier,
       tileColour: palette.tileBlue,
       tileSpecialColour: palette.tileBlueSpecial,
@@ -588,6 +730,40 @@ class _PlaySessionScreenState extends State<PlaySessionScreen>
     final yellowCardSelection = CardSelectionConfirmButton(
       key: _yellowSelectionKey,
       battle: battle
+    );
+
+    final cardSelectionScaleDown = mediaQuery.orientation == Orientation.landscape ? 0.7 : 0.9;
+    final cardSelections = Column(
+      crossAxisAlignment: CrossAxisAlignment.center,
+      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+      children: [
+        Expanded(
+          flex: 1,
+          child: AspectRatio(
+            aspectRatio: CardWidget.CARD_WIDTH/CardWidget.CARD_HEIGHT,
+            child: FractionallySizedBox(
+              heightFactor: cardSelectionScaleDown,
+              widthFactor: cardSelectionScaleDown,
+              child: Center(
+                child: blueCardSelection,
+              ),
+            ),
+          ),
+        ),
+        Expanded(
+          flex: 1,
+          child: AspectRatio(
+            aspectRatio: CardWidget.CARD_WIDTH/CardWidget.CARD_HEIGHT,
+            child: FractionallySizedBox(
+              heightFactor: cardSelectionScaleDown,
+              widthFactor: cardSelectionScaleDown,
+              child: Center(
+                child: yellowCardSelection,
+              ),
+            ),
+          ),
+        ),
+      ]
     );
 
     late final screenContents;
@@ -598,38 +774,49 @@ class _PlaySessionScreenState extends State<PlaySessionScreen>
           Container(
             height: mediaQuery.padding.top + 10
           ),
-          Container(
-            padding: EdgeInsets.symmetric(horizontal: 15),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Row(
-                  children: [
-                    blueScore,
-                    Container(width: 5),
-                    SpecialMeter(player: battle.blue),
-                  ],
-                ),
-                turnCounter,
-              ]
+          Expanded(
+            flex: 1,
+            child: FractionallySizedBox(
+              widthFactor: 0.95,
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Expanded(
+                    child: Row(
+                      children: [
+                        blueScore,
+                        Container(width: 20),
+                        Expanded(child: SpecialMeter(player: battle.blue)),
+                      ],
+                    ),
+                  ),
+                  turnCounter,
+                ]
+              ),
             ),
           ),
           Expanded(
-            flex: 3,
-            child: boardWidget,
-          ),
-          Container(
-            padding: EdgeInsets.symmetric(horizontal: 15),
-            child: Row(
-              children: [
-                yellowScore,
-                Container(width: 5),
-                SpecialMeter(player: battle.yellow),
-              ],
+            flex: 12,
+            child: FractionallySizedBox(
+              heightFactor: 0.9,
+              child: boardWidget
             ),
           ),
           Expanded(
-            flex: 2,
+            flex: 1,
+            child: FractionallySizedBox(
+              widthFactor: 0.95,
+              child: Row(
+                children: [
+                  yellowScore,
+                  Container(width: 20),
+                  Expanded(child: SpecialMeter(player: battle.yellow)),
+                ],
+              ),
+            ),
+          ),
+          Expanded(
+            flex: 6,
             child: blockCursorMovement(
               child: Container(
                 padding: EdgeInsets.all(10),
@@ -658,11 +845,7 @@ class _PlaySessionScreenState extends State<PlaySessionScreen>
                       ),
                       Expanded(
                         flex: 1,
-                        child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.center,
-                            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                            children: [blueCardSelection, yellowCardSelection]
-                        ),
+                        child: cardSelections,
                       )
                     ]
                 ),
@@ -684,14 +867,24 @@ class _PlaySessionScreenState extends State<PlaySessionScreen>
             child: Row(
               children: [
                 Expanded(
-                  flex: 3,
+                  flex: 2,
                   child: Container(
                     margin: const EdgeInsets.symmetric(horizontal: 5.0),
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.spaceAround,
                       children: [
-                        SpecialMeter(player: battle.blue),
                         Expanded(
+                          flex: 1,
+                          child: Align(
+                            alignment: Alignment(-0.85, -0.9),
+                            child: FractionallySizedBox(
+                              heightFactor: 1/3,
+                              child: SpecialMeter(player: battle.blue)
+                            )
+                          )
+                        ),
+                        Expanded(
+                          flex: 5,
                           child: blockCursorMovement(
                             child: fadeOnControlLock(
                               child: Column(
@@ -708,27 +901,38 @@ class _PlaySessionScreenState extends State<PlaySessionScreen>
                             ),
                           ),
                         ),
-                        SpecialMeter(player: battle.yellow),
+                        Expanded(
+                          flex: 1,
+                          child: Align(
+                            alignment: Alignment(-0.85, 0.9),
+                            child: FractionallySizedBox(
+                              heightFactor: 1/3,
+                              child: SpecialMeter(player: battle.yellow)
+                            )
+                          )
+                        ),
                       ],
                     ),
                   ),
                 ),
-                Column(
-                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                  children: [turnCounter, blueScore, yellowScore],
+                Expanded(
+                  flex: 2,
+                  child: FractionallySizedBox(
+                    widthFactor: 2/5,
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                      children: [turnCounter, blueScore, yellowScore],
+                    ),
+                  ),
                 ),
                 Expanded(
-                  flex: 7,
+                  flex: 3,
                   child: boardWidget
                 ),
                 Expanded(
                   flex: 2,
                   child: blockCursorMovement(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.center,
-                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                      children: [blueCardSelection, yellowCardSelection]
-                    ),
+                    child: cardSelections,
                   )
                 )
               ]

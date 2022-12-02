@@ -32,6 +32,7 @@ class TableturfBattle {
   final ValueNotifier<bool> revealCardsNotifier = ValueNotifier(false);
   final ValueNotifier<bool> playerControlLock = ValueNotifier(true);
   final ChangeNotifier endOfGameNotifier = ChangeNotifier();
+  final ChangeNotifier specialMoveNotifier = ChangeNotifier();
 
   final ValueNotifier<TableturfMove?> blueMoveNotifier = ValueNotifier(null);
   final ValueNotifier<TableturfMove?> yellowMoveNotifier = ValueNotifier(null);
@@ -199,6 +200,10 @@ class TableturfBattle {
     final yellowMove = yellowMoveNotifier.value!;
     final blueMove = blueMoveNotifier.value!;
 
+    if (true) { //(yellowMove.special || blueMove.special) {
+      specialMoveNotifier.notifyListeners();
+      await Future<void>.delayed(const Duration(milliseconds: 2000));
+    }
     final audioController = AudioController();
     await audioController.playSfx(SfxType.cardFlip);
     revealCardsNotifier.value = true;

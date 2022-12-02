@@ -125,42 +125,56 @@ class _PlaySessionEndState extends State<PlaySessionEnd>
       child: Column(
         mainAxisAlignment: MainAxisAlignment.spaceEvenly,
         children: [
-          boardWidget,
-          ClipRRect(
-            borderRadius: BorderRadius.circular(scoreBarHeight),
-            child: Container(
-              height: scoreBarHeight,
-              width: scoreBarWidth,
-              decoration: BoxDecoration(
-                color: Colors.black38,
-              ),
-              child: AnimatedBuilder(
-                animation: _scoreBarAnimator,
-                builder: (_, __) {
-                  return Stack(
-                    children: [
-                      Positioned(
-                        left: 0,
-                        child: Container(
-                          color: const BlueTraits().normalColour,
-                          height: scoreBarHeight,
-                          width: scoreBarWidth * blueScoreAnimation.value,
-                        ),
-                      ),
-                      Positioned(
-                        right: 0,
-                        child: Container(
-                          color: const YellowTraits().normalColour,
-                          height: scoreBarHeight,
-                          width: scoreBarWidth * yellowScoreAnimation.value,
-                        ),
-                      ),
-                    ],
-                  );
-                }
+          Container(
+            height: mediaQuery.padding.top + 10
+          ),
+          Expanded(
+            flex: 5,
+            child: boardWidget
+          ),
+          Expanded(
+            flex: 1,
+            child: Center(
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(scoreBarHeight),
+                child: Container(
+                  height: scoreBarHeight,
+                  width: scoreBarWidth,
+                  decoration: BoxDecoration(
+                    color: Colors.black38,
+                  ),
+                  child: AnimatedBuilder(
+                    animation: _scoreBarAnimator,
+                    builder: (_, __) {
+                      return Stack(
+                        children: [
+                          Positioned(
+                            left: 0,
+                            child: Container(
+                              color: const BlueTraits().normalColour,
+                              height: scoreBarHeight,
+                              width: scoreBarWidth * blueScoreAnimation.value,
+                            ),
+                          ),
+                          Positioned(
+                            right: 0,
+                            child: Container(
+                              color: const YellowTraits().normalColour,
+                              height: scoreBarHeight,
+                              width: scoreBarWidth * yellowScoreAnimation.value,
+                            ),
+                          ),
+                        ],
+                      );
+                    }
+                  ),
+                ),
               ),
             ),
           ),
+          Container(
+            height: mediaQuery.padding.bottom + 5,
+          )
         ],
       ),
     );

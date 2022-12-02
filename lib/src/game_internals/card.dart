@@ -141,8 +141,17 @@ class TableturfCardData {
   final TileGrid minPattern;
   final int count;
   final Coords selectPoint;
+  final String designSprite;
 
-  TableturfCardData(this.num, this.name, this.rarity, this.special, this.pattern):
+  TableturfCardData(
+      this.num,
+      this.name,
+      this.rarity,
+      this.special,
+      this.pattern,
+      [String? design]
+  ):
+      designSprite = design ?? "assets/images/card_illustrations/${num}.png",
       count = countLayout(pattern),
       minPattern = getMinPattern(pattern),
       selectPoint = (() {
@@ -222,4 +231,5 @@ class TableturfCard {
   TileGrid get minPattern => data.minPattern;
   int get count => data.count;
   Coords get selectPoint => data.selectPoint;
+  String get designSprite => data.designSprite;
 }

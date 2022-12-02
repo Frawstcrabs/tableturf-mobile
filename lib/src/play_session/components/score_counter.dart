@@ -156,7 +156,7 @@ class _ScoreCounterState extends State<ScoreCounter>
       width: diameter/2,
       height: diameter/2,
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(999),
+        shape: BoxShape.circle,
         color: _scoreDiff > 0 ? widget.traits.scoreCountShadow : Colors.grey,
       ),
       child: Center(
@@ -191,7 +191,7 @@ class _ScoreCounterState extends State<ScoreCounter>
           child: Scaffold(
             backgroundColor: Colors.transparent,
             body: Transform.translate(
-              offset: Offset(-2, -1),
+              offset: Offset(-1, -0.5),
               child: Center(
                 child: FractionallySizedBox(
                   heightFactor: 0.9,
@@ -222,7 +222,7 @@ class _ScoreCounterState extends State<ScoreCounter>
             width: diameter,
             height: diameter,
             decoration: BoxDecoration(
-              borderRadius: BorderRadius.all(Radius.circular(999)),
+              shape: BoxShape.circle,
               color: widget.traits.scoreCountBackground
             ),
             child: Transform.scale(

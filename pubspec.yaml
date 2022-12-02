@@ -36,7 +36,8 @@ flutter:
 
   assets:
     - assets/images/
-    - assets/images/card_sprites/
+    - assets/images/card_illustrations/
+    - assets/images/card_components/
     - assets/music/
     - assets/sfx/
     - assets/cards.json
