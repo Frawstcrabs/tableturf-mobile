@@ -542,7 +542,6 @@ class _PlaySessionScreenState extends State<PlaySessionScreen>
       battle: battle,
       key: _boardTileKey,
       onTileSize: (ts) => tileSize = ts,
-      flightIdentifier: "session",
     );
 
     final turnCounter = AnimatedBuilder(

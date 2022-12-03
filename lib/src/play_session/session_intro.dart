@@ -117,8 +117,7 @@ class _PlaySessionIntroState extends State<PlaySessionIntro>
     final screen = Container(
       color: palette.backgroundPlaySession,
       child: buildBoardWidget(
-        battle: battle,
-        flightIdentifier: "intro",
+        battle: battle
       ),
     );
 

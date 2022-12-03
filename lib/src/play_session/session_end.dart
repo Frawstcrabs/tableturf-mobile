@@ -116,8 +116,7 @@ class _PlaySessionEndState extends State<PlaySessionEnd>
     final scoreBarWidth = mediaQuery.size.width * 0.8;
 
     final boardWidget = buildBoardWidget(
-      battle: widget.battle,
-      flightIdentifier: "outro"
+      battle: widget.battle
     );
 
     final screen = Container(

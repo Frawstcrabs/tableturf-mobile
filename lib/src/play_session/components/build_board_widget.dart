@@ -16,7 +16,7 @@ double getTileSize(double pixelSize, int tileCount, double edgeWidth) {
  * Mostly just to keep all this in one place since this
  * needs to be built across 3 different pages
  */
-Widget buildBoardWidget({required TableturfBattle battle, Key? key, Function(double)? onTileSize, required String flightIdentifier}) {
+Widget buildBoardWidget({required TableturfBattle battle, Key? key, void Function(double)? onTileSize}) {
   final boardBuilder = LayoutBuilder(
     builder: (context, constraints) {
       final mediaQuery = MediaQuery.of(context);
@@ -65,7 +65,7 @@ Widget buildBoardWidget({required TableturfBattle battle, Key? key, Function(dou
       // the board won't change in size as it moves between pages, which we want
       // this makes it so the in-flight board is in the flight context, which does
       // change size between page
-      print("Building flight of screen $flightIdentifier");
+      //print("Building flight of screen $flightIdentifier");
       return boardBuilder;
     },
     child: boardBuilder,
