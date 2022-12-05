@@ -55,6 +55,7 @@ enum SfxType {
   normalMoveConflict,
   cursorMove,
   cursorRotate,
+  specialCutIn,
   turnCountNormal,
   turnCountEnding,
 }

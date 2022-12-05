@@ -199,12 +199,13 @@ class TableturfBattle {
     _log.info("turn triggered");
     final yellowMove = yellowMoveNotifier.value!;
     final blueMove = blueMoveNotifier.value!;
-
-    if (true) { //(yellowMove.special || blueMove.special) {
-      specialMoveNotifier.notifyListeners();
-      await Future<void>.delayed(const Duration(milliseconds: 2000));
-    }
     final audioController = AudioController();
+
+    if (yellowMove.special || blueMove.special) {
+      audioController.playSfx(SfxType.specialCutIn);
+      specialMoveNotifier.notifyListeners();
+      await Future<void>.delayed(const Duration(milliseconds: 1600));
+    }
     await audioController.playSfx(SfxType.cardFlip);
     revealCardsNotifier.value = true;
     yellowMove.card.hasBeenPlayed = true;

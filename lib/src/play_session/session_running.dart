@@ -48,10 +48,10 @@ class SpecialBackgroundPainter extends CustomPainter {
         ..close();
     } else {
       path = Path()
-        ..moveTo(0.0, size.height * (1 - shortSideSize))
-        ..moveTo(0.0, 0.0)
-        ..moveTo(size.width, size.height * shortSideSize)
-        ..moveTo(size.width, size.height)
+        ..moveTo(0.0, size.height * shortSideSize)
+        ..lineTo(0.0, 0.0)
+        ..lineTo(size.width, size.height * (1 - shortSideSize))
+        ..lineTo(size.width, size.height)
         ..close();
     }
     canvas.drawShadow(path, const Color.fromRGBO(0, 0, 0, 0.4), 5, false);
@@ -97,6 +97,7 @@ class _PlaySessionScreenState extends State<PlaySessionScreen>
   late final Animation<double> scoreFade, scoreSize, turnFade, turnSize;
   late final Animation<double> outroScale, outroMove;
   late final Animation<double> specialMoveFade, specialMoveScale;
+  late final Animation<double> specialMoveImageOffset;
   late final Animation<Color?> specialMoveYellowPulse, specialMoveBluePulse;
 
   @override
@@ -116,9 +117,7 @@ class _PlaySessionScreenState extends State<PlaySessionScreen>
     scoreSize = Tween(
       begin: 1.3,
       end: 1.0,
-    ).chain(
-        CurveTween(curve: Curves.easeOut)
-    ).animate(_scoreFadeController);
+    ).chain(CurveTween(curve: Curves.easeOut)).animate(_scoreFadeController);
 
     _turnFadeController = AnimationController(
       duration: const Duration(milliseconds: 200),
@@ -127,15 +126,11 @@ class _PlaySessionScreenState extends State<PlaySessionScreen>
     turnFade = Tween(
       begin: 0.0,
       end: 1.0,
-    ).chain(
-      CurveTween(curve: Curves.easeOut)
-    ).animate(_turnFadeController);
+    ).chain(CurveTween(curve: Curves.easeOut)).animate(_turnFadeController);
     turnSize = Tween(
       begin: 1.3,
       end: 1.0,
-    ).chain(
-      CurveTween(curve: Curves.bounceOut)
-    ).animate(_turnFadeController);
+    ).chain(CurveTween(curve: Curves.bounceOut)).animate(_turnFadeController);
 
     _outroController = AnimationController(
       duration: const Duration(milliseconds: 550),
@@ -175,26 +170,22 @@ class _PlaySessionScreenState extends State<PlaySessionScreen>
     ]).animate(_outroController);
 
     _specialMoveController = AnimationController(
-      duration: const Duration(milliseconds: 2000),
+      duration: const Duration(milliseconds: 1600),
       vsync: this
     );
     _specialMovePulseController = AnimationController(
-      duration: const Duration(milliseconds: 200),
+      duration: const Duration(milliseconds: 175),
       vsync: this
     )..repeat(reverse: true);
 
     specialMoveYellowPulse = ColorTween(
       begin: Colors.yellow,
       end: Colors.orange,
-    )
-        .chain(CurveTween(curve: Curves.easeInOut))
-        .animate(_specialMovePulseController);
+    ).chain(CurveTween(curve: Curves.easeInOut)).animate(_specialMovePulseController);
     specialMoveBluePulse = ColorTween(
       begin: Colors.blue,
       end: Colors.purple,
-    )
-        .chain(CurveTween(curve: Curves.easeInOut))
-        .animate(_specialMovePulseController);
+    ).chain(CurveTween(curve: Curves.easeInOut)).animate(_specialMovePulseController);
     specialMoveFade = TweenSequence([
       TweenSequenceItem(
         tween: Tween(begin: 0.0, end: 1.0),
@@ -206,6 +197,38 @@ class _PlaySessionScreenState extends State<PlaySessionScreen>
       ),
       TweenSequenceItem(
         tween: Tween(begin: 1.0, end: 0.0),
+        weight: 5,
+      ),
+    ]).animate(_specialMoveController);
+    specialMoveScale = TweenSequence([
+      TweenSequenceItem(
+        tween: Tween(begin: 0.3, end: 1.0)
+            .chain(CurveTween(curve: Curves.easeOut)),
+        weight: 5,
+      ),
+      TweenSequenceItem(
+        tween: ConstantTween(1.0),
+        weight: 90,
+      ),
+      TweenSequenceItem(
+        tween: Tween(begin: 1.0, end: 0.3)
+            .chain(CurveTween(curve: Curves.easeIn)),
+        weight: 5,
+      ),
+    ]).animate(_specialMoveController);
+    specialMoveImageOffset = TweenSequence([
+      TweenSequenceItem(
+        tween: Tween(begin: -1.0, end: 0.0)
+            .chain(CurveTween(curve: Curves.easeOut)),
+        weight: 5,
+      ),
+      TweenSequenceItem(
+        tween: ConstantTween(0.0),
+        weight: 90,
+      ),
+      TweenSequenceItem(
+        tween: Tween(begin: 0.0, end: 1.0)
+            .chain(CurveTween(curve: Curves.easeIn)),
         weight: 5,
       ),
     ]).animate(_specialMoveController);
@@ -257,6 +280,31 @@ class _PlaySessionScreenState extends State<PlaySessionScreen>
       final mediaQuery = MediaQuery.of(context);
       final isLandscape = mediaQuery.orientation == Orientation.landscape;
       final blueMove = widget.battle.blueMoveNotifier.value!;
+      final yellowMove = widget.battle.yellowMoveNotifier.value!;
+      final yellowSpecial = yellowMove.special;
+      final blueSpecial = blueMove.special;
+
+      final blueAlignment = yellowSpecial
+          ? (isLandscape ? Alignment(0.3, -0.8) : Alignment(0.8, -0.3))
+          : (isLandscape ? Alignment(0.15, -0.8) : Alignment(0.8, -0.15));
+      final yellowAlignment = blueSpecial
+          ? (isLandscape ? Alignment(-0.3, 0.8) : Alignment(-0.8, 0.3))
+          : (isLandscape ? Alignment(-0.15, 0.8) : Alignment(-0.8, 0.15));
+      final textAlignment = (blueSpecial && !yellowSpecial)
+          ? (isLandscape ? Alignment(-0.15, 0.0) : Alignment(0.0, 0.15))
+          : (!blueSpecial && yellowSpecial)
+          ? (isLandscape ? Alignment(0.15, 0.0) : Alignment(0.0, -0.15))
+          : Alignment.center;
+      final textStyle = TextStyle(
+        fontFamily: "Splatfont1",
+        shadows: [
+          BoxShadow(
+            color: Color.fromRGBO(0, 0, 0, 0.3),
+            offset: Offset(1.5, 1.5),
+          )
+        ]
+      );
+
       return AnimatedBuilder(
         animation: _specialMoveController,
         builder: (_, __) {
@@ -264,13 +312,32 @@ class _PlaySessionScreenState extends State<PlaySessionScreen>
             opacity: specialMoveFade.value,
             child: Stack(
               children: [
-                Align(
-                  alignment: isLandscape
-                      ? Alignment(0.2, -0.3)
-                      : Alignment(0.3, -0.2),
+                SizedBox(
+                  width: mediaQuery.size.width,
+                  height: mediaQuery.size.height,
+                  child: DecoratedBox(
+                    decoration: BoxDecoration(
+                      gradient: RadialGradient(
+                        radius: 1.6,
+                        colors: const [
+                          Color.fromRGBO(75, 57, 166, 0.6),
+                          Color.fromRGBO(0, 0, 0, 0.4),
+                          Color.fromRGBO(0, 0, 0, 0.7),
+                        ],
+                        stops: const [
+                          0.2,
+                          0.6,
+                          1.0
+                        ]
+                      )
+                    )
+                  ),
+                ),
+                if (blueSpecial) Align(
+                  alignment: blueAlignment,
                   child: FractionallySizedBox(
-                    heightFactor: isLandscape ? 0.6 : 0.1,
-                    widthFactor: isLandscape ? 0.1 : 0.6,
+                    heightFactor: isLandscape ? 0.6 : 0.15 * specialMoveScale.value,
+                    widthFactor: isLandscape ? 0.2 * specialMoveScale.value : 0.8,
                     child: AnimatedBuilder(
                       animation: specialMoveBluePulse,
                       builder: (_, __) {
@@ -281,25 +348,106 @@ class _PlaySessionScreenState extends State<PlaySessionScreen>
                     ),
                   )
                 ),
-                Align(
-                  alignment: isLandscape
-                      ? Alignment(0.2, -0.3)
-                      : Alignment(0.3, -0.2),
+                if (blueSpecial) Align(
+                  alignment: blueAlignment,
                   child: FractionallySizedBox(
-                    heightFactor: isLandscape ? 0.6 : 0.1,
-                    widthFactor: isLandscape ? 0.1 : 0.6,
-                    child: Transform.rotate(
-                      angle: -0.05 * pi,
-                      child: Image.asset(blueMove.card.designSprite)
+                    heightFactor: isLandscape ? 0.6 : 0.3,
+                    widthFactor: isLandscape ? 0.2 : 0.6,
+                    child: Transform.translate(
+                      offset: Offset(
+                        0.0,
+                        specialMoveImageOffset.value * mediaQuery.size.height * (isLandscape ? 0.1 : 0.05)
+                      ),
+                      child: Transform.scale(
+                        scaleX: specialMoveScale.value,
+                        scaleY: 1.3 - (specialMoveScale.value * 0.3),
+                        child: Transform.rotate(
+                          angle: -0.05 * pi,
+                          child: Stack(
+                            children: [
+                              Transform.translate(
+                                offset: Offset(3, 3),
+                                child: Image.asset(
+                                  blueMove.card.designSprite,
+                                  color: Color.fromRGBO(184, 139, 254, 1.0)
+                                )
+                              ),
+                              Image.asset(blueMove.card.designSprite),
+                            ],
+                          )
+                        ),
+                      ),
+                    ),
+                  )
+                ),
+                if (yellowSpecial) Align(
+                  alignment: yellowAlignment,
+                  child: FractionallySizedBox(
+                    heightFactor: isLandscape ? 0.6 : 0.15 * specialMoveScale.value,
+                    widthFactor: isLandscape ? 0.2 * specialMoveScale.value : 0.8,
+                    child: AnimatedBuilder(
+                      animation: specialMoveYellowPulse,
+                      builder: (_, __) {
+                        return CustomPaint(
+                          painter: SpecialBackgroundPainter(isLandscape, specialMoveYellowPulse.value!)
+                        );
+                      }
+                    ),
+                  )
+                ),
+                if (yellowSpecial) Align(
+                  alignment: yellowAlignment,
+                  child: FractionallySizedBox(
+                    heightFactor: isLandscape ? 0.6 : 0.3,
+                    widthFactor: isLandscape ? 0.2 : 0.6,
+                    child: Transform.translate(
+                      offset: Offset(
+                        0.0,
+                        specialMoveImageOffset.value * mediaQuery.size.height * (isLandscape ? -0.1 : -0.05)
+                      ),
+                      child: Transform.scale(
+                        scaleX: specialMoveScale.value,
+                        scaleY: 1.3 - (specialMoveScale.value * 0.3),
+                        child: Transform.rotate(
+                          angle: -0.05 * pi,
+                          child: Stack(
+                            children: [
+                              Transform.translate(
+                                offset: Offset(3, 3),
+                                child: Image.asset(
+                                  yellowMove.card.designSprite,
+                                  color: Color.fromRGBO(236, 255, 55, 1.0)
+                                )
+                              ),
+                              Image.asset(yellowMove.card.designSprite),
+                            ],
+                          )
+                        ),
+                      ),
                     ),
                   )
                 ),
                 Align(
-                  alignment: Alignment.center,
-                  child: Transform.rotate(
-                    angle: 0.45 * pi,
-                    child: Text("Special Attack!"),
-                  )
+                  alignment: textAlignment,
+                  child: SizedBox(
+                    width: isLandscape ? mediaQuery.size.height * 0.7 : mediaQuery.size.width * 0.7,
+                    child: FittedBox(
+                      fit: BoxFit.fitWidth,
+                      child: Transform.rotate(
+                        angle: isLandscape ? 0.45 * pi : 0.05 * pi,
+                        child: DefaultTextStyle(
+                          style: textStyle.copyWith(
+                            color: (blueSpecial && !yellowSpecial)
+                                ? Color.fromRGBO(184, 139, 254, 1.0)
+                                : (!blueSpecial && yellowSpecial)
+                                ? Color.fromRGBO(236, 255, 55, 1.0)
+                                : Colors.white,
+                          ),
+                          child: Text("Special Attack!"),
+                        ),
+                      ),
+                    ),
+                  ),
                 ),
               ]
             ),
@@ -480,7 +628,9 @@ class _PlaySessionScreenState extends State<PlaySessionScreen>
     final battle = widget.battle;
     if (_buttonPressed) return;
     if (details.kind == PointerDeviceKind.mouse) {
-      battle.confirmMove();
+      if (widget.battle.playerControlLock.value) {
+        battle.confirmMove();
+      }
     } else {
       _resetPiecePosition(context);
       _tapTimeExceeded = false;
