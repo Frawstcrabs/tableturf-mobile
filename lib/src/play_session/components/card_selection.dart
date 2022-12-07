@@ -88,7 +88,7 @@ class CardFrontWidget extends StatelessWidget {
             Align(
               alignment: Alignment(0.0, -0.85),
               child: FractionallySizedBox(
-                widthFactor: 0.8,
+                widthFactor: 1.0,
                 heightFactor: 0.2,
                 child: LayoutBuilder(
                   builder: (context, constraints) {
@@ -98,7 +98,9 @@ class CardFrontWidget extends StatelessWidget {
                       fontSize: fontSize,
                       letterSpacing: 0.3,
                       shadows: [],
-                      color: Colors.white,
+                      color: {
+                        "common": const Color.fromRGBO(96, 58, 255, 1.0),
+                      }[card.rarity] ?? Colors.white,
                     );
                     final Size textSize = (TextPainter(
                       text: TextSpan(text: card.name, style: textStyle),
@@ -108,10 +110,37 @@ class CardFrontWidget extends StatelessWidget {
                         ..layout()
                     ).size;
 
-                    late final Widget colouredText;
+                    var strokeText = FractionallySizedBox(
+                      widthFactor: 0.8,
+                      child: FittedBox(
+                          fit: textSize.width <= constraints.maxWidth
+                              ? BoxFit.contain
+                              : BoxFit.fill,
+                          child: Stack(
+                            children: [
+                              Text(
+                                  card.name,
+                                  textAlign: TextAlign.center,
+                                  style: textStyle.copyWith(
+                                    foreground: Paint()
+                                      ..style = PaintingStyle.stroke
+                                      ..strokeWidth = 6.0 * sizeRatio
+                                      ..strokeJoin = StrokeJoin.round
+                                      ..color = Colors.black,
+                                  )
+                              ),
+                              Text(
+                                card.name,
+                                textAlign: TextAlign.center,
+                                style: textStyle,
+                              ),
+                            ],
+                          )
+                      ),
+                    );
                     switch (card.rarity) {
                       case "rare":
-                        colouredText = ShaderMask(
+                        return ShaderMask(
                           shaderCallback: (bounds) {
                             return LinearGradient(
                               colors: const [
@@ -123,83 +152,47 @@ class CardFrontWidget extends StatelessWidget {
                               stops: const [
                                 0.0,
                                 0.2,
-                                0.6,
+                                0.55,
                                 0.9,
                               ],
-                              begin: const Alignment(-1.0, 0.2),
-                              end: const Alignment(0.9, -0.2),
+                              begin: const Alignment(-1.0, 0.15),
+                              end: const Alignment(1.0, -0.15),
                             ).createShader(bounds);
                           },
-                          child: Text(
-                            card.name,
-                            textAlign: TextAlign.center,
-                            style: textStyle,
-                          )
+                          child: strokeText,
                         );
-                        break;
                       case "fresh":
-                        colouredText = ShaderMask(
+                        return ShaderMask(
                           shaderCallback: (bounds) {
+                            const boundOvershoot = 1.05;
                             return LinearGradient(
                               colors: const [
                                 Color.fromRGBO(255, 147, 221, 1.0),
                                 Color.fromRGBO(254, 245, 153, 1.0),
                                 Color.fromRGBO(198, 59, 142, 1.0),
+                                Color.fromRGBO(131, 122, 211, 1.0),
                                 Color.fromRGBO(28, 253, 194, 1.0),
                                 Color.fromRGBO(255, 149, 219, 1.0),
                                 Color.fromRGBO(255, 239, 159, 1.0),
                               ],
                               stops: const [
-                                0.0,
-                                0.2,
-                                0.5,
-                                0.7,
-                                0.8,
-                                0.9,
+                                0.05,
+                                0.22,
+                                0.50,
+                                0.60,
+                                0.75,
+                                0.90,
+                                1.00,
                               ],
-                              begin: const Alignment(-1.0, -0.4),
-                              end: const Alignment(1.0, 0.4),
+                              begin: const Alignment(-boundOvershoot, -0.35 * boundOvershoot),
+                              end: const Alignment(boundOvershoot, 0.35 * boundOvershoot),
                             ).createShader(bounds);
                           },
-                          child: Text(
-                            card.name,
-                            textAlign: TextAlign.center,
-                            style: textStyle,
-                          )
+                          child: strokeText,
                         );
-                        break;
                       default:
-                        colouredText = Text(
-                          card.name,
-                          textAlign: TextAlign.center,
-                          style: textStyle.copyWith(
-                            color: const Color.fromRGBO(96, 58, 255, 1.0),
-                          ),
-                        );
-                        break;
+                        return strokeText;
                     }
-                    var strokeText = Stack(
-                      children: [
-                        Text(
-                          card.name,
-                          textAlign: TextAlign.center,
-                          style: textStyle.copyWith(
-                            foreground: Paint()
-                              ..style = PaintingStyle.stroke
-                              ..strokeWidth = 6.0 * sizeRatio
-                              ..strokeJoin = StrokeJoin.round
-                              ..color = Colors.black,
-                          )
-                        ),
-                        colouredText,
-                      ],
-                    );
-                    return FittedBox(
-                      fit: textSize.width <= constraints.maxWidth
-                          ? BoxFit.contain
-                          : BoxFit.fill,
-                      child: strokeText,
-                    );
                   }
                 ),
               )
