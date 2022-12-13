@@ -272,6 +272,11 @@ class _PlaySessionScreenState extends State<PlaySessionScreen>
     AudioController().musicPlayer.stop();
     widget.battle.endOfGameNotifier.removeListener(_onGameEnd);
     widget.battle.specialMoveNotifier.removeListener(_onSpecialMove);
+    _outroController.dispose();
+    _turnFadeController.dispose();
+    _scoreFadeController.dispose();
+    _specialMoveController.dispose();
+    _specialMovePulseController.dispose();
     super.dispose();
   }
 
@@ -620,7 +625,7 @@ class _PlaySessionScreenState extends State<PlaySessionScreen>
   void _resetPiecePosition(BuildContext rootContext) {
     final battle = widget.battle;
     final boardContext = _boardTileKey.currentContext!;
-    final boardTileStep = tileSize - BoardTile.EDGE_WIDTH;
+    final boardTileStep = tileSize;
     final boardLocation = (boardContext.findRenderObject()! as RenderBox).localToGlobal(
         Offset.zero,
         ancestor: rootContext.findRenderObject()

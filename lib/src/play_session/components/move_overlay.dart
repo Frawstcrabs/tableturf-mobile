@@ -91,7 +91,6 @@ class MoveOverlayPainter extends CustomPainter {
         patternClipPath.addRect(tileRect);
       }
     }
-    //canvas.drawPath(patternClipPath, bodyPaint);
     canvas.clipPath(patternClipPath);
     canvas.save();
 
@@ -110,7 +109,6 @@ class MoveOverlayPainter extends CustomPainter {
         normalClipPath.addRect(tileRect);
       }
     }
-    //canvas.drawPath(normalClipPath, bodyPaint);
     canvas.clipPath(normalClipPath);
 
     final colourStripeWidth = tileSideLength * (1/2.25);
