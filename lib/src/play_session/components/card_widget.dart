@@ -13,11 +13,56 @@ import '../../game_internals/player.dart';
 import '../../game_internals/card.dart';
 import '../../game_internals/tile.dart';
 
-import 'build_board_widget.dart' show getTileSize;
+class CardPatternPainter extends CustomPainter {
+  static const EDGE_WIDTH = 0.0;  // effectively 1 real pixel width
+
+  final List<List<TileState>> pattern;
+  final PlayerTraits traits;
+  final double tileSideLength;
+
+  CardPatternPainter(this.pattern, this.traits, this.tileSideLength);
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final palette = const Palette();
+    final bodyPaint = Paint()
+      ..style = PaintingStyle.fill
+      ..strokeJoin = StrokeJoin.miter;
+    final edgePaint = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeJoin = StrokeJoin.miter
+      ..strokeWidth = EDGE_WIDTH
+      ..color = palette.cardTileEdge;
+    // draw
+    for (var y = 0; y < pattern.length; y++) {
+      for (var x = 0; x < pattern[0].length; x++) {
+        final state = pattern[y][x];
+        if (state == TileState.empty) continue;
+
+        bodyPaint.color = state == TileState.unfilled ? palette.cardTileUnfilled
+            : state == TileState.yellow ? traits.normalColour
+            : state == TileState.yellowSpecial ? traits.specialColour
+            : Colors.red;
+        final tileRect = Rect.fromLTWH(
+            x * tileSideLength,
+            y * tileSideLength,
+            tileSideLength,
+            tileSideLength
+        );
+        canvas.drawRect(tileRect, bodyPaint);
+        canvas.drawRect(tileRect, edgePaint);
+      }
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) {
+    return false;
+  }
+}
 
 class CardPatternWidget extends StatelessWidget {
-  static const TILE_EDGE = 0.5;
-
+  static const EDGE_WIDTH = CardPatternPainter.EDGE_WIDTH;
   final List<List<TileState>> pattern;
   final PlayerTraits traits;
 
@@ -30,39 +75,14 @@ class CardPatternWidget extends StatelessWidget {
     return LayoutBuilder(
       builder: (context, constraints) {
         final tileStep = min(
-          getTileSize(constraints.maxHeight, pattern.length, TILE_EDGE),
-          getTileSize(constraints.maxWidth, pattern[0].length, TILE_EDGE),
-        ) - TILE_EDGE;
+          constraints.maxHeight / pattern.length,
+          constraints.maxWidth / pattern[0].length,
+        );
         return SizedBox(
-          height: pattern.length * tileStep + TILE_EDGE,
-          width: pattern[0].length * tileStep + TILE_EDGE,
-          child: Stack(
-            children: pattern.asMap().entries.expand((entry) {
-              int y = entry.key;
-              var row = entry.value;
-              return row.asMap().entries.map((entry) {
-                int x = entry.key;
-                var tile = entry.value;
-                return Positioned(
-                  top: y * tileStep,
-                  left: x * tileStep,
-                  child: Container(
-                    decoration: BoxDecoration(
-                      color: tile == TileState.unfilled ? palette.cardTileUnfilled
-                          : tile == TileState.yellow ? traits.normalColour
-                          : tile == TileState.yellowSpecial ? traits.specialColour
-                          : Colors.red,
-                      border: Border.all(
-                        width: TILE_EDGE,
-                        color: palette.cardTileEdge,
-                      ),
-                    ),
-                    width: tileStep + TILE_EDGE,
-                    height: tileStep + TILE_EDGE,
-                  )
-                );
-              }).toList(growable: false);
-            }).toList(growable: false)
+          height: pattern.length * tileStep + CardPatternPainter.EDGE_WIDTH,
+          width: pattern[0].length * tileStep + CardPatternPainter.EDGE_WIDTH,
+          child: CustomPaint(
+            painter: CardPatternPainter(pattern, traits, tileStep),
           ),
         );
       }
@@ -224,7 +244,7 @@ class _CardWidgetState extends State<CardWidget>
                   decoration: BoxDecoration(
                     color: Palette().tileYellowSpecial,
                     border: Border.all(
-                      width: CardPatternWidget.TILE_EDGE,
+                      width: CardPatternWidget.EDGE_WIDTH,
                       color: Colors.black,
                     ),
                   ),
@@ -247,9 +267,9 @@ class _CardWidgetState extends State<CardWidget>
                   ),
                 ),
               ),
-              Opacity(
-                opacity: 0.7,
-                child: Image.asset(card.designSprite)
+              Image.asset(
+                card.designSprite,
+                opacity: const AlwaysStoppedAnimation(0.7),
               ),
               Flex(
                 direction: isLandscape ? Axis.horizontal : Axis.vertical,

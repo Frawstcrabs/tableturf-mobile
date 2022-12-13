@@ -6,11 +6,6 @@ import '../../game_internals/battle.dart';
 import 'board_widget.dart';
 import 'move_overlay.dart';
 
-double getTileSize(double pixelSize, int tileCount, double edgeWidth) {
-  final innerSize = (pixelSize - (edgeWidth * (tileCount + 1))) / tileCount;
-  return innerSize + (edgeWidth * 2);
-}
-
 /**
  * Builds the widget representing the board and move overlay
  * Mostly just to keep all this in one place since this
@@ -25,11 +20,11 @@ Widget buildBoardWidget({required TableturfBattle battle, Key? key, void Functio
       final width = constraints.maxWidth.isFinite ? constraints.maxWidth : mediaQuery.size.width;
       final boardTileSize = min(
         min(
-          getTileSize(height, board.length, BoardTile.EDGE_WIDTH),
+          height / board.length,
           (mediaQuery.size.height * 0.95) / board.length,
         ),
         min(
-          getTileSize(width, board[0].length, BoardTile.EDGE_WIDTH),
+          width / board[0].length,
           (mediaQuery.size.width * 0.95) / board[0].length,
         )
       );
@@ -39,8 +34,8 @@ Widget buildBoardWidget({required TableturfBattle battle, Key? key, void Functio
       return Center(
         child: SizedBox(
           key: key,
-          height: board.length * (boardTileSize - BoardTile.EDGE_WIDTH) + BoardTile.EDGE_WIDTH,
-          width: board[0].length * (boardTileSize - BoardTile.EDGE_WIDTH) + BoardTile.EDGE_WIDTH,
+          height: board.length * boardTileSize,
+          width: board[0].length * boardTileSize,
           child: Stack(
             children: [
               BoardWidget(

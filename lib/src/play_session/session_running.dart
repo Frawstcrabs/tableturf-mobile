@@ -27,17 +27,19 @@ import 'components/score_counter.dart';
 
 class SpecialBackgroundPainter extends CustomPainter {
   final bool isLandscape;
-  final Color paintColor;
+  final Animation<Color?> paintColor;
 
   static const shortSideSize = 3/4;
 
-  const SpecialBackgroundPainter(this.isLandscape, this.paintColor);
+  const SpecialBackgroundPainter(this.isLandscape, this.paintColor):
+    super(repaint: paintColor)
+  ;
 
   @override
   void paint(Canvas canvas, Size size) {
     late final Path path;
     final paint = Paint()
-      ..color = paintColor
+      ..color = paintColor.value ?? Colors.black
       ..style = PaintingStyle.fill;
     if (isLandscape) {
       path = Path()
@@ -295,7 +297,7 @@ class _PlaySessionScreenState extends State<PlaySessionScreen>
           : (!blueSpecial && yellowSpecial)
           ? (isLandscape ? Alignment(0.15, 0.0) : Alignment(0.0, -0.15))
           : Alignment.center;
-      final textStyle = TextStyle(
+      final textStyle = const TextStyle(
         fontFamily: "Splatfont1",
         shadows: [
           BoxShadow(
@@ -304,6 +306,12 @@ class _PlaySessionScreenState extends State<PlaySessionScreen>
           )
         ]
       );
+
+      // nice arbitrary constant i got while testing
+      // this describes a vertical background
+      const specialBackgroundAspectRatio = 0.6794055421802673;
+
+      final designSpriteScale = isLandscape ? 1.0 : 1.4;
 
       return AnimatedBuilder(
         animation: _specialMoveController,
@@ -315,16 +323,16 @@ class _PlaySessionScreenState extends State<PlaySessionScreen>
                 SizedBox(
                   width: mediaQuery.size.width,
                   height: mediaQuery.size.height,
-                  child: DecoratedBox(
+                  child: const DecoratedBox(
                     decoration: BoxDecoration(
                       gradient: RadialGradient(
                         radius: 1.6,
-                        colors: const [
+                        colors: [
                           Color.fromRGBO(75, 57, 166, 0.6),
                           Color.fromRGBO(0, 0, 0, 0.4),
                           Color.fromRGBO(0, 0, 0, 0.7),
                         ],
-                        stops: const [
+                        stops: [
                           0.2,
                           0.6,
                           1.0
@@ -334,98 +342,122 @@ class _PlaySessionScreenState extends State<PlaySessionScreen>
                   ),
                 ),
                 if (blueSpecial) Align(
-                  alignment: blueAlignment,
-                  child: FractionallySizedBox(
-                    heightFactor: isLandscape ? 0.6 : 0.15 * specialMoveScale.value,
-                    widthFactor: isLandscape ? 0.2 * specialMoveScale.value : 0.8,
-                    child: AnimatedBuilder(
-                      animation: specialMoveBluePulse,
-                      builder: (_, __) {
-                        return CustomPaint(
-                          painter: SpecialBackgroundPainter(isLandscape, specialMoveBluePulse.value!)
-                        );
-                      }
-                    ),
-                  )
-                ),
-                if (blueSpecial) Align(
-                  alignment: blueAlignment,
-                  child: FractionallySizedBox(
-                    heightFactor: isLandscape ? 0.6 : 0.3,
-                    widthFactor: isLandscape ? 0.2 : 0.6,
-                    child: Transform.translate(
-                      offset: Offset(
-                        0.0,
-                        specialMoveImageOffset.value * mediaQuery.size.height * (isLandscape ? 0.1 : 0.05)
-                      ),
-                      child: Transform.scale(
-                        scaleX: specialMoveScale.value,
-                        scaleY: 1.3 - (specialMoveScale.value * 0.3),
-                        child: Transform.rotate(
-                          angle: -0.05 * pi,
-                          child: Stack(
-                            children: [
-                              Transform.translate(
-                                offset: Offset(3, 3),
-                                child: Image.asset(
-                                  blueMove.card.designSprite,
-                                  color: Color.fromRGBO(184, 139, 254, 1.0)
-                                )
+                    alignment: blueAlignment,
+                    child: FractionallySizedBox(
+                      heightFactor: isLandscape ? 0.6 : null,
+                      widthFactor: isLandscape ? null : 0.6,
+                      child: AspectRatio(
+                        aspectRatio: isLandscape ? specialBackgroundAspectRatio : 1/specialBackgroundAspectRatio,
+                        child: Stack(
+                          fit: StackFit.expand,
+                          children: [
+                            Center(
+                              child: AnimatedBuilder(
+                                  animation: specialMoveBluePulse,
+                                  builder: (_, __) {
+                                    return FractionallySizedBox(
+                                      heightFactor: isLandscape ? 1.0 : 1.0 * specialMoveScale.value,
+                                      widthFactor: isLandscape ? 1.0 * specialMoveScale.value : 1.0,
+                                      child: CustomPaint(
+                                          painter: SpecialBackgroundPainter(
+                                            isLandscape,
+                                            specialMoveBluePulse,
+                                          )
+                                      ),
+                                    );
+                                  }
                               ),
-                              Image.asset(blueMove.card.designSprite),
-                            ],
-                          )
+                            ),
+                            Center(
+                              child: Transform.translate(
+                                offset: Offset(
+                                  0.0,
+                                  specialMoveImageOffset.value * mediaQuery.size.height * (isLandscape ? -0.1 : -0.05)
+                                ),
+                                child: Transform.scale(
+                                  scaleX: designSpriteScale * specialMoveScale.value,
+                                  scaleY: designSpriteScale * (1.3 - (specialMoveScale.value * 0.3)),
+                                  child: Transform.rotate(
+                                      angle: -0.05 * pi,
+                                      child: Stack(
+                                        children: [
+                                          Transform.translate(
+                                              offset: Offset(3, 3),
+                                              child: Image.asset(
+                                                  blueMove.card.designSprite,
+                                                  color: Color.fromRGBO(184, 139, 254, 1.0)
+                                              )
+                                          ),
+                                          Image.asset(blueMove.card.designSprite),
+                                        ],
+                                      )
+                                  ),
+                                ),
+                              ),
+                            )
+                          ],
                         ),
                       ),
-                    ),
-                  )
+                    )
                 ),
                 if (yellowSpecial) Align(
-                  alignment: yellowAlignment,
-                  child: FractionallySizedBox(
-                    heightFactor: isLandscape ? 0.6 : 0.15 * specialMoveScale.value,
-                    widthFactor: isLandscape ? 0.2 * specialMoveScale.value : 0.8,
-                    child: AnimatedBuilder(
-                      animation: specialMoveYellowPulse,
-                      builder: (_, __) {
-                        return CustomPaint(
-                          painter: SpecialBackgroundPainter(isLandscape, specialMoveYellowPulse.value!)
-                        );
-                      }
-                    ),
-                  )
-                ),
-                if (yellowSpecial) Align(
-                  alignment: yellowAlignment,
-                  child: FractionallySizedBox(
-                    heightFactor: isLandscape ? 0.6 : 0.3,
-                    widthFactor: isLandscape ? 0.2 : 0.6,
-                    child: Transform.translate(
-                      offset: Offset(
-                        0.0,
-                        specialMoveImageOffset.value * mediaQuery.size.height * (isLandscape ? -0.1 : -0.05)
-                      ),
-                      child: Transform.scale(
-                        scaleX: specialMoveScale.value,
-                        scaleY: 1.3 - (specialMoveScale.value * 0.3),
-                        child: Transform.rotate(
-                          angle: -0.05 * pi,
-                          child: Stack(
-                            children: [
-                              Transform.translate(
-                                offset: Offset(3, 3),
-                                child: Image.asset(
-                                  yellowMove.card.designSprite,
-                                  color: Color.fromRGBO(236, 255, 55, 1.0)
-                                )
+                    alignment: yellowAlignment,
+                    child: FractionallySizedBox(
+                      heightFactor: isLandscape ? 0.6 : null,
+                      widthFactor: isLandscape ? null : 0.6,
+                      child: AspectRatio(
+                        aspectRatio: isLandscape ? specialBackgroundAspectRatio : 1/specialBackgroundAspectRatio,
+                        child: Stack(
+                          fit: StackFit.expand,
+                          children: [
+                            Center(
+                              child: AnimatedBuilder(
+                                  animation: specialMoveYellowPulse,
+                                  builder: (_, __) {
+                                    return FractionallySizedBox(
+                                      heightFactor: isLandscape ? 1.0 : 1.0 * specialMoveScale.value,
+                                      widthFactor: isLandscape ? 1.0 * specialMoveScale.value : 1.0,
+                                      child: CustomPaint(
+                                        painter: SpecialBackgroundPainter(
+                                          isLandscape,
+                                          specialMoveYellowPulse,
+                                        )
+                                      ),
+                                    );
+                                  }
                               ),
-                              Image.asset(yellowMove.card.designSprite),
-                            ],
-                          )
+                            ),
+                            Center(
+                              child: Transform.translate(
+                                offset: Offset(
+                                  0.0,
+                                  specialMoveImageOffset.value * mediaQuery.size.height * (isLandscape ? -0.1 : -0.05)
+                                ),
+                                child: Transform.scale(
+                                  scaleX: designSpriteScale * specialMoveScale.value,
+                                  scaleY: designSpriteScale * (1.3 - (specialMoveScale.value * 0.3)),
+                                  child: Transform.rotate(
+                                      angle: -0.05 * pi,
+                                      child: Stack(
+                                        children: [
+                                          Transform.translate(
+                                              offset: Offset(3, 3),
+                                              child: Image.asset(
+                                                  yellowMove.card.designSprite,
+                                                  color: Color.fromRGBO(236, 255, 55, 1.0)
+                                              )
+                                          ),
+                                          Image.asset(yellowMove.card.designSprite),
+                                        ],
+                                      )
+                                  ),
+                                ),
+                              ),
+                            )
+                          ],
                         ),
                       ),
-                    ),
-                  )
+                    )
                 ),
                 Align(
                   alignment: textAlignment,
@@ -561,7 +593,7 @@ class _PlaySessionScreenState extends State<PlaySessionScreen>
         Offset.zero,
         ancestor: rootContext.findRenderObject()
     );
-    final boardTileStep = tileSize - BoardTile.EDGE_WIDTH;
+    final boardTileStep = tileSize;
     final newX = ((piecePosition!.dx - boardLocation.dx) / boardTileStep).floor();
     final newY = ((piecePosition!.dy - boardLocation.dy) / boardTileStep).floor();
     if (

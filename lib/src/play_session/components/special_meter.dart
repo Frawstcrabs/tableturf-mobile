@@ -52,7 +52,7 @@ class _SpecialTileState extends State<SpecialTile>
         decoration: BoxDecoration(
           color: widget.colour,
           border: Border.all(
-            width: CardPatternWidget.TILE_EDGE,
+            width: CardPatternWidget.EDGE_WIDTH,
             color: Colors.black,
           ),
         ),

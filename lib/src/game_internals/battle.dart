@@ -218,7 +218,6 @@ class TableturfBattle {
     // apply moves to board
     if (blueMove.pass && yellowMove.pass) {
       _log.info("no move");
-      await Future<void>.delayed(const Duration(milliseconds: 1000));
 
     } else if (blueMove.pass && !yellowMove.pass) {
       _log.info("yellow move only");
@@ -257,9 +256,7 @@ class TableturfBattle {
       await _applyConflict(blueMove, yellowMove);
     }
 
-    if (!(blueMove.pass && yellowMove.pass)) {
-      await Future<void>.delayed(const Duration(milliseconds: 1000));
-    }
+    await Future<void>.delayed(const Duration(milliseconds: 1000));
 
     final prevYellowSpecialCount = _yellowSpecialCount;
     final prevBlueSpecialCount = _blueSpecialCount;

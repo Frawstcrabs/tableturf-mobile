@@ -24,7 +24,7 @@ class _TurnCounterState extends State<TurnCounter>
   static const duration = Duration(milliseconds: 1300);
   static const darkenAmount = 0.5;
   static const focusScale = 1.4;
-  static const counterBounceHeight = 0.14;
+  static const counterBounceHeight = 0.11;
 
   @override
   void initState() {
@@ -88,6 +88,9 @@ class _TurnCounterState extends State<TurnCounter>
       ),
     ]).animate(_tickController);
 
+    // taken from bounceOut curve code
+    const bounceCurveRatio = 2.75;
+    const bounceLength = 6.0;
     _counterMove = TweenSequence([
       TweenSequenceItem(
         tween: ConstantTween(0.0),
@@ -97,19 +100,19 @@ class _TurnCounterState extends State<TurnCounter>
         tween: Tween(
           begin: 0.0,
           end: -counterBounceHeight,
-        ).chain(CurveTween(curve: Curves.easeOut)),
-        weight: 7.0,
+        ).chain(CurveTween(curve: Curves.decelerate)),
+        weight: bounceLength,
       ),
       TweenSequenceItem(
         tween: Tween(
           begin: -counterBounceHeight,
           end: 0.0,
         ).chain(CurveTween(curve: Curves.bounceOut)),
-        weight: 14.0,
+        weight: bounceLength * bounceCurveRatio,
       ),
       TweenSequenceItem(
         tween: ConstantTween(0.0),
-        weight: 73.0,
+        weight: 130.0 - 36.0 - (bounceLength * (bounceCurveRatio + 1.0))
       ),
     ]).animate(_tickController);
   }

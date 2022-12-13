@@ -44,7 +44,6 @@ class _SpeenWidgetState extends State<SpeenWidget>
   Widget build(BuildContext context) {
     return RotationTransition(
       turns: _controller,
-      // /*
       child: Icon(
         Icons.refresh,
         size: 50.0,
@@ -71,7 +70,6 @@ class CardFrontWidget extends StatelessWidget {
       builder: (context, constraints) {
         final sizeRatio = constraints.maxHeight/CardWidget.CARD_HEIGHT;
         final cornerRadius = CardWidget.CORNER_RADIUS * sizeRatio;
-        print("sizeRatio=$sizeRatio");
 
         final countTextStyle = TextStyle(
           fontFamily: "Splatfont1",
@@ -86,13 +84,12 @@ class CardFrontWidget extends StatelessWidget {
             Image.asset("assets/images/card_components/bg_${card.rarity}_lv1.png"),
             Image.asset(card.designSprite),
             Align(
-              alignment: Alignment(0.0, -0.85),
+              alignment: Alignment(0.0, -0.825),
               child: FractionallySizedBox(
-                widthFactor: 1.0,
-                heightFactor: 0.2,
+                heightFactor: 0.18,
                 child: LayoutBuilder(
                   builder: (context, constraints) {
-                    final fontSize = 36.0 * sizeRatio;
+                    final fontSize = 44.0 * sizeRatio;
                     final textStyle = TextStyle(
                       fontFamily: "Splatfont1",
                       fontSize: fontSize,
@@ -102,9 +99,9 @@ class CardFrontWidget extends StatelessWidget {
                         "common": const Color.fromRGBO(96, 58, 255, 1.0),
                       }[card.rarity] ?? Colors.white,
                     );
+
                     final Size textSize = (TextPainter(
                       text: TextSpan(text: card.name, style: textStyle),
-                      maxLines: 1,
                       textScaleFactor: MediaQuery.of(context).textScaleFactor,
                       textDirection: TextDirection.ltr)
                         ..layout()
@@ -113,8 +110,8 @@ class CardFrontWidget extends StatelessWidget {
                     var strokeText = FractionallySizedBox(
                       widthFactor: 0.8,
                       child: FittedBox(
-                          fit: textSize.width <= constraints.maxWidth
-                              ? BoxFit.contain
+                          fit: textSize.width <= constraints.maxWidth * 0.8
+                              ? BoxFit.fitHeight
                               : BoxFit.fill,
                           child: Stack(
                             children: [
@@ -142,21 +139,21 @@ class CardFrontWidget extends StatelessWidget {
                       case "rare":
                         return ShaderMask(
                           shaderCallback: (bounds) {
-                            return LinearGradient(
-                              colors: const [
+                            return const LinearGradient(
+                              colors: [
                                 Color.fromRGBO(254, 210, 0, 1.0),
                                 Color.fromRGBO(255, 251, 207, 1.0),
                                 Color.fromRGBO(223, 170, 13, 1.0),
                                 Color.fromRGBO(255, 252, 209, 1.0),
                               ],
-                              stops: const [
+                              stops: [
                                 0.0,
                                 0.2,
                                 0.55,
                                 0.9,
                               ],
-                              begin: const Alignment(-1.0, 0.15),
-                              end: const Alignment(1.0, -0.15),
+                              begin: Alignment(-1.0, 0.15),
+                              end: Alignment(1.0, -0.15),
                             ).createShader(bounds);
                           },
                           child: strokeText,
@@ -165,8 +162,8 @@ class CardFrontWidget extends StatelessWidget {
                         return ShaderMask(
                           shaderCallback: (bounds) {
                             const boundOvershoot = 1.05;
-                            return LinearGradient(
-                              colors: const [
+                            return const LinearGradient(
+                              colors: [
                                 Color.fromRGBO(255, 147, 221, 1.0),
                                 Color.fromRGBO(254, 245, 153, 1.0),
                                 Color.fromRGBO(198, 59, 142, 1.0),
@@ -175,7 +172,7 @@ class CardFrontWidget extends StatelessWidget {
                                 Color.fromRGBO(255, 149, 219, 1.0),
                                 Color.fromRGBO(255, 239, 159, 1.0),
                               ],
-                              stops: const [
+                              stops: [
                                 0.05,
                                 0.22,
                                 0.50,
@@ -184,8 +181,8 @@ class CardFrontWidget extends StatelessWidget {
                                 0.90,
                                 1.00,
                               ],
-                              begin: const Alignment(-boundOvershoot, -0.35 * boundOvershoot),
-                              end: const Alignment(boundOvershoot, 0.35 * boundOvershoot),
+                              begin: Alignment(-boundOvershoot, -0.35 * boundOvershoot),
+                              end: Alignment(boundOvershoot, 0.35 * boundOvershoot),
                             ).createShader(bounds);
                           },
                           child: strokeText,
@@ -221,16 +218,16 @@ class CardFrontWidget extends StatelessWidget {
                                     card.count.toString(),
                                     textAlign: TextAlign.center,
                                     style: countTextStyle.copyWith(
-                                        foreground: Paint()
-                                          ..style = PaintingStyle.stroke
-                                          ..strokeWidth = 4.0 * sizeRatio
-                                          ..strokeJoin = StrokeJoin.round
-                                          ..color = {
-                                            "common": const Color.fromRGBO(60, 16, 153, 1.0),
-                                            "rare": const Color.fromRGBO(129, 116, 0, 1.0),
-                                            "fresh": const Color.fromRGBO(48, 11, 124, 1.0),
-                                          }[card.rarity] ?? Colors.black,
-                                      )
+                                      foreground: Paint()
+                                        ..style = PaintingStyle.stroke
+                                        ..strokeWidth = 4.0 * sizeRatio
+                                        ..strokeJoin = StrokeJoin.round
+                                        ..color = {
+                                          "common": const Color.fromRGBO(60, 16, 153, 1.0),
+                                          "rare": const Color.fromRGBO(129, 116, 0, 1.0),
+                                          "fresh": const Color.fromRGBO(48, 11, 124, 1.0),
+                                        }[card.rarity] ?? Colors.black,
+                                    )
                                   ),
                                   Text(
                                     card.count.toString(),
@@ -245,7 +242,7 @@ class CardFrontWidget extends StatelessWidget {
                       ),
                     ),
                     Expanded(
-                      flex: 6,
+                      flex: 7,
                       child: FractionallySizedBox(
                         widthFactor: 0.9,
                         heightFactor: 0.6,
@@ -263,7 +260,7 @@ class CardFrontWidget extends StatelessWidget {
                                   decoration: BoxDecoration(
                                     color: traits.specialColour,
                                     border: Border.all(
-                                      width: CardPatternWidget.TILE_EDGE,
+                                      width: CardPatternWidget.EDGE_WIDTH,
                                       color: Colors.black,
                                     ),
                                   ),
