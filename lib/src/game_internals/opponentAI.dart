@@ -428,7 +428,7 @@ RatedMove findBestMove({
       return ratedMoves[(ratedMoves.length * selection).floor()];
 
     case AILevel.level3:
-      const lowerBound = 0.8;
+      const lowerBound = 0.9;
       const upperBound = 1.0;
       final selection = lowerBound + (Random().nextDouble() * (upperBound - lowerBound));
       return ratedMoves[(ratedMoves.length * selection).floor()];
