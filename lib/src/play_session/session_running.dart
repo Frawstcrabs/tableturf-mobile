@@ -804,58 +804,54 @@ class _PlaySessionScreenState extends State<PlaySessionScreen>
       );
     }).toList(growable: false);
 
-    final handWidget = RepaintBoundary(
-      child: Column(
-        children: [
-          Expanded(
-            child: Row(
-              children: [
-                Expanded(child: cardWidgets[0]),
-                Expanded(child: cardWidgets[1]),
-              ]
-            )
-          ),
-          Expanded(
-            child: Row(
-              children: [
-                Expanded(child: cardWidgets[2]),
-                Expanded(child: cardWidgets[3]),
-              ]
-            )
-          ),
-        ]
-      ),
+    final handWidget = Column(
+      children: [
+        Expanded(
+          child: Row(
+            children: [
+              Expanded(child: cardWidgets[0]),
+              Expanded(child: cardWidgets[1]),
+            ]
+          )
+        ),
+        Expanded(
+          child: Row(
+            children: [
+              Expanded(child: cardWidgets[2]),
+              Expanded(child: cardWidgets[3]),
+            ]
+          )
+        ),
+      ]
     );
 
-    final passButton = RepaintBoundary(
-      child: GestureDetector(
-        onTap: () {
-          if (!battle.playerControlLock.value) {
-            return;
-          }
-          battle.moveCardNotifier.value = null;
-          battle.moveLocationNotifier.value = null;
-          battle.movePassNotifier.value = !battle.movePassNotifier.value;
-          battle.moveSpecialNotifier.value = false;
-        },
-        child: AnimatedBuilder(
-          animation: battle.movePassNotifier,
-          builder: (_, __) => AnimatedContainer(
-            duration: const Duration(milliseconds: 200),
-            decoration: BoxDecoration(
-              color: battle.movePassNotifier.value
-                  ? palette.buttonSelected
-                  : palette.buttonUnselected,
-              borderRadius: BorderRadius.all(Radius.circular(4)),
-              border: Border.all(
-                width: BoardTile.EDGE_WIDTH,
-                color: Colors.black,
-              ),
+    final passButton = GestureDetector(
+      onTap: () {
+        if (!battle.playerControlLock.value) {
+          return;
+        }
+        battle.moveCardNotifier.value = null;
+        battle.moveLocationNotifier.value = null;
+        battle.movePassNotifier.value = !battle.movePassNotifier.value;
+        battle.moveSpecialNotifier.value = false;
+      },
+      child: AnimatedBuilder(
+        animation: battle.movePassNotifier,
+        builder: (_, __) => AnimatedContainer(
+          duration: const Duration(milliseconds: 200),
+          decoration: BoxDecoration(
+            color: battle.movePassNotifier.value
+                ? palette.buttonSelected
+                : palette.buttonUnselected,
+            borderRadius: BorderRadius.all(Radius.circular(4)),
+            border: Border.all(
+              width: BoardTile.EDGE_WIDTH,
+              color: Colors.black,
             ),
-            child: Center(child: Text("Pass"))
-          )
+          ),
+          child: Center(child: Text("Pass"))
         )
-      ),
+      )
     );
 
     Widget blockCursorMovement({Widget? child}) {
@@ -885,88 +881,84 @@ class _PlaySessionScreenState extends State<PlaySessionScreen>
       );
     }
 
-    final specialButton = RepaintBoundary(
-      child: GestureDetector(
-        onTap: () {
-          if (!battle.playerControlLock.value) {
-            return;
-          }
-          battle.moveCardNotifier.value = null;
-          battle.moveLocationNotifier.value = null;
-          battle.moveSpecialNotifier.value = !battle.moveSpecialNotifier.value;
-          battle.movePassNotifier.value = false;
-        },
-        child: AnimatedBuilder(
-          animation: battle.moveSpecialNotifier,
-          builder: (_, __) => AnimatedContainer(
-            duration: const Duration(milliseconds: 200),
-            decoration: BoxDecoration(
-              color: battle.moveSpecialNotifier.value
-                  ? Color.fromRGBO(216, 216, 0, 1)
-                  : Color.fromRGBO(109, 161, 198, 1),
-              borderRadius: BorderRadius.all(Radius.circular(4)),
-              border: Border.all(
-                width: BoardTile.EDGE_WIDTH,
-                color: Colors.black,
-              ),
+    final specialButton = GestureDetector(
+      onTap: () {
+        if (!battle.playerControlLock.value) {
+          return;
+        }
+        battle.moveCardNotifier.value = null;
+        battle.moveLocationNotifier.value = null;
+        battle.moveSpecialNotifier.value = !battle.moveSpecialNotifier.value;
+        battle.movePassNotifier.value = false;
+      },
+      child: AnimatedBuilder(
+        animation: battle.moveSpecialNotifier,
+        builder: (_, __) => AnimatedContainer(
+          duration: const Duration(milliseconds: 200),
+          decoration: BoxDecoration(
+            color: battle.moveSpecialNotifier.value
+                ? Color.fromRGBO(216, 216, 0, 1)
+                : Color.fromRGBO(109, 161, 198, 1),
+            borderRadius: BorderRadius.all(Radius.circular(4)),
+            border: Border.all(
+              width: BoardTile.EDGE_WIDTH,
+              color: Colors.black,
             ),
-            //height: mediaQuery.orientation == Orientation.portrait ? CardWidget.CARD_HEIGHT : 30,
-            //width: mediaQuery.orientation == Orientation.landscape ? CardWidget.CARD_WIDTH : 64,
-            child: Center(child: Text("Special")),
-          )
+          ),
+          //height: mediaQuery.orientation == Orientation.portrait ? CardWidget.CARD_HEIGHT : 30,
+          //width: mediaQuery.orientation == Orientation.landscape ? CardWidget.CARD_WIDTH : 64,
+          child: Center(child: Text("Special")),
         )
-      ),
+      )
     );
 
-    final blueCardSelection = RepaintBoundary(
+    final blueCardSelection = CardSelectionWidget(
       key: _blueSelectionKey,
-      child: CardSelectionWidget(
-        battle: battle,
-        player: battle.blue,
-        moveNotifier: battle.blueMoveNotifier,
-        tileColour: palette.tileBlue,
-        tileSpecialColour: palette.tileBlueSpecial,
-      ),
+      battle: battle,
+      player: battle.blue,
+      moveNotifier: battle.blueMoveNotifier,
+      tileColour: palette.tileBlue,
+      tileSpecialColour: palette.tileBlueSpecial,
     );
-    final yellowCardSelection = RepaintBoundary(
+    final yellowCardSelection = CardSelectionConfirmButton(
       key: _yellowSelectionKey,
-      child: CardSelectionConfirmButton(
-        battle: battle
-      ),
+      battle: battle
     );
 
     final cardSelectionScaleDown = mediaQuery.orientation == Orientation.landscape ? 0.7 : 0.9;
-    final cardSelections = Column(
-      crossAxisAlignment: CrossAxisAlignment.center,
-      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-      children: [
-        Expanded(
-          flex: 1,
-          child: AspectRatio(
-            aspectRatio: CardWidget.CARD_WIDTH/CardWidget.CARD_HEIGHT,
-            child: FractionallySizedBox(
-              heightFactor: cardSelectionScaleDown,
-              widthFactor: cardSelectionScaleDown,
-              child: Center(
-                child: blueCardSelection,
+    final cardSelections = RepaintBoundary(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+        children: [
+          Expanded(
+            flex: 1,
+            child: AspectRatio(
+              aspectRatio: CardWidget.CARD_WIDTH/CardWidget.CARD_HEIGHT,
+              child: FractionallySizedBox(
+                heightFactor: cardSelectionScaleDown,
+                widthFactor: cardSelectionScaleDown,
+                child: Center(
+                  child: blueCardSelection,
+                ),
               ),
             ),
           ),
-        ),
-        Expanded(
-          flex: 1,
-          child: AspectRatio(
-            aspectRatio: CardWidget.CARD_WIDTH/CardWidget.CARD_HEIGHT,
-            child: FractionallySizedBox(
-              heightFactor: cardSelectionScaleDown,
-              widthFactor: cardSelectionScaleDown,
-              child: Center(
-                child: yellowCardSelection,
+          Expanded(
+            flex: 1,
+            child: AspectRatio(
+              aspectRatio: CardWidget.CARD_WIDTH/CardWidget.CARD_HEIGHT,
+              child: FractionallySizedBox(
+                heightFactor: cardSelectionScaleDown,
+                widthFactor: cardSelectionScaleDown,
+                child: Center(
+                  child: yellowCardSelection,
+                ),
               ),
             ),
           ),
-        ),
-      ]
+        ]
+      ),
     );
 
     late final Widget screenContents;
@@ -1021,36 +1013,38 @@ class _PlaySessionScreenState extends State<PlaySessionScreen>
           Expanded(
             flex: 6,
             child: blockCursorMovement(
-              child: Container(
-                padding: EdgeInsets.all(10),
-                child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                    children: [
-                      Expanded(
-                        flex: 3,
-                        child: fadeOnControlLock(
-                            child: Row(
-                              children: [
-                                Expanded(
-                                  flex: 2,
-                                  child: handWidget,
-                                ),
-                                Expanded(
-                                  flex: 1,
-                                  child: Column(
-                                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                                    children: [passButton, specialButton],
+              child: RepaintBoundary(
+                child: Container(
+                  padding: EdgeInsets.all(10),
+                  child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                      children: [
+                        Expanded(
+                          flex: 3,
+                          child: fadeOnControlLock(
+                              child: Row(
+                                children: [
+                                  Expanded(
+                                    flex: 2,
+                                    child: handWidget,
                                   ),
-                                ),
-                              ],
-                            )
+                                  Expanded(
+                                    flex: 1,
+                                    child: Column(
+                                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                                      children: [passButton, specialButton],
+                                    ),
+                                  ),
+                                ],
+                              )
+                          ),
                         ),
-                      ),
-                      Expanded(
-                        flex: 1,
-                        child: cardSelections,
-                      )
-                    ]
+                        Expanded(
+                          flex: 1,
+                          child: cardSelections,
+                        )
+                      ]
+                  ),
                 ),
               ),
             ),

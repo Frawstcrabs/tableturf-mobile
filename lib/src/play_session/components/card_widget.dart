@@ -69,8 +69,6 @@ class CardPatternWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final palette = context.watch<Palette>();
-
     return LayoutBuilder(
       builder: (context, constraints) {
         final tileStep = min(
@@ -107,8 +105,8 @@ class CardWidget extends StatefulWidget {
 }
 
 class _CardWidgetState extends State<CardWidget>
-    with SingleTickerProviderStateMixin {
-  late AnimationController _transitionController;
+    with TickerProviderStateMixin {
+  late AnimationController _transitionController, _testController;
   late Animation<double> transitionOutShrink, transitionOutFade, transitionInMove, transitionInFade;
   late TableturfCard? _prevCard;
   Widget _prevWidget = Container();
@@ -116,9 +114,14 @@ class _CardWidgetState extends State<CardWidget>
   @override
   void initState() {
     _transitionController = AnimationController(
-      duration: const Duration(milliseconds: 125),
-      vsync: this
+        duration: const Duration(milliseconds: 125),
+        vsync: this
     );
+    _testController = AnimationController(
+        duration: const Duration(milliseconds: 125),
+        vsync: this
+    );
+    //_testController.repeat();
     _transitionController.addStatusListener((status) {setState(() {});});
     _transitionController.value = widget.cardNotifier.value == null ? 0.0 : 1.0;
     transitionOutShrink = Tween<double>(
@@ -342,6 +345,7 @@ class _CardWidgetState extends State<CardWidget>
     final moveCardNotifier = widget.battle.moveCardNotifier;
     var reactiveCard = AnimatedBuilder(
       animation: Listenable.merge([
+        _testController,
         widget.cardNotifier,
         widget.battle.playerControlLock,
         widget.battle.moveSpecialNotifier,

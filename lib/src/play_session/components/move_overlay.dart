@@ -187,24 +187,6 @@ class MoveOverlayPainter extends CustomPainter {
 
     canvas.restore();
 
-    canvas.save();
-    final specialClipPath = Path();
-
-    for (var y = 0; y < pattern.length; y++) {
-      for (var x = 0; x < pattern[0].length; x++) {
-        final tile = pattern[y][x];
-        if (tile != TileState.yellowSpecial) continue;
-        final tileRect = Rect.fromLTWH(
-            (drawLocation.x + x) * tileSideLength,
-            (drawLocation.y + y) * tileSideLength,
-            tileSideLength,
-            tileSideLength
-        );
-        specialClipPath.addRect(tileRect);
-      }
-    }
-    canvas.clipPath(specialClipPath);
-
     bodyPaint.color = specialColour;
     const sideDotCount = 4.0;
     final dotWidth = tileSideLength * (1/(sideDotCount * 4));
@@ -212,6 +194,13 @@ class MoveOverlayPainter extends CustomPainter {
       for (var x = 0; x < pattern[0].length; x++) {
         final tile = pattern[y][x];
         if (tile != TileState.yellowSpecial) continue;
+        canvas.save();
+        canvas.clipRect(Rect.fromLTWH(
+          (drawLocation.x + x) * tileSideLength,
+          (drawLocation.y + y) * tileSideLength,
+          tileSideLength,
+          tileSideLength
+        ));
         final dotCenter = Offset(
           (drawLocation.x + x + 0.5),
           (drawLocation.y + y + 0.5),
@@ -226,15 +215,14 @@ class MoveOverlayPainter extends CustomPainter {
             canvas.drawCircle(dotLocation, dotWidth, bodyPaint);
           }
         }
+        canvas.restore();
       }
     }
-
-    canvas.restore();
   }
 
   @override
   void paint(Canvas canvas, Size size) {
-    const drawComplex = false;
+    const drawComplex = true;
     if (drawComplex) {
       _paintComplex(canvas);
     } else {
