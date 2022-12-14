@@ -56,13 +56,13 @@ class SpecialBackgroundPainter extends CustomPainter {
         ..lineTo(size.width, size.height)
         ..close();
     }
-    canvas.drawShadow(path, const Color.fromRGBO(0, 0, 0, 0.4), 5, false);
+    canvas.drawShadow(path.shift(Offset(5, 5)), const Color.fromRGBO(0, 0, 0, 0.4), 5, false);
     canvas.drawPath(path, paint);
   }
 
   @override
   bool shouldRepaint(SpecialBackgroundPainter oldPainter) {
-    return true;
+    return false;
   }
 }
 
@@ -185,8 +185,8 @@ class _PlaySessionScreenState extends State<PlaySessionScreen>
       end: Colors.orange,
     ).chain(CurveTween(curve: Curves.easeInOut)).animate(_specialMovePulseController);
     specialMoveBluePulse = ColorTween(
-      begin: Colors.blue,
-      end: Colors.purple,
+      begin: const Color.fromRGBO(69, 53, 157, 1.0),
+      end: const Color.fromRGBO(96, 58, 255, 1.0),
     ).chain(CurveTween(curve: Curves.easeInOut)).animate(_specialMovePulseController);
     specialMoveFade = TweenSequence([
       TweenSequenceItem(
@@ -721,6 +721,7 @@ class _PlaySessionScreenState extends State<PlaySessionScreen>
 
   @override
   Widget build(BuildContext context) {
+    print("screen building");
     final battle = widget.battle;
     final palette = context.watch<Palette>();
     final mediaQuery = MediaQuery.of(context);
@@ -731,54 +732,60 @@ class _PlaySessionScreenState extends State<PlaySessionScreen>
       onTileSize: (ts) => tileSize = ts,
     );
 
-    final turnCounter = AnimatedBuilder(
-      animation: _turnFadeController,
-      child: TurnCounter(
-        battle: battle,
+    final turnCounter = RepaintBoundary(
+      child: AnimatedBuilder(
+        animation: _turnFadeController,
+        child: TurnCounter(
+          battle: battle,
+        ),
+        builder: (_, child) {
+          return Transform.scale(
+            scale: turnSize.value,
+            child: Opacity(
+              opacity: turnFade.value,
+              child: child,
+            ),
+          );
+        }
       ),
-      builder: (_, child) {
-        return Transform.scale(
-          scale: turnSize.value,
-          child: Opacity(
-            opacity: turnFade.value,
-            child: child,
-          ),
-        );
-      }
     );
-    var blueScore = AnimatedBuilder(
-      animation: _scoreFadeController,
-      child: ScoreCounter(
-          key: _blueScoreKey,
-          scoreNotifier: battle.blueCountNotifier,
-          traits: const BlueTraits()
+    final blueScore = RepaintBoundary(
+      key: _blueScoreKey,
+      child: AnimatedBuilder(
+        animation: _scoreFadeController,
+        child: ScoreCounter(
+            scoreNotifier: battle.blueCountNotifier,
+            traits: const BlueTraits()
+        ),
+        builder: (_, child) {
+          return Transform.scale(
+            scale: scoreSize.value,
+            child: Opacity(
+              opacity: scoreFade.value,
+              child: child,
+            ),
+          );
+        }
       ),
-      builder: (_, child) {
-        return Transform.scale(
-          scale: scoreSize.value,
-          child: Opacity(
-            opacity: scoreFade.value,
-            child: child,
-          ),
-        );
-      }
     );
-    final yellowScore = AnimatedBuilder(
-      animation: _scoreFadeController,
-      child: ScoreCounter(
-        key: _yellowScoreKey,
-        scoreNotifier: battle.yellowCountNotifier,
-        traits: const YellowTraits()
+    final yellowScore = RepaintBoundary(
+      key: _yellowScoreKey,
+      child: AnimatedBuilder(
+        animation: _scoreFadeController,
+        child: ScoreCounter(
+          scoreNotifier: battle.yellowCountNotifier,
+          traits: const YellowTraits()
+        ),
+        builder: (_, child) {
+          return Transform.scale(
+            scale: scoreSize.value,
+            child: Opacity(
+              opacity: scoreFade.value,
+              child: child,
+            ),
+          );
+        }
       ),
-      builder: (_, child) {
-        return Transform.scale(
-          scale: scoreSize.value,
-          child: Opacity(
-            opacity: scoreFade.value,
-            child: child,
-          ),
-        );
-      }
     );
 
     final cardWidgets = Iterable.generate(battle.yellow.hand.length, (i) {
@@ -797,54 +804,58 @@ class _PlaySessionScreenState extends State<PlaySessionScreen>
       );
     }).toList(growable: false);
 
-    final handWidget = Column(
-      children: [
-        Expanded(
-          child: Row(
-            children: [
-              Expanded(child: cardWidgets[0]),
-              Expanded(child: cardWidgets[1]),
-            ]
-          )
-        ),
-        Expanded(
-          child: Row(
-            children: [
-              Expanded(child: cardWidgets[2]),
-              Expanded(child: cardWidgets[3]),
-            ]
-          )
-        ),
-      ]
+    final handWidget = RepaintBoundary(
+      child: Column(
+        children: [
+          Expanded(
+            child: Row(
+              children: [
+                Expanded(child: cardWidgets[0]),
+                Expanded(child: cardWidgets[1]),
+              ]
+            )
+          ),
+          Expanded(
+            child: Row(
+              children: [
+                Expanded(child: cardWidgets[2]),
+                Expanded(child: cardWidgets[3]),
+              ]
+            )
+          ),
+        ]
+      ),
     );
 
-    final passButton = GestureDetector(
-      onTap: () {
-        if (!battle.playerControlLock.value) {
-          return;
-        }
-        battle.moveCardNotifier.value = null;
-        battle.moveLocationNotifier.value = null;
-        battle.movePassNotifier.value = !battle.movePassNotifier.value;
-        battle.moveSpecialNotifier.value = false;
-      },
-      child: AnimatedBuilder(
-        animation: battle.movePassNotifier,
-        builder: (_, __) => AnimatedContainer(
-          duration: const Duration(milliseconds: 200),
-          decoration: BoxDecoration(
-            color: battle.movePassNotifier.value
-                ? palette.buttonSelected
-                : palette.buttonUnselected,
-            borderRadius: BorderRadius.all(Radius.circular(4)),
-            border: Border.all(
-              width: BoardTile.EDGE_WIDTH,
-              color: Colors.black,
+    final passButton = RepaintBoundary(
+      child: GestureDetector(
+        onTap: () {
+          if (!battle.playerControlLock.value) {
+            return;
+          }
+          battle.moveCardNotifier.value = null;
+          battle.moveLocationNotifier.value = null;
+          battle.movePassNotifier.value = !battle.movePassNotifier.value;
+          battle.moveSpecialNotifier.value = false;
+        },
+        child: AnimatedBuilder(
+          animation: battle.movePassNotifier,
+          builder: (_, __) => AnimatedContainer(
+            duration: const Duration(milliseconds: 200),
+            decoration: BoxDecoration(
+              color: battle.movePassNotifier.value
+                  ? palette.buttonSelected
+                  : palette.buttonUnselected,
+              borderRadius: BorderRadius.all(Radius.circular(4)),
+              border: Border.all(
+                width: BoardTile.EDGE_WIDTH,
+                color: Colors.black,
+              ),
             ),
-          ),
-          child: Center(child: Text("Pass"))
+            child: Center(child: Text("Pass"))
+          )
         )
-      )
+      ),
     );
 
     Widget blockCursorMovement({Widget? child}) {
@@ -874,48 +885,54 @@ class _PlaySessionScreenState extends State<PlaySessionScreen>
       );
     }
 
-    final specialButton = GestureDetector(
-      onTap: () {
-        if (!battle.playerControlLock.value) {
-          return;
-        }
-        battle.moveCardNotifier.value = null;
-        battle.moveLocationNotifier.value = null;
-        battle.moveSpecialNotifier.value = !battle.moveSpecialNotifier.value;
-        battle.movePassNotifier.value = false;
-      },
-      child: AnimatedBuilder(
-        animation: battle.moveSpecialNotifier,
-        builder: (_, __) => AnimatedContainer(
-          duration: const Duration(milliseconds: 200),
-          decoration: BoxDecoration(
-            color: battle.moveSpecialNotifier.value
-                ? Color.fromRGBO(216, 216, 0, 1)
-                : Color.fromRGBO(109, 161, 198, 1),
-            borderRadius: BorderRadius.all(Radius.circular(4)),
-            border: Border.all(
-              width: BoardTile.EDGE_WIDTH,
-              color: Colors.black,
+    final specialButton = RepaintBoundary(
+      child: GestureDetector(
+        onTap: () {
+          if (!battle.playerControlLock.value) {
+            return;
+          }
+          battle.moveCardNotifier.value = null;
+          battle.moveLocationNotifier.value = null;
+          battle.moveSpecialNotifier.value = !battle.moveSpecialNotifier.value;
+          battle.movePassNotifier.value = false;
+        },
+        child: AnimatedBuilder(
+          animation: battle.moveSpecialNotifier,
+          builder: (_, __) => AnimatedContainer(
+            duration: const Duration(milliseconds: 200),
+            decoration: BoxDecoration(
+              color: battle.moveSpecialNotifier.value
+                  ? Color.fromRGBO(216, 216, 0, 1)
+                  : Color.fromRGBO(109, 161, 198, 1),
+              borderRadius: BorderRadius.all(Radius.circular(4)),
+              border: Border.all(
+                width: BoardTile.EDGE_WIDTH,
+                color: Colors.black,
+              ),
             ),
-          ),
-          //height: mediaQuery.orientation == Orientation.portrait ? CardWidget.CARD_HEIGHT : 30,
-          //width: mediaQuery.orientation == Orientation.landscape ? CardWidget.CARD_WIDTH : 64,
-          child: Center(child: Text("Special")),
+            //height: mediaQuery.orientation == Orientation.portrait ? CardWidget.CARD_HEIGHT : 30,
+            //width: mediaQuery.orientation == Orientation.landscape ? CardWidget.CARD_WIDTH : 64,
+            child: Center(child: Text("Special")),
+          )
         )
-      )
+      ),
     );
 
-    final blueCardSelection = CardSelectionWidget(
+    final blueCardSelection = RepaintBoundary(
       key: _blueSelectionKey,
-      battle: battle,
-      player: battle.blue,
-      moveNotifier: battle.blueMoveNotifier,
-      tileColour: palette.tileBlue,
-      tileSpecialColour: palette.tileBlueSpecial,
+      child: CardSelectionWidget(
+        battle: battle,
+        player: battle.blue,
+        moveNotifier: battle.blueMoveNotifier,
+        tileColour: palette.tileBlue,
+        tileSpecialColour: palette.tileBlueSpecial,
+      ),
     );
-    final yellowCardSelection = CardSelectionConfirmButton(
+    final yellowCardSelection = RepaintBoundary(
       key: _yellowSelectionKey,
-      battle: battle
+      child: CardSelectionConfirmButton(
+        battle: battle
+      ),
     );
 
     final cardSelectionScaleDown = mediaQuery.orientation == Orientation.landscape ? 0.7 : 0.9;
@@ -952,7 +969,7 @@ class _PlaySessionScreenState extends State<PlaySessionScreen>
       ]
     );
 
-    late final screenContents;
+    late final Widget screenContents;
     if (mediaQuery.orientation == Orientation.portrait) {
       screenContents = Column(
         mainAxisAlignment: MainAxisAlignment.center,
@@ -972,7 +989,7 @@ class _PlaySessionScreenState extends State<PlaySessionScreen>
                       children: [
                         blueScore,
                         Container(width: 20),
-                        Expanded(child: SpecialMeter(player: battle.blue)),
+                        Expanded(child: RepaintBoundary(child: SpecialMeter(player: battle.blue))),
                       ],
                     ),
                   ),
@@ -996,7 +1013,7 @@ class _PlaySessionScreenState extends State<PlaySessionScreen>
                 children: [
                   yellowScore,
                   Container(width: 20),
-                  Expanded(child: SpecialMeter(player: battle.yellow)),
+                  Expanded(child: RepaintBoundary(child: SpecialMeter(player: battle.yellow))),
                 ],
               ),
             ),

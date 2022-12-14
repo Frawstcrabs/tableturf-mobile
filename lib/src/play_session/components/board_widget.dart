@@ -86,8 +86,10 @@ class BoardWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return CustomPaint(
-      painter: BoardPainter(battle.board, tileSize)
+    return RepaintBoundary(
+      child: CustomPaint(
+        painter: BoardPainter(battle.board, tileSize)
+      ),
     );
   }
 }

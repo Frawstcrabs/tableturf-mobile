@@ -37,7 +37,6 @@ class CardPatternPainter extends CustomPainter {
     for (var y = 0; y < pattern.length; y++) {
       for (var x = 0; x < pattern[0].length; x++) {
         final state = pattern[y][x];
-        if (state == TileState.empty) continue;
 
         bodyPaint.color = state == TileState.unfilled ? palette.cardTileUnfilled
             : state == TileState.yellow ? traits.normalColour

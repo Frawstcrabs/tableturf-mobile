@@ -55,7 +55,7 @@ class LevelSelectionScreen extends StatelessWidget {
                           blueDeck: starterDeck.map((i) => cards[i]).toList(),
                           //yellowDeck: cards.randomSample(15),
                           //blueDeck: cards.randomSample(15),
-                          aiLevel: AILevel.level3,
+                          aiLevel: AILevel.level4,
                         ));
                       },
                       title: Text(

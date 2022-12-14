@@ -40,8 +40,61 @@ class MoveOverlayPainter extends CustomPainter {
     )
   ;
 
-  @override
-  void paint(Canvas canvas, Size size) {
+  void _paintBasic(Canvas canvas) {
+    final card = battle.moveCardNotifier.value;
+    final rot = battle.moveRotationNotifier.value;
+    final location = battle.moveLocationNotifier.value;
+    final isValid = battle.moveIsValidNotifier.value;
+    final isPassed = battle.movePassNotifier.value;
+    final isRevealed = battle.revealCardsNotifier.value;
+
+    if (card == null || location == null || isRevealed || isPassed) {
+      return;
+    }
+
+    final pattern = rotatePattern(
+        card.minPattern,
+        rot
+    );
+    final selectPoint = rotatePatternPoint(
+        card.selectPoint,
+        card.minPattern.length,
+        card.minPattern[0].length,
+        rot
+    );
+    final drawLocation = Coords(location.x - selectPoint.x, location.y - selectPoint.y);
+
+    final bodyPaint = Paint()
+      ..style = PaintingStyle.fill
+      ..strokeJoin = StrokeJoin.miter;
+
+    for (var y = 0; y < pattern.length; y++) {
+      for (var x = 0; x < pattern[0].length; x++) {
+        final tile = pattern[y][x];
+        if (tile == TileState.unfilled) continue;
+
+        if (isValid) {
+          bodyPaint.color = tile == TileState.yellow ? const Color.fromRGBO(255, 255, 17, 0.5)
+              : tile == TileState.yellowSpecial ? const Color.fromRGBO(255, 159, 4, 0.5)
+              : Color.fromRGBO(0, 0, 0, 0);
+        } else {
+          bodyPaint.color = tile == TileState.yellow ? const Color.fromRGBO(255, 255, 255, 0.5)
+              : tile == TileState.yellowSpecial ? const Color.fromRGBO(170, 170, 170, 0.5)
+              : Color.fromRGBO(0, 0, 0, 0);
+        }
+        final tileRect = Rect.fromLTWH(
+            (drawLocation.x + x) * tileSideLength,
+            (drawLocation.y + y) * tileSideLength,
+            tileSideLength,
+            tileSideLength
+        );
+        canvas.drawRect(tileRect, bodyPaint);
+        //canvas.drawRect(tileRect, edgePaint);
+      }
+    }
+  }
+
+  void _paintComplex(Canvas canvas) {
     final card = battle.moveCardNotifier.value;
     final rot = battle.moveRotationNotifier.value;
     final location = battle.moveLocationNotifier.value;
@@ -126,14 +179,15 @@ class MoveOverlayPainter extends CustomPainter {
         )
     );
     bodyPaint.color = normalColour;
-    for (var d = -colourStripeWidth; d <= (pattern.length + pattern[0].length) * tileSideLength; d += colourStripeWidth) {
+    var stripeHeight = (pattern.length + pattern[0].length) * tileSideLength;
+    for (var d = -colourStripeWidth; d <= stripeHeight; d += colourStripeWidth) {
       canvas.drawPath(stripePath, bodyPaint);
       stripePath = stripePath.shift(Offset(0, colourStripeWidth));
     }
 
     canvas.restore();
-    canvas.save();
 
+    canvas.save();
     final specialClipPath = Path();
 
     for (var y = 0; y < pattern.length; y++) {
@@ -149,7 +203,6 @@ class MoveOverlayPainter extends CustomPainter {
         specialClipPath.addRect(tileRect);
       }
     }
-
     canvas.clipPath(specialClipPath);
 
     bodyPaint.color = specialColour;
@@ -177,34 +230,16 @@ class MoveOverlayPainter extends CustomPainter {
     }
 
     canvas.restore();
+  }
 
-    /*
-    for (var y = 0; y < pattern.length; y++) {
-      for (var x = 0; x < pattern[0].length; x++) {
-        final tile = pattern[y][x];
-        if (tile == TileState.unfilled) continue;
-
-        if (isValid) {
-          bodyPaint.color = tile == TileState.yellow ? const Color.fromRGBO(255, 255, 17, 0.5)
-              : tile == TileState.yellowSpecial ? const Color.fromRGBO(255, 159, 4, 0.5)
-              : Color.fromRGBO(0, 0, 0, 0);
-        } else {
-          bodyPaint.color = tile == TileState.yellow ? const Color.fromRGBO(255, 255, 255, 0.5)
-              : tile == TileState.yellowSpecial ? const Color.fromRGBO(170, 170, 170, 0.5)
-              : Color.fromRGBO(0, 0, 0, 0);
-        }
-        final tileRect = Rect.fromLTWH(
-          (drawLocation.x + x) * tileSideLength,
-          (drawLocation.y + y) * tileSideLength,
-          tileSideLength,
-          tileSideLength
-        );
-        canvas.drawRect(tileRect, bodyPaint);
-        //canvas.drawRect(tileRect, edgePaint);
-      }
+  @override
+  void paint(Canvas canvas, Size size) {
+    const drawComplex = false;
+    if (drawComplex) {
+      _paintComplex(canvas);
+    } else {
+      _paintBasic(canvas);
     }
-
-     */
   }
 
   @override
@@ -246,14 +281,16 @@ class _MoveOverlayWidgetState extends State<MoveOverlayWidget>
 
   @override
   Widget build(BuildContext context) {
-    return IgnorePointer(
-      child: CustomPaint(
-        painter: MoveOverlayPainter(
-          widget.battle,
-          _animationController,
-          widget.tileSize
+    return RepaintBoundary(
+      child: IgnorePointer(
+        child: CustomPaint(
+          painter: MoveOverlayPainter(
+            widget.battle,
+            _animationController,
+            widget.tileSize
+          )
         )
-      )
+      ),
     );
   }
 }

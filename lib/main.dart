@@ -30,7 +30,6 @@ import 'src/style/palette.dart';
 import 'src/style/snack_bar.dart';
 
 Future<void> main() async {
-
   WidgetsFlutterBinding.ensureInitialized();
   await loadCards();
   await loadMaps();
