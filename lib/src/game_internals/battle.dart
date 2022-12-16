@@ -22,15 +22,8 @@ int clamp(int x, int _min, int _max) {
 
 class TableturfBattle {
   static final _log = Logger('TableturfBattle');
-  final ValueNotifier<TableturfCard?> moveCardNotifier = ValueNotifier(null);
-  final ValueNotifier<Coords?> moveLocationNotifier = ValueNotifier(null);
-  final ValueNotifier<int> moveRotationNotifier = ValueNotifier(0);
-  final ValueNotifier<bool> moveSpecialNotifier = ValueNotifier(false);
-  final ValueNotifier<bool> movePassNotifier = ValueNotifier(false);
-  final ValueNotifier<bool> moveIsValidNotifier = ValueNotifier(false);
 
   final ValueNotifier<bool> revealCardsNotifier = ValueNotifier(false);
-  final ValueNotifier<bool> playerControlLock = ValueNotifier(true);
   final ChangeNotifier endOfGameNotifier = ChangeNotifier();
   final ChangeNotifier specialMoveNotifier = ChangeNotifier();
 
@@ -54,65 +47,13 @@ class TableturfBattle {
     required this.board,
     required this.aiLevel,
   }) {
-    moveCardNotifier.addListener(_updateMoveHighlight);
-    moveLocationNotifier.addListener(_updateMoveHighlight);
-    moveRotationNotifier.addListener(_updateMoveHighlight);
-    movePassNotifier.addListener(_updateMoveHighlight);
-    moveSpecialNotifier.addListener(_updateMoveHighlight);
     yellowMoveNotifier.addListener(_checkMovesSet);
     blueMoveNotifier.addListener(_checkMovesSet);
   }
 
   void dispose() {
-    moveCardNotifier.removeListener(_updateMoveHighlight);
-    moveLocationNotifier.removeListener(_updateMoveHighlight);
-    moveRotationNotifier.removeListener(_updateMoveHighlight);
-    movePassNotifier.addListener(_updateMoveHighlight);
-    moveSpecialNotifier.removeListener(_updateMoveHighlight);
     yellowMoveNotifier.removeListener(_checkMovesSet);
     blueMoveNotifier.removeListener(_checkMovesSet);
-  }
-
-  void _updateMoveHighlight() {
-    final card = moveCardNotifier.value;
-    final rot = moveRotationNotifier.value;
-    final location = moveLocationNotifier.value;
-    final special = moveSpecialNotifier.value;
-    final pass = movePassNotifier.value;
-    if (pass) {
-      moveIsValidNotifier.value = card != null;
-    } else if (location != null
-        && card != null) {
-      final pattern = rotatePattern(
-        card.minPattern,
-        rot
-      );
-      final selectPoint = rotatePatternPoint(
-        card.selectPoint,
-        card.minPattern.length,
-        card.minPattern[0].length,
-        rot
-      );
-      final locationX = location.x - selectPoint.x;
-      final locationY = location.y - selectPoint.y;
-      if (!(
-          locationY >= 0
-              && locationY <= board.length - pattern.length
-              && locationX >= 0
-              && locationX <= board[0].length - pattern[0].length
-      )) {
-        moveIsValidNotifier.value = false;
-        return;
-      }
-      final move = TableturfMove(
-          card: card,
-          rotation: rot,
-          x: locationX,
-          y: locationY,
-          special: special
-      );
-      moveIsValidNotifier.value = moveIsValid(board, move);
-    }
   }
 
   Future<void> _checkMovesSet() async {
@@ -120,79 +61,6 @@ class TableturfBattle {
       await Future<void>.delayed(const Duration(milliseconds: 1000));
       await runTurn();
     }
-  }
-
-  void rotateLeft() {
-    final audioController = AudioController();
-    audioController.playSfx(SfxType.cursorRotate);
-    int rot = moveRotationNotifier.value;
-    rot -= 1;
-    rot %= 4;
-    moveRotationNotifier.value = rot;
-  }
-
-  void rotateRight() {
-    final audioController = AudioController();
-    audioController.playSfx(SfxType.cursorRotate);
-    int rot = moveRotationNotifier.value;
-    rot += 1;
-    rot %= 4;
-    moveRotationNotifier.value = rot;
-  }
-
-  void confirmMove() {
-    if (!moveIsValidNotifier.value) {
-      return;
-    }
-    final card = moveCardNotifier.value!;
-    final audioController = AudioController();
-    if (movePassNotifier.value) {
-      audioController.playSfx(SfxType.confirmMovePass);
-      yellowMoveNotifier.value = TableturfMove(
-        card: card,
-        rotation: 0,
-        x: 0,
-        y: 0,
-        pass: movePassNotifier.value,
-        special: moveSpecialNotifier.value,
-      );
-      playerControlLock.value = false;
-      return;
-    }
-
-    final location = moveLocationNotifier.value;
-    if (location == null) {
-      return;
-    }
-    final rot = moveRotationNotifier.value;
-    final pattern = rotatePattern(card.minPattern, rot);
-    final selectPoint = rotatePatternPoint(
-      card.selectPoint,
-      card.minPattern.length,
-      card.minPattern[0].length,
-      rot,
-    );
-    final locationX = location.x - selectPoint.x;
-    final locationY = location.y - selectPoint.y;
-    _log.info("trying location $locationX, $locationY");
-    if (!(
-      locationY >= 0
-        && locationY <= board.length - pattern.length
-        && locationX >= 0
-        && locationX <= board[0].length - pattern[0].length
-    )) {
-      return;
-    }
-    audioController.playSfx(SfxType.confirmMoveSucceed);
-    yellowMoveNotifier.value = TableturfMove(
-      card: card,
-      rotation: rot,
-      x: locationX,
-      y: locationY,
-      pass: movePassNotifier.value,
-      special: moveSpecialNotifier.value,
-    );
-    playerControlLock.value = false;
   }
 
   Future<void> runTurn() async {
@@ -294,12 +162,6 @@ class TableturfBattle {
     }
     await Future<void>.delayed(const Duration(milliseconds: 1500));
 
-    moveLocationNotifier.value = null;
-    moveCardNotifier.value = null;
-    moveRotationNotifier.value = 0;
-    movePassNotifier.value = false;
-    moveSpecialNotifier.value = false;
-    moveIsValidNotifier.value = false;
     revealCardsNotifier.value = false;
 
     yellowMoveNotifier.value = null;
@@ -316,7 +178,6 @@ class TableturfBattle {
       card.isPlayable = getMoves(board, card, special: false).isNotEmpty;
       card.isPlayableSpecial = card.special <= yellow.special.value && getMoves(board, card, special: true).isNotEmpty;
     }
-    playerControlLock.value = true;
     runBlueAI();
     //runYellowAI();
     _log.info("turn complete");

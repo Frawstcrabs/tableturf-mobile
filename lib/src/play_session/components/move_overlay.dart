@@ -5,12 +5,13 @@ import 'package:flutter/material.dart';
 import 'package:tableturf_mobile/src/game_internals/battle.dart';
 import 'package:tableturf_mobile/src/game_internals/card.dart';
 import 'package:tableturf_mobile/src/game_internals/tile.dart';
+import 'package:tableturf_mobile/src/game_internals/move_selection.dart';
 
 import '../../style/palette.dart';
 import 'board_widget.dart';
 
 class MoveOverlayPainter extends CustomPainter {
-  final TableturfBattle battle;
+  final TableturfMoveSelection selection;
   final Animation<double> animation;
   final double tileSideLength;
 
@@ -26,27 +27,27 @@ class MoveOverlayPainter extends CustomPainter {
     cos(DOT_ANGLE),
   );
 
-  MoveOverlayPainter(this.battle, this.animation, this.tileSideLength):
+  MoveOverlayPainter(this.selection, this.animation, this.tileSideLength):
     super(
       repaint: Listenable.merge([
         animation,
-        battle.moveCardNotifier,
-        battle.moveRotationNotifier,
-        battle.moveLocationNotifier,
-        battle.moveIsValidNotifier,
-        battle.movePassNotifier,
-        battle.revealCardsNotifier,
+        selection.moveCardNotifier,
+        selection.moveRotationNotifier,
+        selection.moveLocationNotifier,
+        selection.moveIsValidNotifier,
+        selection.movePassNotifier,
+        selection.revealCardsNotifier,
       ])
     )
   ;
 
   void _paintBasic(Canvas canvas) {
-    final card = battle.moveCardNotifier.value;
-    final rot = battle.moveRotationNotifier.value;
-    final location = battle.moveLocationNotifier.value;
-    final isValid = battle.moveIsValidNotifier.value;
-    final isPassed = battle.movePassNotifier.value;
-    final isRevealed = battle.revealCardsNotifier.value;
+    final card = selection.moveCardNotifier.value;
+    final rot = selection.moveRotationNotifier.value;
+    final location = selection.moveLocationNotifier.value;
+    final isValid = selection.moveIsValidNotifier.value;
+    final isPassed = selection.movePassNotifier.value;
+    final isRevealed = selection.revealCardsNotifier.value;
 
     if (card == null || location == null || isRevealed || isPassed) {
       return;
@@ -95,12 +96,12 @@ class MoveOverlayPainter extends CustomPainter {
   }
 
   void _paintComplex(Canvas canvas) {
-    final card = battle.moveCardNotifier.value;
-    final rot = battle.moveRotationNotifier.value;
-    final location = battle.moveLocationNotifier.value;
-    final isValid = battle.moveIsValidNotifier.value;
-    final isPassed = battle.movePassNotifier.value;
-    final isRevealed = battle.revealCardsNotifier.value;
+    final card = selection.moveCardNotifier.value;
+    final rot = selection.moveRotationNotifier.value;
+    final location = selection.moveLocationNotifier.value;
+    final isValid = selection.moveIsValidNotifier.value;
+    final isPassed = selection.movePassNotifier.value;
+    final isRevealed = selection.revealCardsNotifier.value;
 
     if (card == null || location == null || isRevealed || isPassed) {
       return;
@@ -205,8 +206,8 @@ class MoveOverlayPainter extends CustomPainter {
           (drawLocation.x + x + 0.5),
           (drawLocation.y + y + 0.5),
         );
-        for (var dy = -3; dy <= 3; dy++) {
-          for (var dx = -3; dx <= 3; dx++) {
+        for (var dy = -3; dy <= 2; dy++) {
+          for (var dx = -3; dx <= 2; dx++) {
             final dotLocation = (
                 dotCenter
                     + (DOT_OFFSET_X * ((dx + animation.value) / sideDotCount))

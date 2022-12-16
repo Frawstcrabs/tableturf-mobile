@@ -343,46 +343,46 @@ class _CardWidgetState extends State<CardWidget>
   Widget build(BuildContext context) {
     final palette = context.watch<Palette>();
     final moveCardNotifier = widget.battle.moveCardNotifier;
-    var reactiveCard = AnimatedBuilder(
-      animation: Listenable.merge([
-        _testController,
-        widget.cardNotifier,
-        widget.battle.playerControlLock,
-        widget.battle.moveSpecialNotifier,
-        widget.battle.movePassNotifier,
-        moveCardNotifier,
-      ]),
-      builder: (_, __) {
+    var reactiveCard = GestureDetector(
+      child: AnimatedBuilder(
+        animation: Listenable.merge([
+          _testController,
+          widget.cardNotifier,
+          widget.battle.playerControlLock,
+          widget.battle.moveSpecialNotifier,
+          widget.battle.movePassNotifier,
+          moveCardNotifier,
+        ]),
+        builder: (_, __) {
+          return _buildCard(widget.cardNotifier.value!, palette);
+        }
+      ),
+      onTapDown: (details) {
         final card = widget.cardNotifier.value!;
-        return GestureDetector(
-          child: _buildCard(card, palette),
-          onTapDown: (details) {
-            final battle = widget.battle;
-            if (!battle.playerControlLock.value) {
-              return;
-            }
-            if (moveCardNotifier.value != card) {
-              final audioController = AudioController();
-              if (!_cardIsSelectable(card)) {
-                return;
-              }
-              if (battle.moveSpecialNotifier.value) {
-                audioController.playSfx(SfxType.selectCardNormal);
-              } else {
-                audioController.playSfx(SfxType.selectCardNormal);
-              }
-              moveCardNotifier.value = card;
-            }
-            if (details.kind == PointerDeviceKind.touch
-                && battle.moveLocationNotifier.value == null
-                && !battle.movePassNotifier.value) {
-              battle.moveLocationNotifier.value = Coords(
-                  battle.board[0].length ~/ 2,
-                  battle.board.length ~/ 2
-              );
-            }
+        final battle = widget.battle;
+        if (!battle.playerControlLock.value) {
+          return;
+        }
+        if (moveCardNotifier.value != card) {
+          final audioController = AudioController();
+          if (!_cardIsSelectable(card)) {
+            return;
           }
-        );
+          if (battle.moveSpecialNotifier.value) {
+            audioController.playSfx(SfxType.selectCardNormal);
+          } else {
+            audioController.playSfx(SfxType.selectCardNormal);
+          }
+          moveCardNotifier.value = card;
+        }
+        if (details.kind == PointerDeviceKind.touch
+            && battle.moveLocationNotifier.value == null
+            && !battle.movePassNotifier.value) {
+          battle.moveLocationNotifier.value = Coords(
+              battle.board[0].length ~/ 2,
+              battle.board.length ~/ 2
+          );
+        }
       }
     );
     switch (_transitionController.status) {
