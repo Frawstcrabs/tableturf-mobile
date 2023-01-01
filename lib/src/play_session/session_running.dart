@@ -561,7 +561,7 @@ class _PlaySessionScreenState extends State<PlaySessionScreen>
     await Future<void>.delayed(const Duration(milliseconds: 1500));
     await _outroController.forward(from: 0.5);
     animationLayer.remove();
-    widget.battle.countBoard();
+    widget.battle.updateScores();
     _log.info("outro sequence done");
 
     Navigator.of(context).pushReplacement(PageRouteBuilder(

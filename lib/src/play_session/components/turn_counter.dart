@@ -127,9 +127,6 @@ class _TurnCounterState extends State<TurnCounter>
   Future<void> _onTurnCountChange() async {
     final newValue = widget.battle.turnCountNotifier.value;
     final audioController = AudioController();
-    final context = _key.currentContext!;
-    final renderBox = context.findRenderObject()! as RenderBox;
-    final globalPos = renderBox.localToGlobal(Offset.zero);
     final overlayState = Overlay.of(context)!;
 
     final backgroundLayer = OverlayEntry(builder: (_) {
@@ -138,7 +135,17 @@ class _TurnCounterState extends State<TurnCounter>
         child: Container()
       );
     });
-    final animationLayer = OverlayEntry(builder: (_) {
+    late final OverlayEntry animationLayer;
+    animationLayer = OverlayEntry(builder: (context) {
+      MediaQuery.of(context);
+      final counterContext = _key.currentContext;
+      if (counterContext == null) {
+        animationLayer.remove();
+        backgroundLayer.remove();
+        return const SizedBox();
+      }
+      final renderBox = counterContext.findRenderObject()! as RenderBox;
+      final globalPos = renderBox.localToGlobal(Offset.zero);
       return Positioned(
         top: globalPos.dy,
         left: globalPos.dx,
@@ -195,13 +202,13 @@ class _TurnCounterState extends State<TurnCounter>
     );
 
     return AnimatedBuilder(
+      key: key,
       animation: _tickController,
       builder: (_, __) => Transform.scale(
         scale: _counterScale.value,
         child: AspectRatio(
           aspectRatio: 1,
           child: SizedBox(
-            key: key,
             child: DecoratedBox(
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(999),

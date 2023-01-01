@@ -13,13 +13,13 @@ enum AILevel {
   level4;
 }
 
-BoardGrid _flipBoard(BoardGrid board) {
-  BoardGrid ret = [];
+TileGrid _flipBoard(TileGrid board) {
+  TileGrid ret = [];
   for (var y = board.length - 1; y >= 0; y--) {
     ret.add([]);
     for (var x = board[0].length - 1; x >= 0; x--) {
       //print("Getting pattern[$y][$x]");
-      ret.last.add(TableturfTile({
+      ret.last.add({
         TileState.empty: TileState.empty,
         TileState.unfilled: TileState.unfilled,
         TileState.wall: TileState.wall,
@@ -27,19 +27,19 @@ BoardGrid _flipBoard(BoardGrid board) {
         TileState.yellowSpecial: TileState.blueSpecial,
         TileState.blue: TileState.yellow,
         TileState.blueSpecial: TileState.yellowSpecial,
-      }[board[y][x].state.value]!));
+      }[board[y][x]]!);
     }
   }
   return ret;
 }
 
 int _calcBoardCoverage({
-  required BoardGrid board,
+  required TileGrid board,
   required bool Function(TileState) isMatched,
 }) {
   return board.fold(0, (count, row) {
     return count + row.fold(0, (count, tile) {
-      return count + (isMatched(tile.state.value) ? 1 : 0);
+      return count + (isMatched(tile) ? 1 : 0);
     });
   });
 }
@@ -52,7 +52,7 @@ class DistanceStats {
 }
 
 DistanceStats _calcBoardDistances({
-  required BoardGrid board,
+  required TileGrid board,
   required bool Function(TileState) isMatched,
 }) {
   Set<Coords> edgeTiles = Set();
@@ -67,7 +67,7 @@ DistanceStats _calcBoardDistances({
         if (newY < 0 || newY >= board.length || newX < 0 || newX >= board[0].length) {
           continue;
         }
-        final edgeTile = board[newY][newX].state.value;
+        final edgeTile = board[newY][newX];
         if (!edgeTile.isFilled) {
           final coords = Coords(newX, newY);
           if (!newEdgeTiles.contains(coords) && !searchedTiles.contains(coords)) {
@@ -81,7 +81,7 @@ DistanceStats _calcBoardDistances({
 
   for (var y = 0; y < board.length; y++) {
     for (var x = 0; x < board[0].length; x++) {
-      final tile = board[y][x].state.value;
+      final tile = board[y][x];
       if (isMatched(tile)) {
         addEdgeTiles(Coords(x, y), newEdgeTiles);
       }
@@ -109,7 +109,7 @@ class SpecialStats {
 }
 
 SpecialStats _calcSpecialStats({
-  required BoardGrid board,
+  required TileGrid board,
   required TileState specialTile,
 }) {
   var fullSpecial = 0;
@@ -117,7 +117,7 @@ SpecialStats _calcSpecialStats({
 
   for (var y = 0; y < board.length; y++) {
     for (var x = 0; x < board[y].length; x++) {
-      if (board[y][x].state.value == specialTile) {
+      if (board[y][x] == specialTile) {
         var surroundCount = 0;
         for (var dY = -1; dY <= 1; dY++) {
           for (var dX = -1; dX <= 1; dX++) {
@@ -129,7 +129,7 @@ SpecialStats _calcSpecialStats({
               surroundCount += 1;
               continue;
             }
-            final edgeTile = board[newY][newX].state.value;
+            final edgeTile = board[newY][newX];
             if (edgeTile.isFilled) {
               surroundCount += 1;
             }
@@ -167,7 +167,7 @@ class BoardStats {
   });
 }
 
-BoardStats _calcBoardStats(BoardGrid board) {
+BoardStats _calcBoardStats(TileGrid board) {
   const fullSpecialScore = 2.0;
   const partialSpecialScore = 1.0;
 
@@ -215,7 +215,7 @@ BoardStats _calcBoardStats(BoardGrid board) {
 
 double _rateMove({
   required TableturfMove move,
-  required BoardGrid board,
+  required TileGrid board,
   required List<TableturfCard> hand,
   required int special,
   required int turnsLeft,
@@ -226,11 +226,7 @@ double _rateMove({
     return 2.0;
   }
   boardStats ??= _calcBoardStats(board);
-  final newBoard = board.map(
-    (row) => row.map(
-      (tile) => TableturfTile(tile.state.value)
-    ).toList()
-  ).toList();
+  final newBoard = board.copy();
   applyMoveToBoard(newBoard, move);
   final afterBoardStats = _calcBoardStats(newBoard);
 
@@ -368,7 +364,7 @@ extension IterableZip<T> on Iterable<T> {
 }
 
 RatedMove findBestMove({
-  required BoardGrid board,
+  required TileGrid board,
   required List<TableturfCard> hand,
   required int special,
   required int turnsLeft,
@@ -434,10 +430,13 @@ RatedMove findBestMove({
       return ratedMoves[(ratedMoves.length * selection).floor()];
 
     case AILevel.level4:
+      /*
       const lowerBound = 0.98;
       const upperBound = 1.0;
       final selection = lowerBound + (Random().nextDouble() * (upperBound - lowerBound));
       return ratedMoves[(ratedMoves.length * selection).floor()];
+      */
+      return ratedMoves.last;
   }
 
   /*
@@ -474,7 +473,7 @@ RatedMove findBestMove({
 
 TableturfMove findBestBlueMove(List<dynamic> args) {
   print("${DateTime.now()}: rating moves...");
-  final TileGrid plainBoard = args[0];
+  final TileGrid rawBoard = args[0];
   final List<TableturfCard> hand = args[1];
   final int special = args[2];
   final int turnsLeft = args[3];
@@ -482,8 +481,7 @@ TableturfMove findBestBlueMove(List<dynamic> args) {
   final bool flipBoard = args.length == 6 ? args[5] : true;
 
   final startTime = DateTime.now().microsecondsSinceEpoch;
-  final tempBoard = plainBoard.map((row) => row.map(TableturfTile.new).toList()).toList();
-  final board = flipBoard ? _flipBoard(tempBoard) : tempBoard;
+  final board = flipBoard ? _flipBoard(rawBoard) : rawBoard;
   final bestMove = findBestMove(
     board: board,
     hand: hand,

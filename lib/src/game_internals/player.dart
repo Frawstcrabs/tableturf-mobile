@@ -64,9 +64,19 @@ abstract class PlayerTraits {
   abstract final Color scoreCountBackground;
   abstract final Color scoreCountText;
   abstract final Color scoreCountShadow;
+
+  const PlayerTraits();
+
+  TileState mapCardTile(TileState tile) {
+    switch (tile) {
+      case TileState.yellow: return normalTile;
+      case TileState.yellowSpecial: return specialTile;
+      default: return tile;
+    }
+  }
 }
 
-class YellowTraits implements PlayerTraits {
+class YellowTraits extends PlayerTraits {
   get normalTile => TileState.yellow;
   get specialTile => TileState.yellowSpecial;
 
@@ -80,7 +90,7 @@ class YellowTraits implements PlayerTraits {
   const YellowTraits();
 }
 
-class BlueTraits implements PlayerTraits {
+class BlueTraits extends PlayerTraits {
   get normalTile => TileState.blue;
   get specialTile => TileState.blueSpecial;
 

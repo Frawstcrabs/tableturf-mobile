@@ -130,6 +130,7 @@ class MoveOverlayPainter extends CustomPainter {
         ? const Color.fromRGBO(255, 159, 4, 0.8)
         : const Color.fromRGBO(255, 255, 255, 0.8);
 
+    /*
     final patternClipPath = Path();
 
     for (var y = 0; y < pattern.length; y++) {
@@ -146,6 +147,7 @@ class MoveOverlayPainter extends CustomPainter {
       }
     }
     canvas.clipPath(patternClipPath);
+    */
     canvas.save();
 
     final normalClipPath = Path();
@@ -167,6 +169,7 @@ class MoveOverlayPainter extends CustomPainter {
 
     final colourStripeWidth = tileSideLength * (1/2.25);
     final stripeWidth = pattern[0].length * tileSideLength;
+    final allStripesPath = Path();
     var stripePath = Path()
       ..moveTo(0.0, 0.0)
       ..lineTo(stripeWidth, -stripeWidth)
@@ -182,10 +185,10 @@ class MoveOverlayPainter extends CustomPainter {
     bodyPaint.color = normalColour;
     var stripeHeight = (pattern.length + pattern[0].length) * tileSideLength;
     for (var d = -colourStripeWidth; d <= stripeHeight; d += colourStripeWidth) {
-      canvas.drawPath(stripePath, bodyPaint);
+      allStripesPath.addPath(stripePath, Offset.zero);
       stripePath = stripePath.shift(Offset(0, colourStripeWidth));
     }
-
+    canvas.drawPath(allStripesPath, bodyPaint);
     canvas.restore();
 
     bodyPaint.color = specialColour;
@@ -277,7 +280,8 @@ class _MoveOverlayWidgetState extends State<MoveOverlayWidget>
             widget.battle,
             _animationController,
             widget.tileSize
-          )
+          ),
+          child: Container(),
         )
       ),
     );

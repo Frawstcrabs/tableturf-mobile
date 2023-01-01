@@ -19,7 +19,7 @@ import 'components/build_board_widget.dart';
 
 class PlaySessionIntro extends StatefulWidget {
   final TableturfPlayer yellow, blue;
-  final List<List<TableturfTile>> board;
+  final TileGrid board;
   final AILevel aiLevel;
 
   const PlaySessionIntro({
@@ -113,11 +113,24 @@ class _PlaySessionIntroState extends State<PlaySessionIntro>
   @override
   Widget build(BuildContext context) {
     final palette = context.watch<Palette>();
+    final mediaQuery = MediaQuery.of(context);
 
     final screen = Container(
       color: palette.backgroundPlaySession,
-      child: buildBoardWidget(
-        battle: battle
+      child: Column(
+        children: [
+          Container(
+            height: mediaQuery.padding.top
+          ),
+          Expanded(
+            child: buildBoardWidget(
+              battle: battle
+            ),
+          ),
+          Container(
+            height: mediaQuery.padding.bottom
+          ),
+        ],
       ),
     );
 

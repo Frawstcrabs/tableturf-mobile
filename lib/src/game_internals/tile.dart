@@ -19,6 +19,19 @@ enum TileState {
   @JsonValue('B')
   blueSpecial;
 
+  factory TileState.fromJson(dynamic source) {
+    if (source == null) {
+      throw ArgumentError('A value must be provided. Supported values: '
+          '${TileStateEnumMap.values.join(', ')}');
+    }
+    return TileStateEnumMap.entries
+        .singleWhere((e) => e.value == source,
+        orElse: () => throw ArgumentError(
+            '`$source` is not one of the supported values: '
+                '${TileStateEnumMap.values.join(', ')}'))
+        .key;
+  }
+
   bool get isYellow => this == TileState.yellow || this == TileState.yellowSpecial;
   bool get isBlue => this == TileState.blue || this == TileState.blueSpecial;
   bool get isSpecial => this == TileState.yellowSpecial || this == TileState.blueSpecial;
@@ -59,4 +72,4 @@ class TableturfTile {
 }
 
 typedef TileGrid = List<List<TileState>>;
-typedef BoardGrid = List<List<TableturfTile>>;
+//typedef BoardGrid = List<List<TableturfTile>>;

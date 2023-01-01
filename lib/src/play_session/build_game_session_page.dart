@@ -20,10 +20,8 @@ PageRouteBuilder<T> buildGameSessionPage<T>({
   Palette palette = const Palette(),
 }) {
 
-  final List<List<TableturfTile>> board = maps[stage]!.map<List<TableturfTile>>((row) {
-    return (row as List<dynamic>).map((tile) {
-      return TableturfTile.fromJson(tile);
-    }).toList(growable: false);
+  final TileGrid board = maps[stage]!.map<List<TileState>>((row) {
+    return (row as List<dynamic>).map(TileState.fromJson).toList(growable: false);
   }).toList(growable: false);
 
   final yellowDeckCards = yellowDeck

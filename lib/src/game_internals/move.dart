@@ -18,9 +18,26 @@ class TableturfMove {
     this.special = false,
     this.pass = false,
   });
+
+  Map<Coords, TileState> get boardChanges {
+    final Map<Coords, TileState> ret = {};
+    if (!pass) {
+      var pattern = rotatePattern(
+          card.minPattern, rotation);
+      for (var y = 0; y < pattern.length; y++) {
+        for (var x = 0; x < pattern[0].length; x++) {
+          final cardTile = pattern[y][x];
+          if (cardTile != TileState.unfilled) {
+            ret[Coords(x + this.x, y + this.y)] = traits.mapCardTile(cardTile);
+          }
+        }
+      }
+    }
+    return ret;
+  }
 }
 
-Iterable<TableturfMove> getMoves(BoardGrid board, TableturfCard card, {bool special = false}) sync* {
+Iterable<TableturfMove> getMoves(TileGrid board, TableturfCard card, {bool special = false}) sync* {
   for (var rot = 0; rot < 4; rot++) {
     var pattern = rotatePattern(card.minPattern, rot);
     for (var moveY = 0; moveY < board.length - pattern.length + 1; moveY++) {
@@ -40,7 +57,7 @@ Iterable<TableturfMove> getMoves(BoardGrid board, TableturfCard card, {bool spec
   }
 }
 
-bool moveIsValid(BoardGrid board, TableturfMove move) {
+bool moveIsValid(TileGrid board, TableturfMove move) {
   if (!move.special) {
     return _normalMoveIsValid(board, move);
   } else {
@@ -48,7 +65,7 @@ bool moveIsValid(BoardGrid board, TableturfMove move) {
   }
 }
 
-bool _normalMoveIsValid(BoardGrid board, TableturfMove move) {
+bool _normalMoveIsValid(TileGrid board, TableturfMove move) {
   final pattern = rotatePattern(move.card.minPattern, move.rotation);
   final moveY = move.y;
   final moveX = move.x;
@@ -57,7 +74,7 @@ bool _normalMoveIsValid(BoardGrid board, TableturfMove move) {
   for (var y = 0; y < pattern.length; y++) {
     for (var x = 0; x < pattern[y].length; x++) {
       final TileState cardTile = pattern[y][x];
-      if (cardTile.isFilled && board[moveY + y][moveX + x].state.value.isFilled) {
+      if (cardTile.isFilled && board[moveY + y][moveX + x].isFilled) {
         return false;
       }
       if (!isTouchingYellow && cardTile.isFilled) {
@@ -68,7 +85,7 @@ bool _normalMoveIsValid(BoardGrid board, TableturfMove move) {
             if (boardY < 0 || boardY >= board.length || boardX < 0 || boardX >= board[0].length) {
               continue;
             }
-            final TileState edgeTile = board[boardY][boardX].state.value;
+            final TileState edgeTile = board[boardY][boardX];
             if (edgeTile.isYellow) {
               isTouchingYellow = true;
               break;
@@ -84,7 +101,7 @@ bool _normalMoveIsValid(BoardGrid board, TableturfMove move) {
   return isTouchingYellow;
 }
 
-bool _specialMoveIsValid(BoardGrid board, TableturfMove move) {
+bool _specialMoveIsValid(TileGrid board, TableturfMove move) {
   final pattern = rotatePattern(move.card.minPattern, move.rotation);
   final moveY = move.y;
   final moveX = move.x;
@@ -93,7 +110,7 @@ bool _specialMoveIsValid(BoardGrid board, TableturfMove move) {
   for (var y = 0; y < pattern.length; y++) {
     for (var x = 0; x < pattern[y].length; x++) {
       final TileState cardTile = pattern[y][x];
-      final TileState boardTile = board[moveY + y][moveX + x].state.value;
+      final TileState boardTile = board[moveY + y][moveX + x];
       if (cardTile.isFilled
           && (boardTile == TileState.empty
               || boardTile == TileState.wall
@@ -109,7 +126,7 @@ bool _specialMoveIsValid(BoardGrid board, TableturfMove move) {
             if (boardY < 0 || boardY >= board.length || boardX < 0 || boardX >= board[0].length) {
               continue;
             }
-            final TileState edgeTile = board[boardY][boardX].state.value;
+            final TileState edgeTile = board[boardY][boardX];
             if (edgeTile == TileState.yellowSpecial) {
               isTouchingYellow = true;
               break;
@@ -125,26 +142,22 @@ bool _specialMoveIsValid(BoardGrid board, TableturfMove move) {
   return isTouchingYellow;
 }
 
+extension ApplySquare on TileGrid {
+  void applySquare(int y, int x, TileState newState, PlayerTraits traits) {
+    if (newState == TileState.yellow) {
+      this[y][x] = traits.normalTile;
+    } else if (newState == TileState.yellowSpecial) {
+      this[y][x] = traits.specialTile;
+    }
+  }
 
-
-void applySquare(TableturfTile tile, TileState newState, PlayerTraits traits) {
-  if (newState == TileState.yellow) {
-    tile.state.value = traits.normalTile;
-  } else if (newState == TileState.yellowSpecial) {
-    tile.state.value = traits.specialTile;
+  TileGrid copy() {
+    return map((row) => row.toList()).toList();
   }
 }
 
-void applyMoveToBoard(BoardGrid board, TableturfMove move) {
-  if (!move.pass) {
-    var pattern = rotatePattern(
-        move.card.minPattern, move.rotation);
-    for (var y = 0; y < pattern.length; y++) {
-      for (var x = 0; x < pattern[0].length; x++) {
-        final cardTile = pattern[y][x];
-        final boardTile = board[y + move.y][x + move.x];
-        applySquare(boardTile, cardTile, move.traits);
-      }
-    }
+void applyMoveToBoard(TileGrid board, TableturfMove move) {
+  for (final entry in move.boardChanges.entries) {
+    board[entry.key.y][entry.key.x] = entry.value;
   }
 }

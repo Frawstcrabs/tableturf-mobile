@@ -42,13 +42,15 @@ class _SpeenWidgetState extends State<SpeenWidget>
 
   @override
   Widget build(BuildContext context) {
-    return RotationTransition(
-      turns: _controller,
-      child: Icon(
-        Icons.refresh,
-        size: 50.0,
-        color: Color.fromRGBO(255, 255, 255, 0.2),
-      )
+    return RepaintBoundary(
+      child: RotationTransition(
+        turns: _controller,
+        child: Icon(
+          Icons.refresh,
+          size: 50.0,
+          color: Color.fromRGBO(255, 255, 255, 0.2),
+        )
+      ),
     );
   }
 }

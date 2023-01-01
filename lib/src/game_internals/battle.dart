@@ -20,10 +20,56 @@ int clamp(int x, int _min, int _max) {
   return min(_max, max(_min, x));
 }
 
+class BattleEvent {
+  get duration => Duration.zero;
+  const BattleEvent();
+}
+
+class BoardUpdate extends BattleEvent {
+  get duration => const Duration(milliseconds: 1000);
+  final Map<Coords, TileState> updates;
+  final SfxType sfx;
+
+  const BoardUpdate(this.updates, this.sfx);
+}
+
+class BoardSpecialUpdate extends BattleEvent {
+  get duration => const Duration(milliseconds: 1000);
+  final Set<Coords> updates;
+
+  const BoardSpecialUpdate(this.updates);
+}
+
+class ScoreUpdate extends BattleEvent {
+  get duration => const Duration(milliseconds: 1500);
+  final int yellowScore, blueScore;
+
+  const ScoreUpdate(this.yellowScore, this.blueScore);
+}
+
+class PlayerSpecialUpdate extends BattleEvent {
+  final int yellowSpecial, blueSpecial;
+
+  const PlayerSpecialUpdate(this.yellowSpecial, this.blueSpecial);
+}
+
+class EndTurn extends BattleEvent {
+  const EndTurn();
+}
+
 class TableturfBattle {
   static final _log = Logger('TableturfBattle');
+  final ValueNotifier<TableturfCard?> moveCardNotifier = ValueNotifier(null);
+  final ValueNotifier<Coords?> moveLocationNotifier = ValueNotifier(null);
+  final ValueNotifier<int> moveRotationNotifier = ValueNotifier(0);
+  final ValueNotifier<bool> moveSpecialNotifier = ValueNotifier(false);
+  final ValueNotifier<bool> movePassNotifier = ValueNotifier(false);
+  final ValueNotifier<bool> moveIsValidNotifier = ValueNotifier(false);
 
   final ValueNotifier<bool> revealCardsNotifier = ValueNotifier(false);
+  final ValueNotifier<bool> playerControlLock = ValueNotifier(true);
+  final ValueNotifier<Set<Coords>> boardChangeNotifier = ValueNotifier(Set());
+  final ValueNotifier<Set<Coords>> activatedSpecialsNotifier = ValueNotifier(Set());
   final ChangeNotifier endOfGameNotifier = ChangeNotifier();
   final ChangeNotifier specialMoveNotifier = ChangeNotifier();
 
@@ -32,14 +78,14 @@ class TableturfBattle {
 
   final ValueNotifier<int> yellowCountNotifier = ValueNotifier(1);
   final ValueNotifier<int> blueCountNotifier = ValueNotifier(1);
-  final ValueNotifier<int> turnCountNotifier = ValueNotifier(12);
+  final ValueNotifier<int> turnCountNotifier = ValueNotifier(4);
   int _yellowSpecialCount = 0, _blueSpecialCount = 0;
 
   final TableturfPlayer yellow;
   final TableturfPlayer blue;
   final AILevel aiLevel;
 
-  final BoardGrid board;
+  final TileGrid board;
 
   TableturfBattle({
     required this.yellow,
@@ -47,13 +93,65 @@ class TableturfBattle {
     required this.board,
     required this.aiLevel,
   }) {
+    moveCardNotifier.addListener(_updateMoveHighlight);
+    moveLocationNotifier.addListener(_updateMoveHighlight);
+    moveRotationNotifier.addListener(_updateMoveHighlight);
+    movePassNotifier.addListener(_updateMoveHighlight);
+    moveSpecialNotifier.addListener(_updateMoveHighlight);
     yellowMoveNotifier.addListener(_checkMovesSet);
     blueMoveNotifier.addListener(_checkMovesSet);
   }
 
   void dispose() {
+    moveCardNotifier.removeListener(_updateMoveHighlight);
+    moveLocationNotifier.removeListener(_updateMoveHighlight);
+    moveRotationNotifier.removeListener(_updateMoveHighlight);
+    movePassNotifier.addListener(_updateMoveHighlight);
+    moveSpecialNotifier.removeListener(_updateMoveHighlight);
     yellowMoveNotifier.removeListener(_checkMovesSet);
     blueMoveNotifier.removeListener(_checkMovesSet);
+  }
+
+  void _updateMoveHighlight() {
+    final card = moveCardNotifier.value;
+    final rot = moveRotationNotifier.value;
+    final location = moveLocationNotifier.value;
+    final special = moveSpecialNotifier.value;
+    final pass = movePassNotifier.value;
+    if (pass) {
+      moveIsValidNotifier.value = card != null;
+    } else if (location != null
+        && card != null) {
+      final pattern = rotatePattern(
+        card.minPattern,
+        rot
+      );
+      final selectPoint = rotatePatternPoint(
+        card.selectPoint,
+        card.minPattern.length,
+        card.minPattern[0].length,
+        rot
+      );
+      final locationX = location.x - selectPoint.x;
+      final locationY = location.y - selectPoint.y;
+      if (!(
+          locationY >= 0
+              && locationY <= board.length - pattern.length
+              && locationX >= 0
+              && locationX <= board[0].length - pattern[0].length
+      )) {
+        moveIsValidNotifier.value = false;
+        return;
+      }
+      final move = TableturfMove(
+          card: card,
+          rotation: rot,
+          x: locationX,
+          y: locationY,
+          special: special
+      );
+      moveIsValidNotifier.value = moveIsValid(board, move);
+    }
   }
 
   Future<void> _checkMovesSet() async {
@@ -61,6 +159,79 @@ class TableturfBattle {
       await Future<void>.delayed(const Duration(milliseconds: 1000));
       await runTurn();
     }
+  }
+
+  void rotateLeft() {
+    final audioController = AudioController();
+    audioController.playSfx(SfxType.cursorRotate);
+    int rot = moveRotationNotifier.value;
+    rot -= 1;
+    rot %= 4;
+    moveRotationNotifier.value = rot;
+  }
+
+  void rotateRight() {
+    final audioController = AudioController();
+    audioController.playSfx(SfxType.cursorRotate);
+    int rot = moveRotationNotifier.value;
+    rot += 1;
+    rot %= 4;
+    moveRotationNotifier.value = rot;
+  }
+
+  void confirmMove() {
+    if (!moveIsValidNotifier.value) {
+      return;
+    }
+    final card = moveCardNotifier.value!;
+    final audioController = AudioController();
+    if (movePassNotifier.value) {
+      audioController.playSfx(SfxType.confirmMovePass);
+      yellowMoveNotifier.value = TableturfMove(
+        card: card,
+        rotation: 0,
+        x: 0,
+        y: 0,
+        pass: movePassNotifier.value,
+        special: moveSpecialNotifier.value,
+      );
+      playerControlLock.value = false;
+      return;
+    }
+
+    final location = moveLocationNotifier.value;
+    if (location == null) {
+      return;
+    }
+    final rot = moveRotationNotifier.value;
+    final pattern = rotatePattern(card.minPattern, rot);
+    final selectPoint = rotatePatternPoint(
+      card.selectPoint,
+      card.minPattern.length,
+      card.minPattern[0].length,
+      rot,
+    );
+    final locationX = location.x - selectPoint.x;
+    final locationY = location.y - selectPoint.y;
+    _log.info("trying location $locationX, $locationY");
+    if (!(
+      locationY >= 0
+        && locationY <= board.length - pattern.length
+        && locationX >= 0
+        && locationX <= board[0].length - pattern[0].length
+    )) {
+      return;
+    }
+    audioController.playSfx(SfxType.confirmMoveSucceed);
+    yellowMoveNotifier.value = TableturfMove(
+      card: card,
+      rotation: rot,
+      x: locationX,
+      y: locationY,
+      pass: movePassNotifier.value,
+      special: moveSpecialNotifier.value,
+    );
+    playerControlLock.value = false;
   }
 
   Future<void> runTurn() async {
@@ -80,88 +251,61 @@ class TableturfBattle {
     blueMove.card.hasBeenPlayed = true;
     yellow.special.value -= yellowMove.special ? yellowMove.card.special : 0;
     blue.special.value -= blueMove.special ? blueMove.card.special : 0;
-    await Future<void>.delayed(const Duration(milliseconds: 1000));
+    final List<BattleEvent> events = _populateEvents();
+    const cardRevealTime = const Duration(milliseconds: 1000);
+    print(events);
 
-
-    // apply moves to board
-    if (blueMove.pass && yellowMove.pass) {
-      _log.info("no move");
-
-    } else if (blueMove.pass && !yellowMove.pass) {
-      _log.info("yellow move only");
-      await audioController.playSfx(yellowMove.special ? SfxType.specialMove : SfxType.normalMove);
-      applyMoveToBoard(board, yellowMove);
-
-    } else if (!blueMove.pass && yellowMove.pass) {
-      _log.info("blue move only");
-      await audioController.playSfx(blueMove.special ? SfxType.specialMove : SfxType.normalMove);
-      applyMoveToBoard(board, blueMove);
-
-    } else if (!_checkOverlap(blueMove, yellowMove)) {
-      _log.info("no overlap");
-      await audioController.playSfx(yellowMove.special || blueMove.special ? SfxType.specialMove : SfxType.normalMove);
-      applyMoveToBoard(board, blueMove);
-      applyMoveToBoard(board, yellowMove);
-
-    } else if (blueMove.special && !yellowMove.special) {
-      _log.info("blue special over yellow");
-      await _applyOverlap(below: yellowMove, above: blueMove);
-
-    } else if (yellowMove.special && !blueMove.special) {
-      _log.info("yellow special over blue");
-      await _applyOverlap(below: blueMove, above: yellowMove);
-
-    } else if (blueMove.card.count < yellowMove.card.count) {
-      _log.info("blue normal over yellow");
-      await _applyOverlap(below: yellowMove, above: blueMove);
-
-    } else if (yellowMove.card.count < blueMove.card.count) {
-      _log.info("yellow normal over blue");
-      await _applyOverlap(below: blueMove, above: yellowMove);
-
-    } else {
-      _log.info("conflict");
-      await _applyConflict(blueMove, yellowMove);
-    }
-
-    await Future<void>.delayed(const Duration(milliseconds: 1000));
-
-    final prevYellowSpecialCount = _yellowSpecialCount;
-    final prevBlueSpecialCount = _blueSpecialCount;
-    _countSpecial();
-    if (_yellowSpecialCount != prevYellowSpecialCount || _blueSpecialCount != prevBlueSpecialCount) {
-      audioController.playSfx(SfxType.specialActivate);
-      await Future<void>.delayed(const Duration(milliseconds: 1000));
-    }
-    final prevYellowSpecial = yellow.special.value;
-    final prevBlueSpecial = blue.special.value;
-    yellow.special.value += (_yellowSpecialCount - prevYellowSpecialCount) + (yellowMove.pass ? 1 : 0);
-    blue.special.value += (_blueSpecialCount - prevBlueSpecialCount) + (blueMove.pass ? 1 : 0);
-
-    if (turnCountNotifier.value == 1) {
-      endOfGameNotifier.notifyListeners();
-      return;
-    }
-    if (yellow.special.value != prevYellowSpecial || blue.special.value != prevBlueSpecial) {
-      audioController.playSfx(SfxType.gainSpecial);
-    }
-
-    final prevYellowCount = yellowCountNotifier.value;
-    final prevBlueCount = blueCountNotifier.value;
-    countBoard();
-
-    if (yellowCountNotifier.value != prevYellowCount || blueCountNotifier.value != prevBlueCount) {
-      await audioController.playSfx(SfxType.counterUpdate);
-    }
     if (turnCountNotifier.value == 4) {
       () async {
-        await audioController.stopSong(fadeDuration: const Duration(milliseconds: 1800));
-        await Future<void>.delayed(const Duration(milliseconds: 200));
+        const endTurnWaitTime = const Duration(milliseconds: 500);
+        final eventsDuration = events.fold(
+          cardRevealTime + endTurnWaitTime,
+          (Duration d, e) => d + e.duration
+        );
+        const musicFadeTime = Duration(milliseconds: 1300);
+        const musicSilenceTime = Duration(milliseconds: 200);
+
+        await Future<void>.delayed(eventsDuration - (musicFadeTime + musicSilenceTime));
+        await audioController.stopSong(fadeDuration: musicFadeTime);
+        await Future<void>.delayed(musicSilenceTime);
         await audioController.playSong(SongType.last3Turns);
       }();
     }
-    await Future<void>.delayed(const Duration(milliseconds: 1500));
 
+    await Future<void>.delayed(cardRevealTime);
+    for (final event in events) {
+      if (event is BoardUpdate) {
+        for (final entry in event.updates.entries) {
+          board[entry.key.y][entry.key.x] = entry.value;
+        }
+        boardChangeNotifier.value = event.updates.keys.toSet();
+        audioController.playSfx(event.sfx);
+      } else if (event is BoardSpecialUpdate) {
+        activatedSpecialsNotifier.value = event.updates;
+        await audioController.playSfx(SfxType.specialActivate);
+      } else if (event is PlayerSpecialUpdate) {
+        yellow.special.value = event.yellowSpecial;
+        blue.special.value = event.blueSpecial;
+        await audioController.playSfx(SfxType.gainSpecial);
+      } else if (event is ScoreUpdate) {
+        yellowCountNotifier.value = event.yellowScore;
+        blueCountNotifier.value = event.blueScore;
+        await audioController.playSfx(SfxType.counterUpdate);
+      } else if (event is EndTurn) {
+        if (turnCountNotifier.value == 1) {
+          endOfGameNotifier.notifyListeners();
+          return;
+        }
+      }
+      await Future<void>.delayed(event.duration);
+    }
+
+    moveLocationNotifier.value = null;
+    moveCardNotifier.value = null;
+    moveRotationNotifier.value = 0;
+    movePassNotifier.value = false;
+    moveSpecialNotifier.value = false;
+    moveIsValidNotifier.value = false;
     revealCardsNotifier.value = false;
 
     yellowMoveNotifier.value = null;
@@ -178,9 +322,102 @@ class TableturfBattle {
       card.isPlayable = getMoves(board, card, special: false).isNotEmpty;
       card.isPlayableSpecial = card.special <= yellow.special.value && getMoves(board, card, special: true).isNotEmpty;
     }
+    playerControlLock.value = true;
     runBlueAI();
     //runYellowAI();
     _log.info("turn complete");
+  }
+
+  List<BattleEvent> _populateEvents() {
+    final yellowMove = yellowMoveNotifier.value!;
+    final blueMove = blueMoveNotifier.value!;
+    final List<BattleEvent> events = [];
+
+    if (blueMove.pass && yellowMove.pass) {
+      _log.info("no move");
+
+    } else if (blueMove.pass && !yellowMove.pass) {
+      _log.info("yellow move only");
+      events.add(BoardUpdate(
+        yellowMove.boardChanges,
+        yellowMove.special ? SfxType.specialMove : SfxType.normalMove
+      ));
+
+    } else if (!blueMove.pass && yellowMove.pass) {
+      _log.info("blue move only");
+      events.add(BoardUpdate(
+          blueMove.boardChanges,
+          blueMove.special ? SfxType.specialMove : SfxType.normalMove
+      ));
+
+    } else if (!_checkOverlap(blueMove, yellowMove)) {
+      _log.info("no overlap");
+      final boardChanges = yellowMove.boardChanges;
+      boardChanges.addAll(blueMove.boardChanges);
+      events.add(BoardUpdate(
+          boardChanges,
+          yellowMove.special || blueMove.special ? SfxType.specialMove : SfxType.normalMove
+      ));
+
+      /*
+    } else if (blueMove.special && !yellowMove.special) {
+      _log.info("blue special over yellow");
+      await _applyOverlap(below: yellowMove, above: blueMove);
+
+    } else if (yellowMove.special && !blueMove.special) {
+      _log.info("yellow special over blue");
+      await _applyOverlap(below: blueMove, above: yellowMove);
+    */
+
+    } else if (blueMove.card.count < yellowMove.card.count) {
+      _log.info("blue over yellow");
+      events.addAll(_applyOverlap(below: yellowMove, above: blueMove));
+
+    } else if (yellowMove.card.count < blueMove.card.count) {
+      _log.info("yellow over blue");
+      events.addAll(_applyOverlap(below: blueMove, above: yellowMove));
+
+    } else {
+      _log.info("conflict");
+      events.addAll(_applyConflict(blueMove, yellowMove));
+    }
+
+    final newBoard = events.fold<TileGrid>(board.copy(), (newBoard, event) {
+      if (event is BoardUpdate) {
+        for (final entry in event.updates.entries) {
+          newBoard[entry.key.y][entry.key.x] = entry.value;
+        }
+      }
+      return newBoard;
+    });
+
+    final prevYellowSpecialCount = _yellowSpecialCount;
+    final prevBlueSpecialCount = _blueSpecialCount;
+    events.addAll(_countSpecial(newBoard));
+
+    final newYellowSpecial = (
+        yellow.special.value
+            + (_yellowSpecialCount - prevYellowSpecialCount)
+            + (yellowMove.pass ? 1 : 0)
+    );
+    final newBlueSpecial = (
+        blue.special.value
+            + (_blueSpecialCount - prevBlueSpecialCount)
+            + (blueMove.pass ? 1 : 0)
+    );
+
+    if (yellow.special.value != newYellowSpecial || blue.special.value != newBlueSpecial) {
+      events.add(PlayerSpecialUpdate(newYellowSpecial, newBlueSpecial));
+    }
+    if (turnCountNotifier.value == 1) {
+      events.add(const EndTurn());
+      return events;
+    }
+
+    events.addAll(_countBoard(newBoard));
+
+    events.add(const EndTurn());
+    return events;
   }
 
   bool _checkOverlap(TableturfMove move1, TableturfMove move2) {
@@ -209,12 +446,11 @@ class TableturfBattle {
     return false;
   }
 
-  Future<void> _applyOverlap({required TableturfMove below, required TableturfMove above}) async {
-    final audioController = AudioController();
-    await audioController.playSfx(below.special ? SfxType.specialMove : SfxType.normalMove);
-    applyMoveToBoard(board, below);
-    await Future<void>.delayed(const Duration(milliseconds: 1000));
-    await audioController.playSfx(above.special ? SfxType.specialMove : SfxType.normalMoveOverlap);
+  Iterable<BattleEvent> _applyOverlap({required TableturfMove below, required TableturfMove above}) sync* {
+    yield BoardUpdate(
+      below.boardChanges,
+      below.special ? SfxType.specialMove : SfxType.normalMove
+    );
 
     final relativePoint = Coords(
         above.x - below.x,
@@ -222,6 +458,7 @@ class TableturfBattle {
     );
     final abovePattern = rotatePattern(above.card.minPattern, above.rotation);
     final belowPattern = rotatePattern(below.card.minPattern, below.rotation);
+    final Map<Coords, TileState> overlapChanges = {};
     for (var y = 0; y < abovePattern.length; y++) {
       for (var x = 0; x < abovePattern[0].length; x++) {
         final aboveTile = abovePattern[y][x];
@@ -229,6 +466,7 @@ class TableturfBattle {
           continue;
         }
         final boardTile = board[above.y + y][above.x + x];
+        final tileCoords = Coords(above.x + x, above.y + y);
         final relativeX = relativePoint.x + x;
         final relativeY = relativePoint.y + y;
         if (relativeY >= 0
@@ -237,7 +475,7 @@ class TableturfBattle {
             && relativeX < belowPattern[0].length) {
           final belowTile = belowPattern[relativeY][relativeX];
           if (belowTile == TileState.unfilled) {
-            applySquare(boardTile, aboveTile, above.traits);
+            overlapChanges[tileCoords] = above.traits.mapCardTile(aboveTile);
             continue;
           }
           final newTile = {
@@ -247,17 +485,23 @@ class TableturfBattle {
             }[belowTile]!,
             TileState.yellowSpecial: above.traits.specialTile,
           }[aboveTile]!;
-          if (boardTile.state.value != newTile) {
-            boardTile.state.value = newTile;
+          if (boardTile != newTile) {
+            overlapChanges[tileCoords] = newTile;
           }
         } else {
-          applySquare(boardTile, aboveTile, above.traits);
+          overlapChanges[tileCoords] = above.traits.mapCardTile(aboveTile);
         }
       }
     }
+    yield BoardUpdate(
+      overlapChanges,
+      above.special ? SfxType.specialMove : SfxType.normalMoveOverlap
+    );
   }
 
-  Future<void> _applyConflict(TableturfMove move1, TableturfMove move2) async {
+  Iterable<BattleEvent> _applyConflict(TableturfMove move1, TableturfMove move2) sync* {
+    var wallsGenerated = false;
+    final Map<Coords, TileState> overlapChanges = {};
     void applyOneWay(TableturfMove above, TableturfMove below) {
       final relativePoint = Coords(
           above.x - below.x,
@@ -268,7 +512,7 @@ class TableturfBattle {
       for (var y = 0; y < abovePattern.length; y++) {
         for (var x = 0; x < abovePattern[0].length; x++) {
           final aboveTile = abovePattern[y][x];
-          final boardTile = board[above.y + y][above.x + x];
+          final tileCoords = Coords(above.x + x, above.y + y);
           final relativeX = relativePoint.x + x;
           final relativeY = relativePoint.y + y;
           if (relativeY >= 0
@@ -277,14 +521,18 @@ class TableturfBattle {
               && relativeX < belowPattern[0].length) {
             final belowTile = belowPattern[relativeY][relativeX];
             if (aboveTile == TileState.unfilled) {
-              applySquare(boardTile, belowTile, below.traits);
+              if (belowTile != TileState.unfilled) {
+                overlapChanges[tileCoords] = below.traits.mapCardTile(belowTile);
+              }
               continue;
             }
             if (belowTile == TileState.unfilled) {
-              applySquare(boardTile, aboveTile, above.traits);
+              if (aboveTile != TileState.unfilled) {
+                overlapChanges[tileCoords] = above.traits.mapCardTile(aboveTile);
+              }
               continue;
             }
-            boardTile.state.value = {
+            final newTile = {
               TileState.yellow: {
                 TileState.yellow: TileState.wall,
                 TileState.yellowSpecial: below.traits.specialTile,
@@ -294,52 +542,74 @@ class TableturfBattle {
                 TileState.yellowSpecial: TileState.wall,
               }[belowTile]!,
             }[aboveTile]!;
+            overlapChanges[tileCoords] = newTile;
+            if (newTile == TileState.wall) {
+              wallsGenerated = true;
+            }
           } else {
-            applySquare(boardTile, aboveTile, above.traits);
+            if (aboveTile != TileState.unfilled) {
+              overlapChanges[tileCoords] = above.traits.mapCardTile(aboveTile);
+            }
           }
         }
       }
     }
-    final audioController = AudioController();
-    await audioController.playSfx(SfxType.normalMoveConflict);
     applyOneWay(move1, move2);
     applyOneWay(move2, move1);
+    yield BoardUpdate(
+      overlapChanges,
+      wallsGenerated ? SfxType.normalMoveConflict :
+      move1.special || move2.special ? SfxType.specialMove : SfxType.normalMove
+    );
   }
 
-  void countBoard() {
+  Iterable<BattleEvent> _countBoard(TileGrid newBoard) sync* {
     var yellowCount = 0;
     var blueCount = 0;
-    for (var y = 0; y < board.length; y++) {
-      for (var x = 0; x < board[0].length; x++) {
-        final boardTile = board[y][x].state.value;
-        if (boardTile == TileState.yellow || boardTile == TileState.yellowSpecial) {
+    for (var y = 0; y < newBoard.length; y++) {
+      for (var x = 0; x < newBoard[0].length; x++) {
+        final boardTile = newBoard[y][x];
+        if (boardTile.isYellow) {
           yellowCount += 1;
-        }if (boardTile == TileState.blue || boardTile == TileState.blueSpecial) {
+        }
+        if (boardTile.isBlue) {
           blueCount += 1;
         }
       }
     }
-    yellowCountNotifier.value = yellowCount;
-    blueCountNotifier.value = blueCount;
+    if (yellowCountNotifier.value != yellowCount || blueCountNotifier.value != blueCount) {
+      yield ScoreUpdate(yellowCount, blueCount);
+    }
   }
 
-  void _countSpecial() {
+  void updateScores() {
+    final newCountsIterator = _countBoard(board);
+    if (newCountsIterator.isNotEmpty) {
+      final newCounts = newCountsIterator.first as ScoreUpdate;
+      yellowCountNotifier.value = newCounts.yellowScore;
+      blueCountNotifier.value = newCounts.blueScore;
+    }
+  }
+
+  Iterable<BattleEvent> _countSpecial(TileGrid newBoard) sync* {
+    final prevYellowSpecialCount = _yellowSpecialCount;
+    final prevBlueSpecialCount = _blueSpecialCount;
     _yellowSpecialCount = 0;
     _blueSpecialCount = 0;
-    for (var y = 0; y < board.length; y++) {
-      for (var x = 0; x < board[0].length; x++) {
-        final boardTile = board[y][x];
-        final boardTileState = boardTile.state.value;
-        if (boardTileState.isSpecial) {
+    final activatedCoordsSet = Set<Coords>();
+    for (var y = 0; y < newBoard.length; y++) {
+      for (var x = 0; x < newBoard[0].length; x++) {
+        final boardTile = newBoard[y][x];
+        if (boardTile.isSpecial) {
           bool surrounded = true;
           for (var dy = -1; dy <= 1; dy++) {
             for (var dx = -1; dx <= 1; dx++) {
               final newY = y + dy;
               final newX = x + dx;
-              if (newY < 0 || newY >= board.length || newX < 0 || newX >= board[0].length) {
+              if (newY < 0 || newY >= newBoard.length || newX < 0 || newX >= newBoard[0].length) {
                 continue;
               }
-              final adjacentTile = board[newY][newX].state.value;
+              final adjacentTile = newBoard[newY][newX];
               if (!adjacentTile.isFilled) {
                 surrounded = false;
                 continue;
@@ -347,8 +617,8 @@ class TableturfBattle {
             }
           }
           if (surrounded) {
-            boardTile.specialIsActivated.value = true;
-            if (boardTileState == TileState.yellowSpecial) {
+            activatedCoordsSet.add(Coords(x, y));
+            if (boardTile == TileState.yellowSpecial) {
               _yellowSpecialCount += 1;
             } else {
               _blueSpecialCount += 1;
@@ -357,13 +627,16 @@ class TableturfBattle {
         }
       }
     }
+    if (_yellowSpecialCount != prevYellowSpecialCount
+        || _blueSpecialCount != prevBlueSpecialCount) {
+      yield BoardSpecialUpdate(activatedCoordsSet);
+    }
   }
 
   Future<void> runBlueAI() async {
-    final TileGrid plainBoard = board.map((row) => row.map((t) => t.state.value).toList()).toList();
     final TableturfMove blueMove = (await Future.wait([
       compute(findBestBlueMove, [
-        plainBoard,
+        board,
         blue.hand.map((v) => v.value!).toList(),
         blue.special.value,
         turnCountNotifier.value,
@@ -387,10 +660,9 @@ class TableturfBattle {
   }
 
   Future<void> runYellowAI() async {
-    final TileGrid plainBoard = board.map((row) => row.map((t) => t.state.value).toList()).toList();
     final TableturfMove yellowMove = (await Future.wait([
       compute(findBestBlueMove, [
-        plainBoard,
+        board,
         yellow.hand.map((v) => v.value!).toList(),
         yellow.special.value,
         turnCountNotifier.value,
