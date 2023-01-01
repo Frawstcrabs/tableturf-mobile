@@ -12,9 +12,7 @@ import 'package:tableturf_mobile/src/audio/audio_controller.dart';
 import 'package:tableturf_mobile/src/game_internals/battle.dart';
 import 'package:tableturf_mobile/src/game_internals/card.dart';
 import 'package:tableturf_mobile/src/game_internals/move.dart';
-import 'package:tableturf_mobile/src/game_internals/move_selection.dart';
 import 'package:tableturf_mobile/src/game_internals/player.dart';
-import 'package:tableturf_mobile/src/play_session/components/move_selection.dart';
 import 'package:tableturf_mobile/src/style/palette.dart';
 import 'package:tableturf_mobile/src/style/my_transition.dart';
 
@@ -85,8 +83,8 @@ class _PlaySessionScreenState extends State<PlaySessionScreen>
   static final _log = Logger('PlaySessionScreenState');
 
   final GlobalKey _boardTileKey = GlobalKey(debugLabel: "InputArea");
-  final GlobalKey _blueSelectionKey = GlobalKey(debugLabel: "BlueSelectionWidget");
-  final GlobalKey _yellowSelectionKey = GlobalKey(debugLabel: "YellowSelectionWidget");
+  final GlobalKey _bluebattleKey = GlobalKey(debugLabel: "BluebattleWidget");
+  final GlobalKey _yellowbattleKey = GlobalKey(debugLabel: "YellowbattleWidget");
   final GlobalKey _blueScoreKey = GlobalKey(debugLabel: "BlueScoreWidget");
   final GlobalKey _yellowScoreKey = GlobalKey(debugLabel: "YellowScoreWidget");
   double tileSize = 22.0;
@@ -104,15 +102,11 @@ class _PlaySessionScreenState extends State<PlaySessionScreen>
   late final Animation<double> specialMoveImageOffset;
   late final Animation<Color?> specialMoveYellowPulse, specialMoveBluePulse;
 
-  late final TableturfMoveSelection selection;
-
   @override
   void initState() {
     super.initState();
     widget.battle.endOfGameNotifier.addListener(_onGameEnd);
     widget.battle.specialMoveNotifier.addListener(_onSpecialMove);
-
-    selection = TableturfMoveSelection(player: widget.battle.yellow, board: widget.battle.board);
 
     _scoreFadeController = AnimationController(
       duration: const Duration(milliseconds: 100),
@@ -590,7 +584,7 @@ class _PlaySessionScreenState extends State<PlaySessionScreen>
 
   void _updateLocation(PointerEvent details, BuildContext rootContext) {
     final battle = widget.battle;
-    if (battle.yellowMoveNotifier.value != null && selection.moveCardNotifier.value != null) {
+    if (battle.yellowMoveNotifier.value != null && battle.moveCardNotifier.value != null) {
       return;
     }
     final board = battle.board;
@@ -614,17 +608,17 @@ class _PlaySessionScreenState extends State<PlaySessionScreen>
         newX >= board[0].length
     ) {
       if (details.kind == PointerDeviceKind.mouse) {
-        selection.moveLocationNotifier.value = null;
+        battle.moveLocationNotifier.value = null;
       }
       // if pointer is touch, let the position remain
     } else {
       final newCoords = Coords(newX, newY);
-      if (selection.moveLocationNotifier.value != newCoords) {
+      if (battle.moveLocationNotifier.value != newCoords) {
         _noPointerMovement = false;
         final audioController = AudioController();
         audioController.playSfx(SfxType.cursorMove);
       }
-      selection.moveLocationNotifier.value = newCoords;
+      battle.moveLocationNotifier.value = newCoords;
     }
   }
 
@@ -636,13 +630,13 @@ class _PlaySessionScreenState extends State<PlaySessionScreen>
         Offset.zero,
         ancestor: rootContext.findRenderObject()
     );
-    if (selection.moveLocationNotifier.value == null) {
-      selection.moveLocationNotifier.value = Coords(
+    if (battle.moveLocationNotifier.value == null) {
+      battle.moveLocationNotifier.value = Coords(
           battle.board[0].length ~/ 2,
           battle.board.length ~/ 2
       );
     }
-    final pieceLocation = selection.moveLocationNotifier.value!;
+    final pieceLocation = battle.moveLocationNotifier.value!;
     piecePosition = Offset(
         boardLocation.dx + (pieceLocation.x * boardTileStep) + (boardTileStep / 2),
         boardLocation.dy + (pieceLocation.y * boardTileStep) + (boardTileStep / 2)
@@ -671,8 +665,8 @@ class _PlaySessionScreenState extends State<PlaySessionScreen>
     final battle = widget.battle;
     if (_buttonPressed) return;
     if (details.kind == PointerDeviceKind.mouse) {
-      if (selection.playerControlLock.value) {
-        selection.confirmMove();
+      if (battle.playerControlLock.value) {
+        battle.confirmMove();
       }
     } else {
       _resetPiecePosition(context);
@@ -695,8 +689,8 @@ class _PlaySessionScreenState extends State<PlaySessionScreen>
       if (details.kind == PointerDeviceKind.touch) {
         tapTimer?.cancel();
         tapTimer = null;
-        if (!_tapTimeExceeded && _noPointerMovement && selection.playerControlLock.value) {
-          selection.rotateRight();
+        if (!_tapTimeExceeded && _noPointerMovement && battle.playerControlLock.value) {
+          battle.rotateRight();
         }
       }
     }
@@ -708,17 +702,17 @@ class _PlaySessionScreenState extends State<PlaySessionScreen>
     final battle = widget.battle;
     if (event is RawKeyDownEvent) {
       if (event.logicalKey == LogicalKeyboardKey.keyQ) {
-        if (!selection.playerControlLock.value) {
+        if (!battle.playerControlLock.value) {
           return KeyEventResult.ignored;
         }
-        selection.rotateLeft();
+        battle.rotateLeft();
         return KeyEventResult.handled;
       }
       if (event.logicalKey == LogicalKeyboardKey.keyE) {
-        if (!selection.playerControlLock.value) {
+        if (!battle.playerControlLock.value) {
           return KeyEventResult.ignored;
         }
-        selection.rotateRight();
+        battle.rotateRight();
         return KeyEventResult.handled;
       }
     }
@@ -833,20 +827,20 @@ class _PlaySessionScreenState extends State<PlaySessionScreen>
 
     final passButton = GestureDetector(
       onTap: () {
-        if (!selection.playerControlLock.value) {
+        if (!battle.playerControlLock.value) {
           return;
         }
-        selection.moveCardNotifier.value = null;
-        selection.moveLocationNotifier.value = null;
-        selection.movePassNotifier.value = !selection.movePassNotifier.value;
-        selection.moveSpecialNotifier.value = false;
+        battle.moveCardNotifier.value = null;
+        battle.moveLocationNotifier.value = null;
+        battle.movePassNotifier.value = !battle.movePassNotifier.value;
+        battle.moveSpecialNotifier.value = false;
       },
       child: AnimatedBuilder(
-        animation: selection.movePassNotifier,
+        animation: battle.movePassNotifier,
         builder: (_, __) => AnimatedContainer(
           duration: const Duration(milliseconds: 3000),
           decoration: BoxDecoration(
-            color: selection.movePassNotifier.value
+            color: battle.movePassNotifier.value
                 ? palette.buttonSelected
                 : palette.buttonUnselected,
             borderRadius: BorderRadius.all(Radius.circular(4)),
@@ -875,12 +869,12 @@ class _PlaySessionScreenState extends State<PlaySessionScreen>
 
     Widget fadeOnControlLock({Widget? child}) {
       return AnimatedBuilder(
-        animation: selection.playerControlLock,
+        animation: battle.playerControlLock,
         child: child,
         builder: (context, child) {
           return AnimatedOpacity(
             duration: const Duration(milliseconds: 200),
-            opacity: selection.playerControlLock.value ? 1.0 : 0.5,
+            opacity: battle.playerControlLock.value ? 1.0 : 0.5,
             child: child,
           );
         }
@@ -889,20 +883,20 @@ class _PlaySessionScreenState extends State<PlaySessionScreen>
 
     final specialButton = GestureDetector(
       onTap: () {
-        if (!selection.playerControlLock.value) {
+        if (!battle.playerControlLock.value) {
           return;
         }
-        selection.moveCardNotifier.value = null;
-        selection.moveLocationNotifier.value = null;
-        selection.moveSpecialNotifier.value = !selection.moveSpecialNotifier.value;
-        selection.movePassNotifier.value = false;
+        battle.moveCardNotifier.value = null;
+        battle.moveLocationNotifier.value = null;
+        battle.moveSpecialNotifier.value = !battle.moveSpecialNotifier.value;
+        battle.movePassNotifier.value = false;
       },
       child: AnimatedBuilder(
-        animation: selection.moveSpecialNotifier,
+        animation: battle.moveSpecialNotifier,
         builder: (_, __) => AnimatedContainer(
           duration: const Duration(milliseconds: 200),
           decoration: BoxDecoration(
-            color: selection.moveSpecialNotifier.value
+            color: battle.moveSpecialNotifier.value
                 ? Color.fromRGBO(216, 216, 0, 1)
                 : Color.fromRGBO(109, 161, 198, 1),
             borderRadius: BorderRadius.all(Radius.circular(4)),
@@ -918,21 +912,21 @@ class _PlaySessionScreenState extends State<PlaySessionScreen>
       )
     );
 
-    final blueCardSelection = CardSelectionWidget(
-      key: _blueSelectionKey,
+    final blueCardbattle = CardSelectionWidget(
+      key: _bluebattleKey,
       battle: battle,
       player: battle.blue,
       moveNotifier: battle.blueMoveNotifier,
       tileColour: palette.tileBlue,
       tileSpecialColour: palette.tileBlueSpecial,
     );
-    final yellowCardSelection = CardSelectionConfirmButton(
-      key: _yellowSelectionKey,
+    final yellowCardbattle = CardSelectionConfirmButton(
+      key: _yellowbattleKey,
       battle: battle
     );
 
-    final cardSelectionScaleDown = mediaQuery.orientation == Orientation.landscape ? 0.7 : 0.9;
-    final cardSelections = RepaintBoundary(
+    final cardbattleScaleDown = mediaQuery.orientation == Orientation.landscape ? 0.7 : 0.9;
+    final cardbattles = RepaintBoundary(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.center,
         mainAxisAlignment: MainAxisAlignment.spaceEvenly,
@@ -942,10 +936,10 @@ class _PlaySessionScreenState extends State<PlaySessionScreen>
             child: AspectRatio(
               aspectRatio: CardWidget.CARD_WIDTH/CardWidget.CARD_HEIGHT,
               child: FractionallySizedBox(
-                heightFactor: cardSelectionScaleDown,
-                widthFactor: cardSelectionScaleDown,
+                heightFactor: cardbattleScaleDown,
+                widthFactor: cardbattleScaleDown,
                 child: Center(
-                  child: blueCardSelection,
+                  child: blueCardbattle,
                 ),
               ),
             ),
@@ -955,10 +949,10 @@ class _PlaySessionScreenState extends State<PlaySessionScreen>
             child: AspectRatio(
               aspectRatio: CardWidget.CARD_WIDTH/CardWidget.CARD_HEIGHT,
               child: FractionallySizedBox(
-                heightFactor: cardSelectionScaleDown,
-                widthFactor: cardSelectionScaleDown,
+                heightFactor: cardbattleScaleDown,
+                widthFactor: cardbattleScaleDown,
                 child: Center(
-                  child: yellowCardSelection,
+                  child: yellowCardbattle,
                 ),
               ),
             ),
@@ -1047,7 +1041,7 @@ class _PlaySessionScreenState extends State<PlaySessionScreen>
                         ),
                         Expanded(
                           flex: 1,
-                          child: cardSelections,
+                          child: cardbattles,
                         )
                       ]
                   ),
@@ -1135,7 +1129,7 @@ class _PlaySessionScreenState extends State<PlaySessionScreen>
                 Expanded(
                   flex: 2,
                   child: blockCursorMovement(
-                    child: cardSelections,
+                    child: cardbattles,
                   )
                 )
               ]
@@ -1175,10 +1169,7 @@ class _PlaySessionScreenState extends State<PlaySessionScreen>
           onPointerMove: (details) => _onPointerMove(details, context),
           onPointerHover: (details) => _onPointerHover(details, context),
           onPointerUp: (details) => _onPointerUp(details, context),
-          child: MoveSelection(
-            selection: selection,
-            child: screen
-          )
+          child: screen,
         ),
       ),
     );

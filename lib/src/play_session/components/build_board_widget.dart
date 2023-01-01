@@ -39,9 +39,11 @@ Widget buildBoardWidget({required TableturfBattle battle, Key? key, void Functio
           child: Stack(
             children: [
               BoardWidget(
+                battle,
                 tileSize: boardTileSize,
               ),
               MoveOverlayWidget(
+                battle,
                 tileSize: boardTileSize,
               )
             ]
