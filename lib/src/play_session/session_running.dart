@@ -13,6 +13,7 @@ import 'package:tableturf_mobile/src/game_internals/battle.dart';
 import 'package:tableturf_mobile/src/game_internals/card.dart';
 import 'package:tableturf_mobile/src/game_internals/move.dart';
 import 'package:tableturf_mobile/src/game_internals/player.dart';
+import 'package:tableturf_mobile/src/play_session/components/card_deck.dart';
 import 'package:tableturf_mobile/src/style/palette.dart';
 import 'package:tableturf_mobile/src/style/my_transition.dart';
 
@@ -1006,6 +1007,7 @@ class _PlaySessionScreenState extends State<PlaySessionScreen>
                   yellowScore,
                   Container(width: 20),
                   Expanded(child: RepaintBoundary(child: SpecialMeter(player: battle.yellow))),
+                  CardDeck(battle: battle),
                 ],
               ),
             ),
@@ -1118,7 +1120,7 @@ class _PlaySessionScreenState extends State<PlaySessionScreen>
                     widthFactor: 2/5,
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                      children: [turnCounter, blueScore, yellowScore],
+                      children: [turnCounter, blueScore, yellowScore, CardDeck(battle: battle)],
                     ),
                   ),
                 ),

@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:tableturf_mobile/src/game_internals/opponentAI.dart';
 import 'package:tableturf_mobile/src/game_internals/player.dart';
+import 'package:tableturf_mobile/src/level_selection/opponents.dart';
 
 import '../audio/audio_controller.dart';
 import '../audio/sounds.dart';
@@ -43,26 +44,27 @@ class LevelSelectionScreen extends StatelessWidget {
             Expanded(
               child: ListView(
                 children: [
-                  for (final map in maps.keys)
+                  for (final opponent in opponents)
                     ListTile(
                       onTap: () {
-                        //const starterDeck = [5, 33, 158, 12, 44, 136, 21, 51, 140, 27, 54, 102, 39, 55, 91];
-                        const starterDeck = [97, 98, 158, 12, 44, 136, 21, 51, 140, 27, 54, 102, 0, 55, 91];
+                        const playerDeck = [97, 98, 158, 12, 44, 136, 21, 51, 140, 27, 54, 102, 0, 55, 91];
                         Navigator.of(context).push(buildGameSessionPage(
                           context: context,
-                          stage: map,
-                          yellowDeck: starterDeck.map((i) => cards[i]).toList(),
-                          blueDeck: starterDeck.map((i) => cards[i]).toList(),
-                          //yellowDeck: cards.randomSample(15),
-                          //blueDeck: cards.randomSample(15),
+                          stage: opponent.map,
+                          yellowDeck: playerDeck.map((i) => cards[i]).toList(),
+                          yellowSleeve: "crustysean",
+                          blueDeck: (
+                            opponent.name == "Clone Jelly"
+                              ? playerDeck
+                              : opponent.deck
+                          ).map((i) => cards[i]).toList(),
+                          blueName: opponent.name,
+                          blueSleeve: opponent.sleeveDesign,
                           aiLevel: AILevel.level4,
                         ));
                       },
                       title: Text(
-                        map.splitMapJoin("_",
-                          onMatch: (s) => " ",
-                          onNonMatch: (s) => "${s[0].toUpperCase()}${s.substring(1).toLowerCase()}"
-                        ),
+                        opponent.name,
                         style: TextStyle(fontFamily: "Splatfont2")
                       )
                     )

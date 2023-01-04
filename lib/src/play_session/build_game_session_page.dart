@@ -16,6 +16,10 @@ PageRouteBuilder<T> buildGameSessionPage<T>({
   required String stage,
   required List<TableturfCardData> yellowDeck,
   required List<TableturfCardData> blueDeck,
+  String yellowName = "You",
+  required String blueName,
+  String yellowSleeve = "default",
+  required String blueSleeve,
   required AILevel aiLevel,
   Palette palette = const Palette(),
 }) {
@@ -37,18 +41,19 @@ PageRouteBuilder<T> buildGameSessionPage<T>({
   }
 
   final yellowPlayer = TableturfPlayer(
-    name: "You",
+    name: yellowName,
     deck: yellowDeckCards,
     hand: Iterable.generate(4, (c) => ValueNotifier<TableturfCard?>(null)).toList(),
     traits: const YellowTraits(),
-    cardSleeve: "assets/images/card_components/sleeve_cool.png",
+    cardSleeve: "assets/images/card_components/sleeve_${yellowSleeve}.png",
     special: 0,
   );
   final bluePlayer = TableturfPlayer(
-    name: "Rando",
+    name: blueName,
     deck: blueDeckCards,
     hand: blueHand.map((c) => ValueNotifier(c)).toList(),
     traits: const BlueTraits(),
+    cardSleeve: "assets/images/card_components/sleeve_${blueSleeve}.png",
     special: 0,
   );
 

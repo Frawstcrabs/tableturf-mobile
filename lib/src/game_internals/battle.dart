@@ -57,6 +57,11 @@ class EndTurn extends BattleEvent {
   const EndTurn();
 }
 
+class NopEvent extends BattleEvent {
+  get duration => const Duration(milliseconds: 1000);
+  const NopEvent();
+}
+
 class TableturfBattle {
   static final _log = Logger('TableturfBattle');
   final ValueNotifier<TableturfCard?> moveCardNotifier = ValueNotifier(null);
@@ -78,7 +83,7 @@ class TableturfBattle {
 
   final ValueNotifier<int> yellowCountNotifier = ValueNotifier(1);
   final ValueNotifier<int> blueCountNotifier = ValueNotifier(1);
-  final ValueNotifier<int> turnCountNotifier = ValueNotifier(4);
+  final ValueNotifier<int> turnCountNotifier = ValueNotifier(12);
   int _yellowSpecialCount = 0, _blueSpecialCount = 0;
 
   final TableturfPlayer yellow;
@@ -335,6 +340,7 @@ class TableturfBattle {
 
     if (blueMove.pass && yellowMove.pass) {
       _log.info("no move");
+      events.add(const NopEvent());
 
     } else if (blueMove.pass && !yellowMove.pass) {
       _log.info("yellow move only");
