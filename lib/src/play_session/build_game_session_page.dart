@@ -45,7 +45,7 @@ PageRouteBuilder<T> buildGameSessionPage<T>({
     deck: yellowDeckCards,
     hand: Iterable.generate(4, (c) => ValueNotifier<TableturfCard?>(null)).toList(),
     traits: const YellowTraits(),
-    cardSleeve: "assets/images/card_components/sleeve_${yellowSleeve}.png",
+    cardSleeve: "assets/images/card_sleeves/sleeve_${yellowSleeve}.png",
     special: 0,
   );
   final bluePlayer = TableturfPlayer(
@@ -53,7 +53,7 @@ PageRouteBuilder<T> buildGameSessionPage<T>({
     deck: blueDeckCards,
     hand: blueHand.map((c) => ValueNotifier(c)).toList(),
     traits: const BlueTraits(),
-    cardSleeve: "assets/images/card_components/sleeve_${blueSleeve}.png",
+    cardSleeve: "assets/images/card_sleeves/sleeve_${blueSleeve}.png",
     special: 0,
   );
 

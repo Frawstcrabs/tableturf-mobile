@@ -34,7 +34,7 @@ class TableturfPlayer {
     required this.deck,
     required this.hand,
     required this.traits,
-    this.cardSleeve = "assets/images/card_components/sleeve_default.png",
+    this.cardSleeve = "assets/images/card_sleeves/sleeve_default.png",
     special = 0,
   }): special = ValueNotifier(special);
 

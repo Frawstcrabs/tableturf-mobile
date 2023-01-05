@@ -839,7 +839,7 @@ class _PlaySessionScreenState extends State<PlaySessionScreen>
       child: AnimatedBuilder(
         animation: battle.movePassNotifier,
         builder: (_, __) => AnimatedContainer(
-          duration: const Duration(milliseconds: 3000),
+          duration: const Duration(milliseconds: 200),
           decoration: BoxDecoration(
             color: battle.movePassNotifier.value
                 ? palette.buttonSelected

@@ -233,6 +233,7 @@ class _PlaySessionEndState extends State<PlaySessionEnd>
   void dispose() {
     _scoreBarAnimator.dispose();
     _scoreCountersAnimator.dispose();
+    _scoreWaveAnimator.dispose();
     super.dispose();
   }
 

@@ -2,6 +2,8 @@ import 'dart:math';
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
+import 'package:tableturf_mobile/src/audio/audio_controller.dart';
+import 'package:tableturf_mobile/src/audio/sounds.dart';
 import 'package:tableturf_mobile/src/game_internals/battle.dart';
 
 class CircularArcOffsetTween extends Tween<Offset> {
@@ -137,17 +139,27 @@ class CardDeck extends StatefulWidget {
 class _CardDeckState extends State<CardDeck>
     with TickerProviderStateMixin {
   late final AnimationController _shuffleController;
-  late final Animation<Offset> topCardMove, bottomCardMove;
+  late final Animation<Offset> shuffleTopCardMove, shuffleBottomCardMove;
+
+  late final AnimationController _dealController;
+  late final Animation<Offset> dealCardOffset;
+  late final Animation<double> dealCardRotate;
+
+  late final AnimationController _scaleController;
+  late final Animation<double> scaleDeckValue;
+  late final Animation<Color?> scaleDeckColour;
+
+  static const DECK_SPACING = Offset(0, -0.05);
 
   @override
   void initState() {
     super.initState();
     _shuffleController = AnimationController(
-      duration: const Duration(milliseconds: 300),
+      duration: const Duration(milliseconds: 200),
       vsync: this
     );
-    final startOffset = Offset(0, -10);
-    final endOffset = Offset(0, 10);
+    final startOffset = DECK_SPACING * 2;
+    final endOffset = DECK_SPACING * -2;
     final topTween = CircularArcOffsetTween(
       begin: startOffset,
       end: endOffset,
@@ -160,81 +172,167 @@ class _CardDeckState extends State<CardDeck>
     ).chain(CurveTween(curve: Curves.easeInOutBack));
 
     const switchPoint = 0.4;
-    topCardMove = AnimationSwitcher(
+    shuffleTopCardMove = AnimationSwitcher(
       switchPoint: switchPoint,
       first: topTween,
       second: bottomTween,
     ).animate(_shuffleController);
-    bottomCardMove = AnimationSwitcher(
+    shuffleBottomCardMove = AnimationSwitcher(
       switchPoint: switchPoint,
       first: bottomTween,
       second: topTween,
     ).animate(_shuffleController);
+
+    _dealController = AnimationController(
+      duration: const Duration(milliseconds: 100),
+      vsync: this,
+    );
+    dealCardOffset = TweenSequence([
+      TweenSequenceItem(
+        tween: ConstantTween(Offset.zero),
+        weight: 1
+      ),
+      TweenSequenceItem(
+        tween: ConstantTween(Offset(0.03, -0.09)),
+        weight: 99
+      ),
+    ]).animate(_dealController);
+    const defaultRotation = -0.025;
+    dealCardRotate = Tween(
+      begin: defaultRotation,
+      end: defaultRotation * 2.5,
+    )
+      .chain(CurveTween(curve: Curves.decelerate))
+      .animate(_dealController);
+
+    _scaleController = AnimationController(
+      duration: const Duration(milliseconds: 150),
+      vsync: this,
+    );
+    scaleDeckValue = Tween(
+      begin: 0.6,
+      end: 1.0,
+    ).animate(_scaleController);
+    scaleDeckColour = ColorTween(
+      begin: const Color.fromRGBO(0, 0, 0, 0.3),
+      end: const Color.fromRGBO(0, 0, 0, 0.0),
+    )
+        .chain(CurveTween(curve: Curves.easeOut))
+        .animate(_scaleController);
+  }
+
+  @override
+  void dispose() {
+    _shuffleController.dispose();
+    _dealController.dispose();
+    _scaleController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _playDealAnimation() async {
+    final audioController = AudioController();
+    await _scaleController.forward(from: 0.0);
+    await Future<void>.delayed(const Duration(milliseconds: 200));
+    audioController.playSfx(SfxType.dealHand);
+    await _shuffleController.forward(from: 0.0);
+    await _shuffleController.forward(from: 0.0);
+    await _shuffleController.forward(from: 0.0);
+    await Future<void>.delayed(const Duration(milliseconds: 200));
+    await _dealController.forward(from: 0.0);
+    await _dealController.reverse(from: 1.0);
+    await Future<void>.delayed(const Duration(milliseconds: 1000));
+    await _scaleController.reverse(from: 1.0);
   }
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: () async {
-        await _shuffleController.forward(from: 0.0);
-        await _shuffleController.forward(from: 0.0);
-        await _shuffleController.forward(from: 0.0);
-      },
-      child: AspectRatio(
-        aspectRatio: 1.0,
-        child: Container(
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            color: Colors.blueGrey,
-            border: Border.all(
-              width: 3,
-              color: Colors.black,
-            )
+    return AspectRatio(
+      aspectRatio: 1.0,
+      child: GestureDetector(
+        onTap: _playDealAnimation,
+        child: RepaintBoundary(
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              final width = constraints.maxWidth;
+              print(constraints);
+              return Container(
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: Colors.black.withOpacity(0.4),
+                ),
+                child: Center(
+                  child: AnimatedBuilder(
+                    animation: _scaleController,
+                    builder: (_, __) => Transform.scale(
+                      scale: scaleDeckValue.value,
+                      child: Stack(
+                        children: [
+                          AnimatedBuilder(
+                            animation: Listenable.merge([
+                              _shuffleController,
+                              _dealController,
+                              _scaleController,
+                            ]),
+                            child: Stack(
+                              children: [
+                                Transform.translate(
+                                  offset: (DECK_SPACING * -1) * width,
+                                  child: Image.asset(widget.battle.yellow.cardSleeve),
+                                ),
+                                Transform.translate(
+                                  offset: (DECK_SPACING * 1) * width,
+                                  child: Image.asset(widget.battle.yellow.cardSleeve),
+                                ),
+                              ]
+                            ),
+                            builder: (_, child) => Transform.rotate(
+                              angle: dealCardRotate.value * 2 * pi,
+                              child: ColorFiltered(
+                                colorFilter: ColorFilter.mode(
+                                  scaleDeckColour.value!,
+                                  BlendMode.srcATop,
+                                ),
+                                child: Stack(
+                                  children: [
+                                    Transform.translate(
+                                      offset: shuffleBottomCardMove.value * width,
+                                      child: ColorFiltered(
+                                        colorFilter: ColorFilter.mode(
+                                          const Color.fromRGBO(0, 0, 0, 0.5),
+                                          BlendMode.srcATop,
+                                        ),
+                                        child: child,
+                                      ),
+                                    ),
+                                    Transform.translate(
+                                      offset: (shuffleTopCardMove.value + dealCardOffset.value) * width,
+                                      child: child,
+                                    ),
+                                  ]
+                                ),
+                              ),
+                            )
+                          ),
+                          FractionallySizedBox(
+                            heightFactor: 0.3,
+                            widthFactor: 0.4,
+                            child: DecoratedBox(
+                              decoration: BoxDecoration(
+                                color: Colors.black54
+                              ),
+                              child: Text("15"),
+                            )
+                          )
+                        ],
+                      ),
+                    )
+                  ),
+                )
+              );
+            }
           ),
-          child: Center(
-            child: Transform.rotate(
-              angle: -0.05 * pi,
-              child: AnimatedBuilder(
-                animation: _shuffleController,
-                builder: (_, __) {
-                  return Stack(
-                    children: [
-                      Transform.translate(
-                          offset: bottomCardMove.value,
-                          child: Container(
-                            decoration: BoxDecoration(
-                                color: Colors.green[900],
-                                border: Border.all(
-                                  width: 2,
-                                  color: Colors.black,
-                                )
-                            ),
-                            height: 50,
-                            width: 35,
-                          )
-                      ),
-                      Transform.translate(
-                          offset: topCardMove.value,
-                          child: Container(
-                            decoration: BoxDecoration(
-                                color: Colors.green[400],
-                                border: Border.all(
-                                  width: 2,
-                                  color: Colors.black,
-                                )
-                            ),
-                            height: 50,
-                            width: 35,
-                          )
-                      ),
-                    ]
-                  );
-                }
-              ),
-            ),
-          )
-        ),
-      )
+        )
+      ),
     );
   }
 }
