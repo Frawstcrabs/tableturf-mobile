@@ -47,6 +47,7 @@ enum SfxType {
   confirmMoveSucceed,
   confirmMovePass,
   counterUpdate,
+  gameStart,
   specialActivate,
   gainSpecial,
   normalMove,

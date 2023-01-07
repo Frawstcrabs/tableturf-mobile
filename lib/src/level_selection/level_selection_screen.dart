@@ -52,7 +52,7 @@ class LevelSelectionScreen extends StatelessWidget {
                           context: context,
                           stage: opponent.map,
                           yellowDeck: playerDeck.map((i) => cards[i]).toList(),
-                          yellowSleeve: "crustysean",
+                          yellowSleeve: "ultracool",
                           blueDeck: (
                             opponent.name == "Clone Jelly"
                               ? playerDeck

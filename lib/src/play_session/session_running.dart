@@ -67,6 +67,209 @@ class SpecialBackgroundPainter extends CustomPainter {
   }
 }
 
+class CircularArcOffsetTween extends Tween<Offset> {
+  bool _clockwise;
+  double _angle;
+
+  bool _dirty = true;
+  Offset? _center;
+  double? _beginAngle;
+  double? _radius;
+
+  CircularArcOffsetTween({
+    super.begin,
+    super.end,
+    required angle,
+    clockwise = true,
+  }): _angle = angle, _clockwise = clockwise;
+
+  void _initialise() {
+    assert(this.begin != null);
+    assert(this.end != null);
+    assert(this._angle >= 0.0);
+    assert(this._angle <= (2*pi));
+
+    final begin = this.begin!;
+    final end = this.end!;
+
+    final pointAngle = (end - begin).direction;
+    final midpoint = (end + begin) / 2;
+    final distanceToMid = (end - begin).distance / 2;
+    late final double distMidToCenter;
+    late final double newRadius;
+    bool effectiveClockwise = this._clockwise;
+    if (this._angle > pi) {
+      effectiveClockwise = !effectiveClockwise;
+      final tempAngle = (2*pi) - this._angle;
+      distMidToCenter = distanceToMid / tan(tempAngle / 2);
+      newRadius = distanceToMid / sin(tempAngle / 2);
+    } else {
+      distMidToCenter = distanceToMid / tan(this._angle / 2);
+      newRadius = distanceToMid / sin(this._angle / 2);
+    }
+    final toCenterOffset = Offset(
+      distMidToCenter * cos(pointAngle + (pi/2)),
+      distMidToCenter * sin(pointAngle + (pi/2)),
+    ) * (effectiveClockwise ? 1 : -1);
+    final newCenter = midpoint + toCenterOffset;
+    _beginAngle = (begin - newCenter).direction;
+    _center = newCenter;
+    _radius = newRadius;
+
+    print("begin $begin, end $end\ndistanceToMid $distanceToMid\npointAngle $pointAngle\nangle $_angle\ndistMidToCenter $distMidToCenter, newRadius $newRadius\ncenter $_center");
+
+    _dirty = false;
+  }
+
+  @override
+  set begin(Offset? value) {
+    if (value != begin) {
+      super.begin = value;
+      _dirty = true;
+    }
+  }
+
+  @override
+  set end(Offset? value) {
+    if (value != end) {
+      super.end = value;
+      _dirty = true;
+    }
+  }
+
+  double get angle => _angle;
+
+  set angle(double value) {
+    if (value != _angle) {
+      this._angle = value;
+      _dirty = true;
+    }
+  }
+
+  bool get clockwise => _clockwise;
+
+  set clockwise(bool value) {
+    if (value != _clockwise) {
+      this._clockwise = _clockwise;
+      _dirty = true;
+    }
+  }
+
+  @override
+  Offset lerp(double t) {
+    if (_dirty) {
+      _initialise();
+    }
+    final beginAngle = _beginAngle!;
+    final endAngle = beginAngle + _angle * (_clockwise ? 1 : -1);
+    final curAngle = lerpDouble(beginAngle, endAngle, t)!;
+    final x = cos(curAngle) * _radius!;
+    final y = sin(curAngle) * _radius!;
+    return _center! + Offset(x, y);
+  }
+}
+
+class AnimationSwitcher<T> extends Animatable<T> {
+  final double switchPoint;
+  final Animatable<T> first, second;
+
+  const AnimationSwitcher({
+    required this.switchPoint,
+    required this.first,
+    required this.second,
+  });
+
+  @override
+  T transform(double t) {
+    if (t < switchPoint) {
+      return first.transform(t);
+    } else {
+      return second.transform(t);
+    }
+  }
+}
+
+class _CardDeckSlice extends StatelessWidget {
+  final String cardSleeve;
+  final bool isDarkened;
+  final double width;
+
+  const _CardDeckSlice({
+    super.key,
+    required this.cardSleeve,
+    required this.isDarkened,
+    required this.width,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Stack(
+        children: [
+          Transform.translate(
+            offset: (CardDeck.DECK_SPACING * -1.0) * width,
+            child: AspectRatio(
+                aspectRatio: CardWidget.CARD_WIDTH / CardWidget.CARD_HEIGHT,
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(20/CardWidget.CARD_HEIGHT * width),
+                    color: Colors.black,
+                  ),
+                )
+            ),
+          ),
+          Transform.translate(
+            offset: (CardDeck.DECK_SPACING * -0.5) * width,
+            child: AspectRatio(
+                aspectRatio: CardWidget.CARD_WIDTH / CardWidget.CARD_HEIGHT,
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(20/CardWidget.CARD_HEIGHT * width),
+                    color: Colors.brown,
+                  ),
+                )
+            ),
+          ),
+          Transform.translate(
+            offset: (CardDeck.DECK_SPACING * 0.0) * width,
+            child: AspectRatio(
+                aspectRatio: CardWidget.CARD_WIDTH / CardWidget.CARD_HEIGHT,
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(20/CardWidget.CARD_HEIGHT * width),
+                    color: Colors.black,
+                  ),
+                )
+            ),
+          ),
+          Transform.translate(
+            offset: (CardDeck.DECK_SPACING * 0.5) * width,
+            child: AspectRatio(
+                aspectRatio: CardWidget.CARD_WIDTH / CardWidget.CARD_HEIGHT,
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(20/CardWidget.CARD_HEIGHT * width),
+                    color: Colors.brown,
+                  ),
+                )
+            ),
+          ),
+          Transform.translate(
+            offset: (CardDeck.DECK_SPACING * 1.0) * width,
+            child: isDarkened
+                ? ColorFiltered(
+                colorFilter: ColorFilter.mode(
+                  const Color.fromRGBO(0, 0, 0, 0.5),
+                  BlendMode.srcATop,
+                ),
+                child: Image.asset(cardSleeve)
+            )
+                : Image.asset(cardSleeve),
+          ),
+        ]
+    );
+  }
+}
+
 class PlaySessionScreen extends StatefulWidget {
   final TableturfBattle battle;
 
@@ -96,12 +299,29 @@ class _PlaySessionScreenState extends State<PlaySessionScreen>
       _lockInputs = true;
   Timer? tapTimer;
 
-  late final AnimationController _outroController, _turnFadeController, _scoreFadeController, _specialMoveController, _specialMovePulseController;
+  late final AnimationController _turnFadeController, _scoreFadeController;
   late final Animation<double> scoreFade, scoreSize, turnFade, turnSize;
+
+  late final AnimationController _outroController;
   late final Animation<double> outroScale, outroMove;
+
+  late final AnimationController _specialMoveController;
   late final Animation<double> specialMoveFade, specialMoveScale;
   late final Animation<double> specialMoveImageOffset;
+
+  late final AnimationController _specialMovePulseController;
   late final Animation<Color?> specialMoveYellowPulse, specialMoveBluePulse;
+
+  late final AnimationController _deckShuffleController;
+  late final Animation<Offset> shuffleTopCardMove, shuffleBottomCardMove;
+
+  late final AnimationController _deckDealController;
+  late final Animation<Offset> dealCardOffset;
+  late final Animation<double> dealCardRotate;
+
+  late final AnimationController _deckScaleController;
+  late final Animation<double> scaleDeckValue;
+  late final Animation<Color?> scaleDeckColour;
 
   @override
   void initState() {
@@ -236,13 +456,89 @@ class _PlaySessionScreenState extends State<PlaySessionScreen>
       ),
     ]).animate(_specialMoveController);
 
+    _deckShuffleController = AnimationController(
+        duration: const Duration(milliseconds: 200),
+        vsync: this
+    );
+    final startOffset = CardDeck.DECK_SPACING * 1;
+    final endOffset = CardDeck.DECK_SPACING * -1;
+    final topTween = CircularArcOffsetTween(
+        begin: startOffset,
+        end: endOffset,
+        clockwise: false,
+        angle: pi*1.85
+    ).chain(CurveTween(curve: Curves.ease));
+    final bottomTween = Tween(
+      begin: endOffset,
+      end: startOffset,
+    ).chain(CurveTween(curve: Curves.easeInOutBack));
+
+    const switchPoint = 0.4;
+    shuffleTopCardMove = AnimationSwitcher(
+      switchPoint: switchPoint,
+      first: topTween,
+      second: bottomTween,
+    ).animate(_deckShuffleController);
+    shuffleBottomCardMove = AnimationSwitcher(
+      switchPoint: switchPoint,
+      first: bottomTween,
+      second: topTween,
+    ).animate(_deckShuffleController);
+
+    _deckDealController = AnimationController(
+      duration: const Duration(milliseconds: 100),
+      vsync: this,
+    );
+    dealCardOffset = TweenSequence([
+      TweenSequenceItem(
+          tween: ConstantTween(Offset.zero),
+          weight: 1
+      ),
+      TweenSequenceItem(
+          tween: ConstantTween(Offset(0.035, -0.09)),
+          weight: 99
+      ),
+    ]).animate(_deckDealController);
+    const defaultRotation = -0.025;
+    dealCardRotate = Tween(
+      begin: defaultRotation,
+      end: defaultRotation * 2.5,
+    )
+        .chain(CurveTween(curve: Curves.decelerate))
+        .animate(_deckDealController);
+
+    _deckScaleController = AnimationController(
+      duration: const Duration(milliseconds: 150),
+      vsync: this,
+    );
+    scaleDeckValue = Tween(
+      begin: 0.6,
+      end: 1.0,
+    ).animate(_deckScaleController);
+    scaleDeckColour = ColorTween(
+      begin: const Color.fromRGBO(0, 0, 0, 0.3),
+      // setting this to be completely transparent causes flutter web
+      // to absolutely shit the bed for some reason
+      end: const Color.fromRGBO(0, 0, 0, 0.01),
+    )
+        .chain(CurveTween(curve: Curves.easeOut))
+        .animate(_deckScaleController);
+
     _playInitSequence();
   }
 
   FutureOr<void> _playInitSequence() async {
-    await Future<void>.delayed(const Duration(milliseconds: 500));
+    await Future<void>.delayed(const Duration(milliseconds: 600));
+    final audioController = AudioController();
+
+
+    await _deckScaleController.forward(from: 0.0);
     await _dealHand();
+
+    await Future<void>.delayed(const Duration(milliseconds: 200));
+    _deckScaleController.reverse(from: 1.0);
     _turnFadeController.forward(from: 0.0);
+    audioController.playSfx(SfxType.gameStart);
     await Future<void>.delayed(const Duration(milliseconds: 50));
     await _scoreFadeController.forward(from: 0.0);
     setState(() {
@@ -255,9 +551,17 @@ class _PlaySessionScreenState extends State<PlaySessionScreen>
   Future<void> _dealHand() async {
     final battle = widget.battle;
     final yellow = battle.yellow;
+
     final audioController = AudioController();
     audioController.playSfx(SfxType.dealHand);
-    await Future<void>.delayed(const Duration(milliseconds: 800));
+    await _deckShuffleController.forward(from: 0.0);
+    await _deckShuffleController.forward(from: 0.0);
+    await _deckShuffleController.forward(from: 0.0);
+    await Future<void>.delayed(const Duration(milliseconds: 200));
+    () async {
+      await _deckDealController.forward(from: 0.0);
+      await _deckDealController.reverse(from: 1.0);
+    }();
     for (var i = 0; i < 4; i++) {
       final newCard = yellow.deck.where((card) => !card.isHeld && !card.hasBeenPlayed).toList().random();
       newCard.isHeld = true;
@@ -278,6 +582,9 @@ class _PlaySessionScreenState extends State<PlaySessionScreen>
     _scoreFadeController.dispose();
     _specialMoveController.dispose();
     _specialMovePulseController.dispose();
+    _deckShuffleController.dispose();
+    _deckDealController.dispose();
+    _deckScaleController.dispose();
     super.dispose();
   }
 
@@ -962,6 +1269,128 @@ class _PlaySessionScreenState extends State<PlaySessionScreen>
       ),
     );
 
+    final cardDeck = AspectRatio(
+      aspectRatio: 1.0,
+      child: RepaintBoundary(
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            final width = constraints.maxWidth;
+            print(constraints);
+            return Container(
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: const Color.fromRGBO(21, 0, 96, 1.0),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black38,
+                      blurRadius: width * 0.03,
+                    )
+                  ]
+                ),
+                child: Center(
+                  child: AnimatedBuilder(
+                    animation: _deckScaleController,
+                    builder: (_, __) => Transform.scale(
+                      scale: scaleDeckValue.value,
+                      child: Stack(
+                        children: [
+                          Center(
+                            child: ColorFiltered(
+                              colorFilter: ColorFilter.mode(
+                                scaleDeckColour.value!,
+                                BlendMode.srcATop,
+                              ),
+                              child: AnimatedBuilder(
+                                animation: Listenable.merge([
+                                  _deckShuffleController,
+                                  _deckDealController,
+                                ]),
+                                builder: (_, __) => Transform.rotate(
+                                  angle: dealCardRotate.value * 2 * pi,
+                                  child: Stack(
+                                      children: [
+                                        Transform.translate(
+                                          offset: shuffleBottomCardMove.value * width,
+                                          child: _CardDeckSlice(
+                                              cardSleeve: widget.battle.yellow.cardSleeve,
+                                              isDarkened: true,
+                                              width: width
+                                          ),
+                                        ),
+                                        Transform.translate(
+                                          offset: (shuffleTopCardMove.value + dealCardOffset.value) * width,
+                                          child: _CardDeckSlice(
+                                              cardSleeve: widget.battle.yellow.cardSleeve,
+                                              isDarkened: false,
+                                              width: width
+                                          ),
+                                        ),
+                                      ]
+                                  ),
+                                )
+                            ),
+                          ),
+                        ),
+                        Transform.rotate(
+                          angle: 0.05 * pi,
+                          child: Align(
+                            alignment: Alignment(2.0, 1.25),
+                            child: FractionallySizedBox(
+                              widthFactor: 0.5,
+                              child: AspectRatio(
+                                aspectRatio: 4/3,
+                                child: Stack(
+                                  fit: StackFit.expand,
+                                  children: [
+                                    DecoratedBox(
+                                      decoration: BoxDecoration(
+                                        gradient: RadialGradient(
+                                          center: Alignment.bottomRight,
+                                          radius: 1.2,
+                                          colors: const [
+                                            Color.fromRGBO(8, 8, 8, 1.0),
+                                            Color.fromRGBO(38, 38, 38, 1.0),
+                                          ]
+                                        )
+                                      ),
+                                      child: Container(),
+                                    ),
+                                    FittedBox(
+                                      fit: BoxFit.contain,
+                                      child: AnimatedBuilder(
+                                        animation: Listenable.merge(battle.yellow.hand),
+                                        builder: (_, __) {
+                                          int remainingCards = 0;
+                                          for (final card in battle.yellow.deck) {
+                                            if (!card.isHeld && !card.hasBeenPlayed) {
+                                              remainingCards += 1;
+                                            }
+                                          }
+                                          return Text(remainingCards.toString(), style: TextStyle(
+                                            fontFamily: "Splatfont2",
+                                            letterSpacing: width * 0.05,
+                                            fontSize: width * 0.2,
+                                          ));
+                                        }
+                                      )
+                                    ),
+                                  ],
+                                ),
+                              )
+                            ),
+                          ),
+                        )
+                      ],
+                    ),
+                  )
+                ),
+              )
+            );
+          }
+        ),
+      ),
+    );
+
     late final Widget screenContents;
     if (mediaQuery.orientation == Orientation.portrait) {
       screenContents = Column(
@@ -1007,7 +1436,7 @@ class _PlaySessionScreenState extends State<PlaySessionScreen>
                   yellowScore,
                   Container(width: 20),
                   Expanded(child: RepaintBoundary(child: SpecialMeter(player: battle.yellow))),
-                  CardDeck(battle: battle),
+                  cardDeck,
                 ],
               ),
             ),
@@ -1120,7 +1549,7 @@ class _PlaySessionScreenState extends State<PlaySessionScreen>
                     widthFactor: 2/5,
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                      children: [turnCounter, blueScore, yellowScore, CardDeck(battle: battle)],
+                      children: [turnCounter, blueScore, yellowScore, cardDeck],
                     ),
                   ),
                 ),

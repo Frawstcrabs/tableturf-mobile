@@ -6,6 +6,8 @@ import 'package:tableturf_mobile/src/audio/audio_controller.dart';
 import 'package:tableturf_mobile/src/audio/sounds.dart';
 import 'package:tableturf_mobile/src/game_internals/battle.dart';
 
+import 'card_widget.dart';
+
 class CircularArcOffsetTween extends Tween<Offset> {
   bool _clockwise;
   double _angle;
@@ -128,13 +130,96 @@ class AnimationSwitcher<T> extends Animatable<T> {
   }
 }
 
+class _CardDeckSlice extends StatelessWidget {
+  final String cardSleeve;
+  final bool isDarkened;
+  final double width;
+
+  const _CardDeckSlice({
+    super.key,
+    required this.cardSleeve,
+    required this.isDarkened,
+    required this.width,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Stack(
+      children: [
+        Transform.translate(
+          offset: (CardDeck.DECK_SPACING * -1.0) * width,
+          child: AspectRatio(
+              aspectRatio: CardWidget.CARD_WIDTH / CardWidget.CARD_HEIGHT,
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(20/CardWidget.CARD_HEIGHT * width),
+                  color: Colors.black,
+                ),
+              )
+          ),
+        ),
+        Transform.translate(
+          offset: (CardDeck.DECK_SPACING * -0.5) * width,
+          child: AspectRatio(
+              aspectRatio: CardWidget.CARD_WIDTH / CardWidget.CARD_HEIGHT,
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(20/CardWidget.CARD_HEIGHT * width),
+                  color: Colors.brown,
+                ),
+              )
+          ),
+        ),
+        Transform.translate(
+          offset: (CardDeck.DECK_SPACING * 0.0) * width,
+          child: AspectRatio(
+              aspectRatio: CardWidget.CARD_WIDTH / CardWidget.CARD_HEIGHT,
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(20/CardWidget.CARD_HEIGHT * width),
+                  color: Colors.black,
+                ),
+              )
+          ),
+        ),
+        Transform.translate(
+          offset: (CardDeck.DECK_SPACING * 0.5) * width,
+          child: AspectRatio(
+              aspectRatio: CardWidget.CARD_WIDTH / CardWidget.CARD_HEIGHT,
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(20/CardWidget.CARD_HEIGHT * width),
+                  color: Colors.brown,
+                ),
+              )
+          ),
+        ),
+        Transform.translate(
+          offset: (CardDeck.DECK_SPACING * 1.0) * width,
+          child: isDarkened
+            ? ColorFiltered(
+                colorFilter: ColorFilter.mode(
+                  const Color.fromRGBO(0, 0, 0, 0.4),
+                  BlendMode.srcATop,
+                ),
+                child: Image.asset(cardSleeve)
+              )
+            : Image.asset(cardSleeve),
+        ),
+      ]
+    );
+  }
+}
+
 class CardDeck extends StatefulWidget {
+  static const DECK_SPACING = Offset(0, -0.05);
   final TableturfBattle battle;
   const CardDeck({super.key, required this.battle});
 
   @override
   State<CardDeck> createState() => _CardDeckState();
 }
+
 
 class _CardDeckState extends State<CardDeck>
     with TickerProviderStateMixin {
@@ -149,7 +234,6 @@ class _CardDeckState extends State<CardDeck>
   late final Animation<double> scaleDeckValue;
   late final Animation<Color?> scaleDeckColour;
 
-  static const DECK_SPACING = Offset(0, -0.05);
 
   @override
   void initState() {
@@ -158,13 +242,13 @@ class _CardDeckState extends State<CardDeck>
       duration: const Duration(milliseconds: 200),
       vsync: this
     );
-    final startOffset = DECK_SPACING * 2;
-    final endOffset = DECK_SPACING * -2;
+    final startOffset = CardDeck.DECK_SPACING * 1;
+    final endOffset = CardDeck.DECK_SPACING * -1;
     final topTween = CircularArcOffsetTween(
       begin: startOffset,
       end: endOffset,
       clockwise: false,
-      angle: pi*1.4
+      angle: pi*1.8
     ).chain(CurveTween(curve: Curves.ease));
     final bottomTween = Tween(
       begin: endOffset,
@@ -193,7 +277,7 @@ class _CardDeckState extends State<CardDeck>
         weight: 1
       ),
       TweenSequenceItem(
-        tween: ConstantTween(Offset(0.03, -0.09)),
+        tween: ConstantTween(Offset(0.035, -0.09)),
         weight: 99
       ),
     ]).animate(_dealController);
@@ -246,93 +330,6 @@ class _CardDeckState extends State<CardDeck>
 
   @override
   Widget build(BuildContext context) {
-    return AspectRatio(
-      aspectRatio: 1.0,
-      child: GestureDetector(
-        onTap: _playDealAnimation,
-        child: RepaintBoundary(
-          child: LayoutBuilder(
-            builder: (context, constraints) {
-              final width = constraints.maxWidth;
-              print(constraints);
-              return Container(
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: Colors.black.withOpacity(0.4),
-                ),
-                child: Center(
-                  child: AnimatedBuilder(
-                    animation: _scaleController,
-                    builder: (_, __) => Transform.scale(
-                      scale: scaleDeckValue.value,
-                      child: Stack(
-                        children: [
-                          AnimatedBuilder(
-                            animation: Listenable.merge([
-                              _shuffleController,
-                              _dealController,
-                              _scaleController,
-                            ]),
-                            child: Stack(
-                              children: [
-                                Transform.translate(
-                                  offset: (DECK_SPACING * -1) * width,
-                                  child: Image.asset(widget.battle.yellow.cardSleeve),
-                                ),
-                                Transform.translate(
-                                  offset: (DECK_SPACING * 1) * width,
-                                  child: Image.asset(widget.battle.yellow.cardSleeve),
-                                ),
-                              ]
-                            ),
-                            builder: (_, child) => Transform.rotate(
-                              angle: dealCardRotate.value * 2 * pi,
-                              child: ColorFiltered(
-                                colorFilter: ColorFilter.mode(
-                                  scaleDeckColour.value!,
-                                  BlendMode.srcATop,
-                                ),
-                                child: Stack(
-                                  children: [
-                                    Transform.translate(
-                                      offset: shuffleBottomCardMove.value * width,
-                                      child: ColorFiltered(
-                                        colorFilter: ColorFilter.mode(
-                                          const Color.fromRGBO(0, 0, 0, 0.5),
-                                          BlendMode.srcATop,
-                                        ),
-                                        child: child,
-                                      ),
-                                    ),
-                                    Transform.translate(
-                                      offset: (shuffleTopCardMove.value + dealCardOffset.value) * width,
-                                      child: child,
-                                    ),
-                                  ]
-                                ),
-                              ),
-                            )
-                          ),
-                          FractionallySizedBox(
-                            heightFactor: 0.3,
-                            widthFactor: 0.4,
-                            child: DecoratedBox(
-                              decoration: BoxDecoration(
-                                color: Colors.black54
-                              ),
-                              child: Text("15"),
-                            )
-                          )
-                        ],
-                      ),
-                    )
-                  ),
-                )
-              );
-            }
-          ),
-        )
-      ),
-    );
+    return Container();
   }
 }
