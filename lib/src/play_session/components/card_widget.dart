@@ -75,12 +75,13 @@ class CardPatternWidget extends StatelessWidget {
           constraints.maxHeight / pattern.length,
           constraints.maxWidth / pattern[0].length,
         );
-        return SizedBox(
-          height: pattern.length * tileStep + CardPatternPainter.EDGE_WIDTH,
-          width: pattern[0].length * tileStep + CardPatternPainter.EDGE_WIDTH,
-          child: CustomPaint(
-            painter: CardPatternPainter(pattern, traits, tileStep),
+        return CustomPaint(
+          painter: CardPatternPainter(pattern, traits, tileStep),
+          child: SizedBox(
+            height: pattern.length * tileStep + CardPatternPainter.EDGE_WIDTH,
+            width: pattern[0].length * tileStep + CardPatternPainter.EDGE_WIDTH,
           ),
+          isComplex: true,
         );
       }
     );

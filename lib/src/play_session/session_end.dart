@@ -5,16 +5,19 @@ import 'package:logging/logging.dart' hide Level;
 import 'package:provider/provider.dart';
 
 import 'package:tableturf_mobile/src/audio/audio_controller.dart';
+import 'package:tableturf_mobile/src/audio/songs.dart';
+import 'package:tableturf_mobile/src/audio/sounds.dart';
 import 'package:tableturf_mobile/src/game_internals/battle.dart';
 import 'package:tableturf_mobile/src/game_internals/player.dart';
 import 'package:tableturf_mobile/src/style/palette.dart';
 
+import 'components/arc_tween.dart';
 import 'components/build_board_widget.dart';
 import 'components/score_counter.dart';
 
 class ScoreBarPainter extends CustomPainter {
-  final Animation<double> yellowLength, blueLength, waveAnimation;
-  final Axis axis;
+  final Animation<double> yellowLength, blueLength, waveAnimation, opacity;
+  final Orientation orientation;
 
   static const WAVE_WIDTH = 0.3;
   static const WAVE_HEIGHT = 0.4;
@@ -23,18 +26,21 @@ class ScoreBarPainter extends CustomPainter {
     required this.yellowLength,
     required this.blueLength,
     required this.waveAnimation,
-    required this.axis,
+    required this.orientation,
+    required this.opacity,
   }):
     super(repaint: Listenable.merge([
       yellowLength,
       blueLength,
       waveAnimation,
+      opacity,
     ]))
   ;
 
   @override
   void paint(Canvas canvas, Size size) {
     final palette = const Palette();
+    if (opacity.value == 0.0) return;
     canvas.clipRRect(
       RRect.fromRectAndRadius(
         Offset.zero & size,
@@ -52,7 +58,7 @@ class ScoreBarPainter extends CustomPainter {
     final yellowPath = Path();
     final bluePath = Path();
 
-    if (axis == Axis.horizontal) {
+    if (orientation == Orientation.landscape) {
       var d = (waveWidth * -2) * (1 - waveAnimation.value);
       yellowPath.moveTo(size.width, size.height);
       yellowPath.lineTo(size.width, 0.0);
@@ -113,13 +119,13 @@ class ScoreBarPainter extends CustomPainter {
       }
       bluePath.close();
     }
-    canvas.drawPath(bluePath, paint..color = palette.tileBlue);
-    canvas.drawPath(yellowPath, paint..color = palette.tileYellow);
+    canvas.drawPath(bluePath, paint..color = palette.tileBlue.withOpacity(opacity.value));
+    canvas.drawPath(yellowPath, paint..color = palette.tileYellow.withOpacity(opacity.value));
   }
 
   @override
   bool shouldRepaint(ScoreBarPainter oldDelegate) {
-    return this.axis != oldDelegate.axis;
+    return this.orientation != oldDelegate.orientation;
   }
 }
 
@@ -139,8 +145,10 @@ class _PlaySessionEndState extends State<PlaySessionEnd>
     with TickerProviderStateMixin {
   static final _log = Logger('PlaySessionEndState');
 
-  late final AnimationController _scoreBarAnimator, _scoreCountersAnimator, _scoreWaveAnimator;
+  late final AnimationController _scoreBarAnimator, _scoreSplashAnimator, _scoreCountersAnimator, _scoreWaveAnimator;
   late final Animation<double> yellowScoreAnimation, blueScoreAnimation;
+  late final Animation<double> winScoreMoveAnimation, winScoreFadeAnimation;
+  late final List<Animation<Offset>> winScoreDropletMoveAnimations;
   late final Animation<double> scoreFade, scoreSize;
 
   @override
@@ -151,7 +159,11 @@ class _PlaySessionEndState extends State<PlaySessionEnd>
       vsync: this
     );
     _scoreBarAnimator = AnimationController(
-      duration: const Duration(milliseconds: 2750),
+      duration: const Duration(milliseconds: 2250),
+      vsync: this
+    );
+    _scoreSplashAnimator = AnimationController(
+      duration: const Duration(milliseconds: 400),
       vsync: this
     );
     _scoreWaveAnimator = AnimationController(
@@ -218,21 +230,69 @@ class _PlaySessionEndState extends State<PlaySessionEnd>
       ),
     ]).animate(_scoreBarAnimator);
 
+    /*
+    late final Animation<double> winScoreMoveAnimation, winScoreFadeAnimation;
+    late final List<Animation<Offset>> winScoreDropletMoveAnimations;
+    */
+
+    winScoreFadeAnimation = TweenSequence([
+      TweenSequenceItem(
+        tween: ConstantTween(1.0),
+        weight: 50,
+      ),
+      TweenSequenceItem(
+        tween: Tween(
+          begin: 1.0,
+          end: 0.0
+        ).chain(CurveTween(curve: Curves.easeOut)),
+        weight: 50
+      )
+    ]).animate(_scoreSplashAnimator);
+
+    const winSplashExtendDist = 0.2;
+    if (yellowScoreRatio > 0.5) {
+      winScoreMoveAnimation = Tween(
+        begin: yellowScoreRatio,
+        end: yellowScoreRatio + winSplashExtendDist,
+      ).animate(_scoreSplashAnimator);
+      winScoreDropletMoveAnimations = [];
+    } else {
+      winScoreMoveAnimation = Tween(
+        begin: 1 - yellowScoreRatio,
+        end: 1 - yellowScoreRatio - winSplashExtendDist,
+      ).animate(_scoreSplashAnimator);
+      winScoreDropletMoveAnimations = [];
+    }
+
     _playInitSequence();
   }
 
   FutureOr<void> _playInitSequence() async {
     _log.info("outro sequence started");
+    final audioController = AudioController();
     await Future<void>.delayed(const Duration(milliseconds: 1300));
+    audioController.playSfx(SfxType.scoreBarFill);
     await _scoreBarAnimator.forward();
+    audioController.playSfx(SfxType.scoreBarImpact);
     await Future<void>.delayed(const Duration(milliseconds: 300));
     await _scoreCountersAnimator.forward();
+    await Future<void>.delayed(const Duration(milliseconds: 300));
+
+    final yellowScore = widget.battle.yellowCountNotifier.value;
+    final blueScore = widget.battle.blueCountNotifier.value;
+    if (yellowScore > blueScore) {
+      audioController.playSong(SongType.resultWin);
+    } else {
+      audioController.playSong(SongType.resultLose);
+    }
   }
 
   @override
   void dispose() {
+    AudioController().musicPlayer.stop();
     _scoreBarAnimator.dispose();
     _scoreCountersAnimator.dispose();
+    _scoreSplashAnimator.dispose();
     _scoreWaveAnimator.dispose();
     super.dispose();
   }
@@ -300,12 +360,14 @@ class _PlaySessionEndState extends State<PlaySessionEnd>
                   yellowLength: yellowScoreAnimation,
                   blueLength: blueScoreAnimation,
                   waveAnimation: _scoreWaveAnimator,
-                  axis: Axis.horizontal,
+                  orientation: Orientation.landscape,
+                  opacity: AlwaysStoppedAnimation(1.0),
                 ),
                 child: FractionallySizedBox(
                   widthFactor: 0.8,
                   heightFactor: 0.5,
-                )
+                ),
+                willChange: true,
               ),
             ),
           ),

@@ -16,23 +16,11 @@ class FlipCard extends StatelessWidget {
   final FlipDirection direction;
   final Alignment alignment;
 
-  final _frontRotation = TweenSequence(
+  final _rotation = TweenSequence(
     [
       TweenSequenceItem<double>(
         tween: Tween(begin: 0.0, end: pi / 2)
             .chain(CurveTween(curve: Curves.easeIn)),
-        weight: 50.0,
-      ),
-      TweenSequenceItem<double>(
-        tween: ConstantTween<double>(pi / 2),
-        weight: 50.0,
-      ),
-    ],
-  );
-  final _backRotation = TweenSequence(
-    [
-      TweenSequenceItem<double>(
-        tween: ConstantTween<double>(pi / 2),
         weight: 50.0,
       ),
       TweenSequenceItem<double>(
@@ -57,25 +45,30 @@ class FlipCard extends StatelessWidget {
       alignment: alignment,
       fit: StackFit.passthrough,
       children: <Widget>[
-        _buildContent(true),
-        _buildContent(false),
+        Opacity(
+          opacity: skew < 0.5 ? 1.0 : 0.0,
+          child: _buildContent(front)
+        ),
+        Opacity(
+          opacity: skew < 0.5 ? 0.0 : 1.0,
+          child: _buildContent(back)
+        ),
       ],
     );
   }
 
-  Widget _buildContent(bool viewFront) {
-    final animation = viewFront ? _frontRotation : _backRotation;
+  Widget _buildContent(Widget side) {
     var transform = Matrix4.identity();
     transform.setEntry(3, 2, 0.001);
     if (direction == FlipDirection.VERTICAL) {
-      transform.rotateX(animation.transform(skew));
+      transform.rotateX(_rotation.transform(skew));
     } else {
-      transform.rotateY(animation.transform(skew));
+      transform.rotateY(_rotation.transform(skew));
     }
     return Transform(
       transform: transform,
       alignment: Alignment.center,
-      child: viewFront ? front : back,
+      child: side,
     );
   }
 }

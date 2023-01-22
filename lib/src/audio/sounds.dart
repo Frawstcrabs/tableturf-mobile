@@ -48,6 +48,7 @@ enum SfxType {
   confirmMovePass,
   counterUpdate,
   gameStart,
+  gameEndWhistle,
   specialActivate,
   gainSpecial,
   normalMove,
@@ -59,4 +60,6 @@ enum SfxType {
   specialCutIn,
   turnCountNormal,
   turnCountEnding,
+  scoreBarFill,
+  scoreBarImpact,
 }

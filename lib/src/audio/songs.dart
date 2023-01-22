@@ -6,6 +6,10 @@ enum SongType {
   battle1,
   last3Turns,
   levelSelect,
+  resultWin,
+  resultLose,
+  itemSelect,
+  edit,
 }
 
 class Song {
@@ -30,5 +34,25 @@ const Map<SongType, Song> songMap = {
     "intro_levelSelect.mp3",
     Duration(seconds: 5),
     "loop_levelSelect.mp3",
+  ),
+  SongType.resultWin: Song(
+    "intro_resultWin.mp3",
+    Duration(seconds: 9),
+    "loop_resultWin.mp3",
+  ),
+  SongType.resultLose: Song(
+    "intro_resultLose.mp3",
+    Duration(seconds: 3),
+    "loop_resultLose.mp3",
+  ),
+  SongType.itemSelect: Song(
+    "intro_itemSelect.mp3",
+    Duration(seconds: 6),
+    "loop_itemSelect.mp3",
+  ),
+  SongType.edit: Song(
+    "intro_edit.mp3",
+    Duration(seconds: 2),
+    "loop_edit.mp3",
   ),
 };

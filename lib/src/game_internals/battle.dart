@@ -291,7 +291,9 @@ class TableturfBattle {
       } else if (event is PlayerSpecialUpdate) {
         yellow.special.value = event.yellowSpecial;
         blue.special.value = event.blueSpecial;
-        await audioController.playSfx(SfxType.gainSpecial);
+        if (turnCountNotifier.value > 1) {
+          await audioController.playSfx(SfxType.gainSpecial);
+        }
       } else if (event is ScoreUpdate) {
         yellowCountNotifier.value = event.yellowScore;
         blueCountNotifier.value = event.blueScore;
@@ -453,8 +455,9 @@ class TableturfBattle {
   }
 
   Iterable<BattleEvent> _applyOverlap({required TableturfMove below, required TableturfMove above}) sync* {
+    final belowChanges = below.boardChanges;
     yield BoardUpdate(
-      below.boardChanges,
+      belowChanges,
       below.special ? SfxType.specialMove : SfxType.normalMove
     );
 
@@ -491,7 +494,7 @@ class TableturfBattle {
             }[belowTile]!,
             TileState.yellowSpecial: above.traits.specialTile,
           }[aboveTile]!;
-          if (boardTile != newTile) {
+          if (boardTile != newTile && belowChanges[tileCoords] != newTile) {
             overlapChanges[tileCoords] = newTile;
           }
         } else {

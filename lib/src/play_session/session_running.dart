@@ -13,11 +13,11 @@ import 'package:tableturf_mobile/src/game_internals/battle.dart';
 import 'package:tableturf_mobile/src/game_internals/card.dart';
 import 'package:tableturf_mobile/src/game_internals/move.dart';
 import 'package:tableturf_mobile/src/game_internals/player.dart';
-import 'package:tableturf_mobile/src/play_session/components/card_deck.dart';
 import 'package:tableturf_mobile/src/style/palette.dart';
 import 'package:tableturf_mobile/src/style/my_transition.dart';
 
 import 'session_end.dart';
+import 'components/arc_tween.dart';
 import 'components/build_board_widget.dart';
 import 'components/special_meter.dart';
 import 'components/turn_counter.dart';
@@ -67,113 +67,79 @@ class SpecialBackgroundPainter extends CustomPainter {
   }
 }
 
-class CircularArcOffsetTween extends Tween<Offset> {
-  bool _clockwise;
-  double _angle;
+class SelectionBackgroundPainter extends CustomPainter {
+  final Animation<double> waveAnimation;
+  final Orientation orientation;
 
-  bool _dirty = true;
-  Offset? _center;
-  double? _beginAngle;
-  double? _radius;
+  static const WAVE_WIDTH = 1/8.5;
+  static const WAVE_HEIGHT = 0.2;
+  static const SCREEN_DIST = 0.7;
 
-  CircularArcOffsetTween({
-    super.begin,
-    super.end,
-    required angle,
-    clockwise = true,
-  }): _angle = angle, _clockwise = clockwise;
+  SelectionBackgroundPainter({
+    required this.waveAnimation,
+    required this.orientation,
+  }):
+    super(repaint: waveAnimation)
+  ;
 
-  void _initialise() {
-    assert(this.begin != null);
-    assert(this.end != null);
-    assert(this._angle >= 0.0);
-    assert(this._angle <= (2*pi));
+  @override
+  void paint(Canvas canvas, Size size) {
+    canvas.drawColor(Colors.black38, BlendMode.srcOver);
 
-    final begin = this.begin!;
-    final end = this.end!;
+    final paint = Paint()
+      ..style = PaintingStyle.fill
+      ..strokeJoin = StrokeJoin.miter
+      ..color = Colors.black38;
+    final waveWidth = size.height * WAVE_WIDTH;
+    final waveHeight = waveWidth * WAVE_HEIGHT;
+    final path = Path();
 
-    final pointAngle = (end - begin).direction;
-    final midpoint = (end + begin) / 2;
-    final distanceToMid = (end - begin).distance / 2;
-    late final double distMidToCenter;
-    late final double newRadius;
-    bool effectiveClockwise = this._clockwise;
-    if (this._angle > pi) {
-      effectiveClockwise = !effectiveClockwise;
-      final tempAngle = (2*pi) - this._angle;
-      distMidToCenter = distanceToMid / tan(tempAngle / 2);
-      newRadius = distanceToMid / sin(tempAngle / 2);
+    var d = (waveWidth * -2) * (1 - waveAnimation.value);
+    if (orientation == Orientation.landscape) {
+      path.moveTo(size.width, size.height);
+      path.lineTo(size.width, 0.0);
+      path.lineTo(size.width * (1.0 - SCREEN_DIST), d);
+      var outWave = true;
+
+      for (; d < size.height; d += waveWidth) {
+        path.relativeQuadraticBezierTo(
+          outWave ? waveHeight : -waveHeight, waveWidth / 2,
+          0.0, waveWidth,
+        );
+        outWave = !outWave;
+      }
     } else {
-      distMidToCenter = distanceToMid / tan(this._angle / 2);
-      newRadius = distanceToMid / sin(this._angle / 2);
+      path.moveTo(size.width, 0.0);
+      path.lineTo(0.0, 0.0);
+      path.lineTo(d, size.height * SCREEN_DIST);
+      //path.moveTo(size.width, size.height);
+      //path.lineTo(size.width, 0.0);
+      //path.lineTo(size.width * (1.0 - SCREEN_DIST), d);
+      var outWave = true;
+
+      for (; d < size.height; d += waveWidth) {
+        path.relativeQuadraticBezierTo(
+          waveWidth / 2, outWave ? waveHeight : -waveHeight,
+          waveWidth, 0.0,
+        );
+        outWave = !outWave;
+      }
     }
-    final toCenterOffset = Offset(
-      distMidToCenter * cos(pointAngle + (pi/2)),
-      distMidToCenter * sin(pointAngle + (pi/2)),
-    ) * (effectiveClockwise ? 1 : -1);
-    final newCenter = midpoint + toCenterOffset;
-    _beginAngle = (begin - newCenter).direction;
-    _center = newCenter;
-    _radius = newRadius;
-
-    print("begin $begin, end $end\ndistanceToMid $distanceToMid\npointAngle $pointAngle\nangle $_angle\ndistMidToCenter $distMidToCenter, newRadius $newRadius\ncenter $_center");
-
-    _dirty = false;
+    path.close();
+    canvas.drawPath(path, paint);
   }
 
   @override
-  set begin(Offset? value) {
-    if (value != begin) {
-      super.begin = value;
-      _dirty = true;
-    }
-  }
-
-  @override
-  set end(Offset? value) {
-    if (value != end) {
-      super.end = value;
-      _dirty = true;
-    }
-  }
-
-  double get angle => _angle;
-
-  set angle(double value) {
-    if (value != _angle) {
-      this._angle = value;
-      _dirty = true;
-    }
-  }
-
-  bool get clockwise => _clockwise;
-
-  set clockwise(bool value) {
-    if (value != _clockwise) {
-      this._clockwise = _clockwise;
-      _dirty = true;
-    }
-  }
-
-  @override
-  Offset lerp(double t) {
-    if (_dirty) {
-      _initialise();
-    }
-    final beginAngle = _beginAngle!;
-    final endAngle = beginAngle + _angle * (_clockwise ? 1 : -1);
-    final curAngle = lerpDouble(beginAngle, endAngle, t)!;
-    final x = cos(curAngle) * _radius!;
-    final y = sin(curAngle) * _radius!;
-    return _center! + Offset(x, y);
+  bool shouldRepaint(SelectionBackgroundPainter oldDelegate) {
+    return this.orientation != oldDelegate.orientation;
   }
 }
 
-class AnimationSwitcher<T> extends Animatable<T> {
+class SwitchTween<T> extends Animatable<T> {
   final double switchPoint;
   final Animatable<T> first, second;
 
-  const AnimationSwitcher({
+  const SwitchTween({
     required this.switchPoint,
     required this.first,
     required this.second,
@@ -190,12 +156,12 @@ class AnimationSwitcher<T> extends Animatable<T> {
 }
 
 class _CardDeckSlice extends StatelessWidget {
+  static const DECK_SPACING = Offset(0, -0.05);
   final String cardSleeve;
   final bool isDarkened;
   final double width;
 
   const _CardDeckSlice({
-    super.key,
     required this.cardSleeve,
     required this.isDarkened,
     required this.width,
@@ -206,7 +172,7 @@ class _CardDeckSlice extends StatelessWidget {
     return Stack(
         children: [
           Transform.translate(
-            offset: (CardDeck.DECK_SPACING * -1.0) * width,
+            offset: (DECK_SPACING * -1.0) * width,
             child: AspectRatio(
                 aspectRatio: CardWidget.CARD_WIDTH / CardWidget.CARD_HEIGHT,
                 child: DecoratedBox(
@@ -218,19 +184,19 @@ class _CardDeckSlice extends StatelessWidget {
             ),
           ),
           Transform.translate(
-            offset: (CardDeck.DECK_SPACING * -0.5) * width,
+            offset: (DECK_SPACING * -0.5) * width,
             child: AspectRatio(
                 aspectRatio: CardWidget.CARD_WIDTH / CardWidget.CARD_HEIGHT,
                 child: DecoratedBox(
                   decoration: BoxDecoration(
                     borderRadius: BorderRadius.circular(20/CardWidget.CARD_HEIGHT * width),
-                    color: Colors.brown,
+                    color: Colors.grey[900],
                   ),
                 )
             ),
           ),
           Transform.translate(
-            offset: (CardDeck.DECK_SPACING * 0.0) * width,
+            offset: (DECK_SPACING * 0.0) * width,
             child: AspectRatio(
                 aspectRatio: CardWidget.CARD_WIDTH / CardWidget.CARD_HEIGHT,
                 child: DecoratedBox(
@@ -242,19 +208,19 @@ class _CardDeckSlice extends StatelessWidget {
             ),
           ),
           Transform.translate(
-            offset: (CardDeck.DECK_SPACING * 0.5) * width,
+            offset: (DECK_SPACING * 0.5) * width,
             child: AspectRatio(
-                aspectRatio: CardWidget.CARD_WIDTH / CardWidget.CARD_HEIGHT,
-                child: DecoratedBox(
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(20/CardWidget.CARD_HEIGHT * width),
-                    color: Colors.brown,
-                  ),
-                )
+              aspectRatio: CardWidget.CARD_WIDTH / CardWidget.CARD_HEIGHT,
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(20/CardWidget.CARD_HEIGHT * width),
+                  color: Colors.grey[900],
+                ),
+              )
             ),
           ),
           Transform.translate(
-            offset: (CardDeck.DECK_SPACING * 1.0) * width,
+            offset: (DECK_SPACING * 1.0) * width,
             child: isDarkened
                 ? ColorFiltered(
                 colorFilter: ColorFilter.mode(
@@ -269,6 +235,109 @@ class _CardDeckSlice extends StatelessWidget {
     );
   }
 }
+
+class _SelectionButton extends StatefulWidget {
+  final void Function() onSelect;
+  final double designRatio;
+  final Widget child;
+  const _SelectionButton({
+    super.key,
+    required this.onSelect,
+    required this.designRatio,
+    required this.child,
+  });
+
+  @override
+  State<_SelectionButton> createState() => _SelectionButtonState();
+}
+
+class _SelectionButtonState extends State<_SelectionButton>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _selectController;
+  late final Animation<double> selectScale;
+  late final Animation<Color?> selectColor, selectTextColor;
+
+  @override
+  void initState() {
+    super.initState();
+
+    _selectController = AnimationController(
+      duration: const Duration(milliseconds: 125),
+      vsync: this
+    );
+    const selectDownscale = 0.9;
+    selectScale = TweenSequence([
+      TweenSequenceItem(
+        tween: Tween(begin: 1.0, end: selectDownscale)
+          .chain(CurveTween(curve: Curves.decelerate)),
+        weight: 50
+      ),
+      TweenSequenceItem(
+        tween: Tween(begin: selectDownscale, end: 1.05)
+          .chain(CurveTween(curve: Curves.decelerate.flipped)),
+        weight: 50
+      ),
+    ]).animate(_selectController);
+    selectColor = ColorTween(
+        begin: const Color.fromRGBO(71, 16, 175, 1.0),
+        end: const Color.fromRGBO(167, 231, 9, 1.0)
+    )
+        .animate(_selectController);
+    selectTextColor = ColorTween(
+        begin: Colors.white,
+        end: Colors.black
+    )
+        .animate(_selectController);
+  }
+
+  @override
+  void dispose() {
+    _selectController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: () async {
+        await _selectController.forward(from: 0.0);
+        await Future<void>.delayed(const Duration(milliseconds: 50));
+        widget.onSelect();
+      },
+      child: AnimatedBuilder(
+        animation: _selectController,
+        builder: (_, __) {
+          final textStyle = DefaultTextStyle.of(context).style.copyWith(
+            color: selectTextColor.value
+          );
+          return AspectRatio(
+            aspectRatio: 2/1,
+            child: Transform.scale(
+              scale: selectScale.value,
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  color: selectColor.value,
+                  borderRadius: BorderRadius.circular(20 * widget.designRatio),
+                  border: Border.all(
+                    color: Colors.black,
+                    width: 1.0 * widget.designRatio,
+                  ),
+                ),
+                child: Center(
+                  child: DefaultTextStyle(
+                    style: textStyle,
+                    child: widget.child
+                  )
+                )
+              ),
+            )
+          );
+        }
+      ),
+    );
+  }
+}
+
 
 class PlaySessionScreen extends StatefulWidget {
   final TableturfBattle battle;
@@ -314,14 +383,16 @@ class _PlaySessionScreenState extends State<PlaySessionScreen>
 
   late final AnimationController _deckShuffleController;
   late final Animation<Offset> shuffleTopCardMove, shuffleBottomCardMove;
-
-  late final AnimationController _deckDealController;
-  late final Animation<Offset> dealCardOffset;
-  late final Animation<double> dealCardRotate;
+  late final Animation<double> shuffleCardRotate;
 
   late final AnimationController _deckScaleController;
   late final Animation<double> scaleDeckValue;
   late final Animation<Color?> scaleDeckColour;
+
+  late final AnimationController _redrawSelectionController;
+  late final AnimationController _redrawSelectionWaveController;
+  late final Animation<double> redrawSelectionOpacity, redrawSelectionScale, redrawSelectionRotate;
+  late final Animation<Offset> redrawSelectionOffset;
 
   @override
   void initState() {
@@ -457,11 +528,11 @@ class _PlaySessionScreenState extends State<PlaySessionScreen>
     ]).animate(_specialMoveController);
 
     _deckShuffleController = AnimationController(
-        duration: const Duration(milliseconds: 200),
-        vsync: this
+      duration: const Duration(milliseconds: 1000),
+      vsync: this
     );
-    final startOffset = CardDeck.DECK_SPACING * 1;
-    final endOffset = CardDeck.DECK_SPACING * -1;
+    final startOffset = _CardDeckSlice.DECK_SPACING * 1;
+    final endOffset = _CardDeckSlice.DECK_SPACING * -1;
     final topTween = CircularArcOffsetTween(
         begin: startOffset,
         end: endOffset,
@@ -474,38 +545,50 @@ class _PlaySessionScreenState extends State<PlaySessionScreen>
     ).chain(CurveTween(curve: Curves.easeInOutBack));
 
     const switchPoint = 0.4;
-    shuffleTopCardMove = AnimationSwitcher(
+    final topLayerShuffle = SwitchTween(
       switchPoint: switchPoint,
       first: topTween,
       second: bottomTween,
-    ).animate(_deckShuffleController);
-    shuffleBottomCardMove = AnimationSwitcher(
+    );
+    final bottomLayerShuffle = SwitchTween(
       switchPoint: switchPoint,
       first: bottomTween,
       second: topTween,
-    ).animate(_deckShuffleController);
-
-    _deckDealController = AnimationController(
-      duration: const Duration(milliseconds: 100),
-      vsync: this,
     );
-    dealCardOffset = TweenSequence([
-      TweenSequenceItem(
-          tween: ConstantTween(Offset.zero),
-          weight: 1
-      ),
-      TweenSequenceItem(
-          tween: ConstantTween(Offset(0.035, -0.09)),
-          weight: 99
-      ),
-    ]).animate(_deckDealController);
+
+    shuffleTopCardMove = TweenSequence([
+      TweenSequenceItem(tween: topLayerShuffle, weight: 200),
+      TweenSequenceItem(tween: topLayerShuffle, weight: 200),
+      TweenSequenceItem(tween: topLayerShuffle, weight: 200),
+      TweenSequenceItem(tween: ConstantTween(startOffset), weight: 200),
+      TweenSequenceItem(tween: ConstantTween(startOffset + Offset(0.035, -0.09)), weight: 100),
+      TweenSequenceItem(tween: ConstantTween(startOffset + Offset(0.035, -0.09)), weight: 99),
+      TweenSequenceItem(tween: ConstantTween(startOffset), weight: 1),
+    ]).animate(_deckShuffleController);
+    shuffleBottomCardMove = TweenSequence([
+      TweenSequenceItem(tween: bottomLayerShuffle, weight: 200),
+      TweenSequenceItem(tween: bottomLayerShuffle, weight: 200),
+      TweenSequenceItem(tween: bottomLayerShuffle, weight: 200),
+      TweenSequenceItem(tween: ConstantTween(endOffset), weight: 400),
+    ]).animate(_deckShuffleController);
     const defaultRotation = -0.025;
-    dealCardRotate = Tween(
-      begin: defaultRotation,
-      end: defaultRotation * 2.5,
-    )
-        .chain(CurveTween(curve: Curves.decelerate))
-        .animate(_deckDealController);
+    shuffleCardRotate = TweenSequence([
+      TweenSequenceItem(tween: ConstantTween(defaultRotation), weight: 800),
+      TweenSequenceItem(
+        tween: Tween(
+          begin: defaultRotation,
+          end: defaultRotation * 2.5,
+        ).chain(CurveTween(curve: Curves.decelerate)),
+        weight: 100
+      ),
+      TweenSequenceItem(
+        tween: Tween(
+          begin: defaultRotation * 2.5,
+          end: defaultRotation,
+        ).chain(CurveTween(curve: Curves.decelerate.flipped)),
+        weight: 100
+      ),
+    ]).animate(_deckShuffleController);
 
     _deckScaleController = AnimationController(
       duration: const Duration(milliseconds: 150),
@@ -524,16 +607,95 @@ class _PlaySessionScreenState extends State<PlaySessionScreen>
         .chain(CurveTween(curve: Curves.easeOut))
         .animate(_deckScaleController);
 
+    _redrawSelectionController = AnimationController(
+      duration: const Duration(milliseconds: 400),
+      vsync: this
+    );
+    _redrawSelectionWaveController = AnimationController(
+      duration: const Duration(milliseconds: 2500),
+      vsync: this
+    );
+    redrawSelectionOpacity = TweenSequence([
+      TweenSequenceItem(
+        tween: Tween(begin: 0.0, end: 1.0),
+        weight: 50
+      ),
+      TweenSequenceItem(
+        tween: Tween(begin: 1.0, end: 0.0),
+        weight: 35
+      ),
+      TweenSequenceItem(
+        tween: ConstantTween(0.0),
+        weight: 15
+      ),
+    ]).animate(_redrawSelectionController);
+    redrawSelectionScale = TweenSequence([
+      TweenSequenceItem(
+        tween: ConstantTween(1.0),
+        weight: 50
+      ),
+      TweenSequenceItem(
+        tween: Tween(begin: 1.0, end: 0.9),
+        weight: 50
+      ),
+    ]).animate(_redrawSelectionController);
+    redrawSelectionOffset = TweenSequence([
+      TweenSequenceItem(
+        tween: Tween(
+          begin: Offset(0.0, -100.0),
+          end: Offset(0.0, 20.0),
+        ).chain(CurveTween(curve: Curves.easeOut)),
+        weight: 42
+      ),
+      TweenSequenceItem(
+        tween: Tween(
+          begin: Offset(0.0, 20.0),
+          end: Offset.zero,
+        ).chain(CurveTween(curve: Curves.easeIn)),
+        weight: 8
+      ),
+      TweenSequenceItem(
+        tween: ConstantTween(Offset.zero),
+        weight: 50
+      ),
+    ]).animate(_redrawSelectionController);
+    const defaultRotate = -0.005 * pi;
+    redrawSelectionRotate = TweenSequence([
+      TweenSequenceItem(
+        tween: Tween(begin: 0.01 * pi, end: defaultRotate),
+        weight: 50
+      ),
+      TweenSequenceItem(
+        tween: ConstantTween(defaultRotate),
+        weight: 50
+      ),
+    ]).animate(_redrawSelectionController);
+    _redrawSelectionWaveController.repeat();
+
     _playInitSequence();
   }
 
-  FutureOr<void> _playInitSequence() async {
+  Future<void> _playInitSequence() async {
     await Future<void>.delayed(const Duration(milliseconds: 600));
     final audioController = AudioController();
 
-
     await _deckScaleController.forward(from: 0.0);
     await _dealHand();
+
+    final shouldRedraw = await _checkRedrawHand();
+    if (shouldRedraw) {
+      for (final card in widget.battle.yellow.hand) {
+        final heldCard = card.value;
+        if (heldCard != null) {
+          heldCard.isHeld = false;
+          heldCard.isPlayable = false;
+          heldCard.isPlayableSpecial = false;
+        }
+        card.value = null;
+      }
+      await Future<void>.delayed(const Duration(milliseconds: 150));
+      await _dealHand();
+    }
 
     await Future<void>.delayed(const Duration(milliseconds: 200));
     _deckScaleController.reverse(from: 1.0);
@@ -548,20 +710,128 @@ class _PlaySessionScreenState extends State<PlaySessionScreen>
     //widget.battle.runYellowAI();
   }
 
+  Future<bool> _checkRedrawHand() async {
+    _log.info("special move sequence started");
+    final overlayState = Overlay.of(context)!;
+    final completer = Completer<bool>();
+    late final OverlayEntry selectionLayer;
+
+    void Function() createTapCallback(bool ret) {
+      return () async {
+        print("Callback with $ret");
+        await _redrawSelectionController.forward();
+        selectionLayer.remove();
+        completer.complete(ret);
+      };
+    }
+
+    selectionLayer = OverlayEntry(builder: (context) {
+      final mediaQuery = MediaQuery.of(context);
+      final isLandscape = mediaQuery.orientation == Orientation.landscape;
+      return AnimatedBuilder(
+        animation: _redrawSelectionController,
+        builder: (_, __) {
+          return Opacity(
+            opacity: redrawSelectionOpacity.value,
+            child: CustomPaint(
+              painter: SelectionBackgroundPainter(
+                waveAnimation: _redrawSelectionWaveController,
+                orientation: mediaQuery.orientation,
+              ),
+              child: Align(
+                alignment: isLandscape ? Alignment(0.4, 0.0) : Alignment(0.0, -0.4),
+                child: FractionallySizedBox(
+                  heightFactor: isLandscape ? 0.5 : null,
+                  widthFactor: isLandscape ? null : 0.8,
+                  child: AspectRatio(
+                    aspectRatio: 4/3,
+                    child: LayoutBuilder(
+                      builder: (context, constraints) {
+                        const designWidth = 646;
+                        final designRatio = constraints.maxWidth / designWidth;
+                        return DefaultTextStyle(
+                          style: TextStyle(
+                            fontFamily: "Splatfont2",
+                            color: Colors.white,
+                            fontSize: 25 * designRatio,
+                          ),
+                          child: Transform.translate(
+                            offset: redrawSelectionOffset.value * designRatio,
+                            child: Transform.scale(
+                              scale: redrawSelectionScale.value,
+                              child: Transform.rotate(
+                                angle: redrawSelectionRotate.value,
+                                child: DecoratedBox(
+                                  decoration: BoxDecoration(
+                                    color: Colors.grey[850],
+                                    borderRadius: BorderRadius.circular(60 * designRatio),
+                                  ),
+                                  child: Column(
+                                    mainAxisAlignment: MainAxisAlignment.spaceAround,
+                                    children: [
+                                      Expanded(
+                                        flex: 2,
+                                        child: Center(
+                                          child: Text(
+                                            "Redraw hand?",
+                                            style: TextStyle(
+                                              fontSize: 35 * designRatio,
+                                            ),
+                                          )
+                                        )
+                                      ),
+                                      Expanded(
+                                        flex: 1,
+                                        child: FractionallySizedBox(
+                                          heightFactor: 0.7,
+                                          child: Row(
+                                            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                                            children: [
+                                              _SelectionButton(
+                                                onSelect: createTapCallback(false),
+                                                designRatio: designRatio,
+                                                child: Text("Hold Steady")
+                                              ),
+                                              _SelectionButton(
+                                                onSelect: createTapCallback(true),
+                                                designRatio: designRatio,
+                                                child: Text("Redraw!")
+                                              ),
+                                            ]
+                                          ),
+                                        )
+                                      )
+                                    ]
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                        );
+                      }
+                    ),
+                  ),
+                )
+              )
+            )
+          );
+        }
+      );
+    });
+    overlayState.insert(selectionLayer);
+    await _redrawSelectionController.animateTo(0.5);
+
+    return completer.future;
+  }
+
   Future<void> _dealHand() async {
     final battle = widget.battle;
     final yellow = battle.yellow;
 
     final audioController = AudioController();
     audioController.playSfx(SfxType.dealHand);
-    await _deckShuffleController.forward(from: 0.0);
-    await _deckShuffleController.forward(from: 0.0);
-    await _deckShuffleController.forward(from: 0.0);
-    await Future<void>.delayed(const Duration(milliseconds: 200));
-    () async {
-      await _deckDealController.forward(from: 0.0);
-      await _deckDealController.reverse(from: 1.0);
-    }();
+    _deckShuffleController.forward(from: 0.0);
+    await Future<void>.delayed(const Duration(milliseconds: 800));
     for (var i = 0; i < 4; i++) {
       final newCard = yellow.deck.where((card) => !card.isHeld && !card.hasBeenPlayed).toList().random();
       newCard.isHeld = true;
@@ -583,8 +853,9 @@ class _PlaySessionScreenState extends State<PlaySessionScreen>
     _specialMoveController.dispose();
     _specialMovePulseController.dispose();
     _deckShuffleController.dispose();
-    _deckDealController.dispose();
     _deckScaleController.dispose();
+    _redrawSelectionController.dispose();
+    _redrawSelectionWaveController.dispose();
     super.dispose();
   }
 
@@ -727,14 +998,16 @@ class _PlaySessionScreenState extends State<PlaySessionScreen>
                               child: AnimatedBuilder(
                                   animation: specialMoveYellowPulse,
                                   builder: (_, __) {
-                                    return FractionallySizedBox(
-                                      heightFactor: isLandscape ? 1.0 : 1.0 * specialMoveScale.value,
-                                      widthFactor: isLandscape ? 1.0 * specialMoveScale.value : 1.0,
-                                      child: CustomPaint(
-                                        painter: SpecialBackgroundPainter(
-                                          isLandscape,
-                                          specialMoveYellowPulse,
-                                        )
+                                    return CustomPaint(
+                                      painter: SpecialBackgroundPainter(
+                                        isLandscape,
+                                        specialMoveYellowPulse,
+                                      ),
+                                      willChange: true,
+                                      isComplex: true,
+                                      child: FractionallySizedBox(
+                                        heightFactor: isLandscape ? 1.0 : 1.0 * specialMoveScale.value,
+                                        widthFactor: isLandscape ? 1.0 * specialMoveScale.value : 1.0,
                                       ),
                                     );
                                   }
@@ -808,6 +1081,7 @@ class _PlaySessionScreenState extends State<PlaySessionScreen>
 
   Future<void> _onGameEnd() async {
     _log.info("outro sequence started");
+    final audioController = AudioController();
     final overlayState = Overlay.of(context)!;
     final animationLayer = OverlayEntry(builder: (_) {
       final mediaQuery = MediaQuery.of(context);
@@ -855,6 +1129,7 @@ class _PlaySessionScreenState extends State<PlaySessionScreen>
     });
     overlayState.insert(animationLayer);
 
+    audioController.playSfx(SfxType.gameEndWhistle);
     _scoreFadeController.reverse(from: 1.0);
     await _outroController.animateTo(0.5);
     await AudioController().stopSong(
@@ -909,21 +1184,22 @@ class _PlaySessionScreenState extends State<PlaySessionScreen>
     final boardTileStep = tileSize;
     final newX = ((piecePosition!.dx - boardLocation.dx) / boardTileStep).floor();
     final newY = ((piecePosition!.dy - boardLocation.dy) / boardTileStep).floor();
-    if (
+    final newCoords = Coords(
+        clamp(newX, 0, board[0].length - 1),
+        clamp(newY, 0, board.length - 1),
+    );
+    if ((
     newY < 0 ||
         newY >= board.length ||
         newX < 0 ||
         newX >= board[0].length
-    ) {
-      if (details.kind == PointerDeviceKind.mouse) {
-        battle.moveLocationNotifier.value = null;
-      }
+    ) && details.kind == PointerDeviceKind.mouse) {
+      battle.moveLocationNotifier.value = null;
       // if pointer is touch, let the position remain
-    } else {
-      final newCoords = Coords(newX, newY);
-      if (battle.moveLocationNotifier.value != newCoords) {
-        _noPointerMovement = false;
-        final audioController = AudioController();
+    } else if (battle.moveLocationNotifier.value != newCoords) {
+      _noPointerMovement = false;
+      final audioController = AudioController();
+      if (battle.moveCardNotifier.value != null && !battle.movePassNotifier.value) {
         audioController.playSfx(SfxType.cursorMove);
       }
       battle.moveLocationNotifier.value = newCoords;
@@ -1033,6 +1309,7 @@ class _PlaySessionScreenState extends State<PlaySessionScreen>
     final battle = widget.battle;
     final palette = context.watch<Palette>();
     final mediaQuery = MediaQuery.of(context);
+    print(mediaQuery.devicePixelRatio);
 
     final boardWidget = buildBoardWidget(
       battle: battle,
@@ -1143,22 +1420,25 @@ class _PlaySessionScreenState extends State<PlaySessionScreen>
         battle.movePassNotifier.value = !battle.movePassNotifier.value;
         battle.moveSpecialNotifier.value = false;
       },
-      child: AnimatedBuilder(
-        animation: battle.movePassNotifier,
-        builder: (_, __) => AnimatedContainer(
-          duration: const Duration(milliseconds: 200),
-          decoration: BoxDecoration(
-            color: battle.movePassNotifier.value
-                ? palette.buttonSelected
-                : palette.buttonUnselected,
-            borderRadius: BorderRadius.all(Radius.circular(4)),
-            border: Border.all(
-              width: BoardTile.EDGE_WIDTH,
-              color: Colors.black,
+      child: AspectRatio(
+        aspectRatio: 3.5/1,
+        child: AnimatedBuilder(
+          animation: battle.movePassNotifier,
+          builder: (_, __) => AnimatedContainer(
+            duration: const Duration(milliseconds: 200),
+            decoration: BoxDecoration(
+              color: battle.movePassNotifier.value
+                  ? palette.buttonSelected
+                  : palette.buttonUnselected,
+              borderRadius: BorderRadius.all(Radius.circular(10)),
+              border: Border.all(
+                width: BoardTile.EDGE_WIDTH,
+                color: Colors.black,
+              ),
             ),
-          ),
-          child: Center(child: Text("Pass"))
-        )
+            child: Center(child: Text("Pass"))
+          )
+        ),
       )
     );
 
@@ -1199,24 +1479,27 @@ class _PlaySessionScreenState extends State<PlaySessionScreen>
         battle.moveSpecialNotifier.value = !battle.moveSpecialNotifier.value;
         battle.movePassNotifier.value = false;
       },
-      child: AnimatedBuilder(
-        animation: battle.moveSpecialNotifier,
-        builder: (_, __) => AnimatedContainer(
-          duration: const Duration(milliseconds: 200),
-          decoration: BoxDecoration(
-            color: battle.moveSpecialNotifier.value
-                ? Color.fromRGBO(216, 216, 0, 1)
-                : Color.fromRGBO(109, 161, 198, 1),
-            borderRadius: BorderRadius.all(Radius.circular(4)),
-            border: Border.all(
-              width: BoardTile.EDGE_WIDTH,
-              color: Colors.black,
+      child: AspectRatio(
+        aspectRatio: 3.5/1,
+        child: AnimatedBuilder(
+          animation: battle.moveSpecialNotifier,
+          builder: (_, __) => AnimatedContainer(
+            duration: const Duration(milliseconds: 200),
+            decoration: BoxDecoration(
+              color: battle.moveSpecialNotifier.value
+                  ? Color.fromRGBO(216, 216, 0, 1)
+                  : Color.fromRGBO(109, 161, 198, 1),
+              borderRadius: BorderRadius.all(Radius.circular(10)),
+              border: Border.all(
+                width: BoardTile.EDGE_WIDTH,
+                color: Colors.black,
+              ),
             ),
-          ),
-          //height: mediaQuery.orientation == Orientation.portrait ? CardWidget.CARD_HEIGHT : 30,
-          //width: mediaQuery.orientation == Orientation.landscape ? CardWidget.CARD_WIDTH : 64,
-          child: Center(child: Text("Special")),
-        )
+            //height: mediaQuery.orientation == Orientation.portrait ? CardWidget.CARD_HEIGHT : 30,
+            //width: mediaQuery.orientation == Orientation.landscape ? CardWidget.CARD_WIDTH : 64,
+            child: Center(child: Text("Special")),
+          )
+        ),
       )
     );
 
@@ -1301,31 +1584,28 @@ class _PlaySessionScreenState extends State<PlaySessionScreen>
                                 BlendMode.srcATop,
                               ),
                               child: AnimatedBuilder(
-                                animation: Listenable.merge([
-                                  _deckShuffleController,
-                                  _deckDealController,
-                                ]),
+                                animation: _deckShuffleController,
                                 builder: (_, __) => Transform.rotate(
-                                  angle: dealCardRotate.value * 2 * pi,
+                                  angle: shuffleCardRotate.value * 2 * pi,
                                   child: Stack(
-                                      children: [
-                                        Transform.translate(
-                                          offset: shuffleBottomCardMove.value * width,
-                                          child: _CardDeckSlice(
-                                              cardSleeve: widget.battle.yellow.cardSleeve,
-                                              isDarkened: true,
-                                              width: width
-                                          ),
+                                    children: [
+                                      Transform.translate(
+                                        offset: shuffleBottomCardMove.value * width,
+                                        child: _CardDeckSlice(
+                                          cardSleeve: widget.battle.yellow.cardSleeve,
+                                          isDarkened: true,
+                                          width: width
                                         ),
-                                        Transform.translate(
-                                          offset: (shuffleTopCardMove.value + dealCardOffset.value) * width,
-                                          child: _CardDeckSlice(
-                                              cardSleeve: widget.battle.yellow.cardSleeve,
-                                              isDarkened: false,
-                                              width: width
-                                          ),
+                                      ),
+                                      Transform.translate(
+                                        offset: (shuffleTopCardMove.value) * width,
+                                        child: _CardDeckSlice(
+                                          cardSleeve: widget.battle.yellow.cardSleeve,
+                                          isDarkened: false,
+                                          width: width
                                         ),
-                                      ]
+                                      ),
+                                    ]
                                   ),
                                 )
                             ),
@@ -1463,7 +1743,7 @@ class _PlaySessionScreenState extends State<PlaySessionScreen>
                                     flex: 1,
                                     child: Column(
                                       mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                                      children: [passButton, specialButton],
+                                      children: [Expanded(child: passButton), Expanded(child: specialButton)],
                                     ),
                                   ),
                                 ],
@@ -1522,7 +1802,20 @@ class _PlaySessionScreenState extends State<PlaySessionScreen>
                                   ),
                                   Row(
                                     mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                                    children: [passButton, specialButton],
+                                    children: [
+                                      Expanded(
+                                        child: FractionallySizedBox(
+                                          widthFactor: 0.9,
+                                          child: passButton,
+                                        )
+                                      ),
+                                      Expanded(
+                                          child: FractionallySizedBox(
+                                            widthFactor: 0.9,
+                                            child: specialButton,
+                                          )
+                                      )
+                                    ],
                                   )
                                 ]
                               ),
@@ -1600,7 +1893,10 @@ class _PlaySessionScreenState extends State<PlaySessionScreen>
           onPointerMove: (details) => _onPointerMove(details, context),
           onPointerHover: (details) => _onPointerHover(details, context),
           onPointerUp: (details) => _onPointerUp(details, context),
-          child: screen,
+          child: WillPopScope(
+            onWillPop: () async => !_lockInputs,
+            child: screen
+          ),
         ),
       ),
     );

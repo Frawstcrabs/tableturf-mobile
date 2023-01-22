@@ -281,6 +281,8 @@ class _MoveOverlayWidgetState extends State<MoveOverlayWidget>
             widget.tileSize
           ),
           child: Container(),
+          isComplex: true,
+          willChange: true,
         )
       ),
     );

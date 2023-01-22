@@ -54,6 +54,9 @@ flutter:
     - family: Splatfont1
       fonts:
         - asset: assets/Splatfont/Splatfont1.otf
+    - family: InklingBubble
+      fonts:
+        - asset: assets/Splatfont/SplatoonBubble.otf
 
 flutter_icons:
   android: true

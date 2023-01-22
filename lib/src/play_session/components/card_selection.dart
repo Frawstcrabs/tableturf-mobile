@@ -71,7 +71,6 @@ class CardFrontWidget extends StatelessWidget {
     return LayoutBuilder(
       builder: (context, constraints) {
         final sizeRatio = constraints.maxHeight/CardWidget.CARD_HEIGHT;
-        final cornerRadius = CardWidget.CORNER_RADIUS * sizeRatio;
 
         final countTextStyle = TextStyle(
           fontFamily: "Splatfont1",
@@ -93,7 +92,9 @@ class CardFrontWidget extends StatelessWidget {
                   builder: (context, constraints) {
                     final fontSize = 44.0 * sizeRatio;
                     final textStyle = TextStyle(
-                      fontFamily: "Splatfont1",
+                      fontFamily: {
+                        "randomiser": "InklingBubble",
+                      }[card.rarity] ?? "Splatfont1",
                       fontSize: fontSize,
                       letterSpacing: 0.3,
                       shadows: [],

@@ -205,6 +205,7 @@ class _BoardWidgetState extends State<BoardWidget>
                   specialButtonOn: showSpecialDarken,
                 ),
                 child: Container(),
+                isComplex: true,
               );
             }
           ),

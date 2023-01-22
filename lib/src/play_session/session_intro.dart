@@ -147,7 +147,10 @@ class _PlaySessionIntroState extends State<PlaySessionIntro>
           )
         ]
       ),
-      child: screen
+      child: WillPopScope(
+        onWillPop: () async => false,
+        child: screen
+      )
     );
   }
 }
