@@ -141,8 +141,15 @@ class AudioController {
     await musicPlayer.setLoopMode(LoopMode.all);
     await musicPlayer.setVolume(1.0);
     musicPlayer.play();
-    _musicLoopTimer = Timer(song.introDuration, () {
-      musicPlayer.setLoopMode(LoopMode.one);
+    _musicLoopTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      if (musicPlayer.currentIndex == null) {
+        timer.cancel();
+        return;
+      }
+      if (musicPlayer.currentIndex == 1) {
+        musicPlayer.setLoopMode(LoopMode.one);
+        timer.cancel();
+      }
     });
   }
 

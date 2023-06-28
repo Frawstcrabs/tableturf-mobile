@@ -52,8 +52,6 @@ class CircularArcOffsetTween extends Tween<Offset> {
     _center = newCenter;
     _radius = newRadius;
 
-    print("begin $begin, end $end\ndistanceToMid $distanceToMid\npointAngle $pointAngle\nangle $_angle\ndistMidToCenter $distMidToCenter, newRadius $newRadius\ncenter $_center");
-
     _dirty = false;
   }
 
