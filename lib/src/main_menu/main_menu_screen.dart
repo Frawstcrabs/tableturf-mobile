@@ -8,6 +8,7 @@ import 'package:provider/provider.dart';
 import '../audio/audio_controller.dart';
 import '../audio/sounds.dart';
 import '../level_selection/level_selection_screen.dart';
+import '../card_manager/card_list_screen.dart';
 import '../settings/settings.dart';
 import '../settings/settings_screen.dart';
 import '../style/my_transition.dart';
@@ -53,6 +54,16 @@ class MainMenuScreen extends StatelessWidget {
                 ));
               },
               child: const Text('Play'),
+            ),
+            _gap,
+            ElevatedButton(
+              onPressed: () {
+                Navigator.of(context).push(buildMyTransition<void>(
+                  child: const CardListScreen(),
+                  color: palette.backgroundCardList,
+                ));
+              },
+              child: const Text("Manage Cards")
             ),
             _gap,
             ElevatedButton(

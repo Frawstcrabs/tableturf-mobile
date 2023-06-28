@@ -20,7 +20,7 @@ PageRouteBuilder<T> buildMyTransition<T>({
         child: child,
       );
     },
-    transitionDuration: const Duration(milliseconds: 700),
+    transitionDuration: const Duration(milliseconds: 400),
   );
 }
 

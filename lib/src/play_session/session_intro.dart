@@ -117,20 +117,11 @@ class _PlaySessionIntroState extends State<PlaySessionIntro>
 
     final screen = Container(
       color: palette.backgroundPlaySession,
-      child: Column(
-        children: [
-          Container(
-            height: mediaQuery.padding.top
-          ),
-          Expanded(
-            child: buildBoardWidget(
-              battle: battle
-            ),
-          ),
-          Container(
-            height: mediaQuery.padding.bottom
-          ),
-        ],
+      child: Padding(
+        padding: mediaQuery.padding,
+        child: buildBoardWidget(
+          battle: battle
+        ),
       ),
     );
 

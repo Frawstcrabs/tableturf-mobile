@@ -89,9 +89,10 @@ class CardPatternWidget extends StatelessWidget {
 }
 
 class CardWidget extends StatefulWidget {
-  static final double CARD_HEIGHT = 472;
-  static final double CARD_WIDTH = 339;
-  static final double CORNER_RADIUS = 25;
+  static const double CARD_HEIGHT = 472;
+  static const double CARD_WIDTH = 339;
+  static const double CARD_RATIO = CARD_WIDTH / CARD_HEIGHT;
+  static const double CORNER_RADIUS = 25;
   final ValueNotifier<TableturfCard?> cardNotifier;
   final TableturfBattle battle;
 
@@ -217,7 +218,7 @@ class _CardWidgetState extends State<CardWidget>
                       child: FittedBox(
                         fit: BoxFit.fitHeight,
                         child: Text(
-                            card.count.toString(),
+                            "${card.count}",
                             style: TextStyle(
                                 fontFamily: "Splatfont1",
                                 color: Colors.white,

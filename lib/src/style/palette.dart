@@ -31,6 +31,9 @@ class Palette {
   Color get ink => const Color(0xee352b42);
   Color get backgroundMain => const Color(0xffffffd1);
   Color get backgroundLevelSelection => const Color(0xffa2dcc7);
+  Color get backgroundCardList => const Color.fromRGBO(208, 220, 220, 1.0);
+  Color get backgroundDeckList => const Color.fromRGBO(213, 225, 213, 1.0);
+  Color get backgroundDeckEditor => const Color.fromRGBO(229, 224, 239, 1.0);
   Color get backgroundPlaySession => const Color(0xff3f2f93);
   Color get background4 => const Color(0xffffd7ff);
   Color get backgroundSettings => const Color(0xffbfc8e3);
@@ -51,6 +54,9 @@ class Palette {
   Color get cardTileUnfilled => const Color.fromRGBO(32, 32, 32, 0.4);
   Color get cardTileEdge => const Color.fromRGBO(120, 120, 120, 1);
 
-  Color get buttonSelected => const Color.fromRGBO(216, 216, 0, 1);
-  Color get buttonUnselected => const Color.fromRGBO(109, 161, 198, 1);
+  Color get inGameButtonSelected => const Color.fromRGBO(216, 216, 0, 1);
+  Color get inGameButtonUnselected => const Color.fromRGBO(109, 161, 198, 1);
+
+  Color get selectionButtonSelected => const Color.fromRGBO(167, 231, 9, 1.0);
+  Color get selectionButtonUnselected => const Color.fromRGBO(71, 16, 175, 1.0);
 }

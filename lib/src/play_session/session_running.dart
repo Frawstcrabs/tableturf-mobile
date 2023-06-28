@@ -16,6 +16,7 @@ import 'package:tableturf_mobile/src/game_internals/player.dart';
 import 'package:tableturf_mobile/src/style/palette.dart';
 import 'package:tableturf_mobile/src/style/my_transition.dart';
 
+import 'components/selection_button.dart';
 import 'session_end.dart';
 import 'components/arc_tween.dart';
 import 'components/build_board_widget.dart';
@@ -232,108 +233,6 @@ class _CardDeckSlice extends StatelessWidget {
                 : Image.asset(cardSleeve),
           ),
         ]
-    );
-  }
-}
-
-class _SelectionButton extends StatefulWidget {
-  final void Function() onSelect;
-  final double designRatio;
-  final Widget child;
-  const _SelectionButton({
-    super.key,
-    required this.onSelect,
-    required this.designRatio,
-    required this.child,
-  });
-
-  @override
-  State<_SelectionButton> createState() => _SelectionButtonState();
-}
-
-class _SelectionButtonState extends State<_SelectionButton>
-    with SingleTickerProviderStateMixin {
-  late final AnimationController _selectController;
-  late final Animation<double> selectScale;
-  late final Animation<Color?> selectColor, selectTextColor;
-
-  @override
-  void initState() {
-    super.initState();
-
-    _selectController = AnimationController(
-      duration: const Duration(milliseconds: 125),
-      vsync: this
-    );
-    const selectDownscale = 0.9;
-    selectScale = TweenSequence([
-      TweenSequenceItem(
-        tween: Tween(begin: 1.0, end: selectDownscale)
-          .chain(CurveTween(curve: Curves.decelerate)),
-        weight: 50
-      ),
-      TweenSequenceItem(
-        tween: Tween(begin: selectDownscale, end: 1.05)
-          .chain(CurveTween(curve: Curves.decelerate.flipped)),
-        weight: 50
-      ),
-    ]).animate(_selectController);
-    selectColor = ColorTween(
-        begin: const Color.fromRGBO(71, 16, 175, 1.0),
-        end: const Color.fromRGBO(167, 231, 9, 1.0)
-    )
-        .animate(_selectController);
-    selectTextColor = ColorTween(
-        begin: Colors.white,
-        end: Colors.black
-    )
-        .animate(_selectController);
-  }
-
-  @override
-  void dispose() {
-    _selectController.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: () async {
-        await _selectController.forward(from: 0.0);
-        await Future<void>.delayed(const Duration(milliseconds: 50));
-        widget.onSelect();
-      },
-      child: AnimatedBuilder(
-        animation: _selectController,
-        builder: (_, __) {
-          final textStyle = DefaultTextStyle.of(context).style.copyWith(
-            color: selectTextColor.value
-          );
-          return AspectRatio(
-            aspectRatio: 2/1,
-            child: Transform.scale(
-              scale: selectScale.value,
-              child: DecoratedBox(
-                decoration: BoxDecoration(
-                  color: selectColor.value,
-                  borderRadius: BorderRadius.circular(20 * widget.designRatio),
-                  border: Border.all(
-                    color: Colors.black,
-                    width: 1.0 * widget.designRatio,
-                  ),
-                ),
-                child: Center(
-                  child: DefaultTextStyle(
-                    style: textStyle,
-                    child: widget.child
-                  )
-                )
-              ),
-            )
-          );
-        }
-      ),
     );
   }
 }
@@ -716,7 +615,7 @@ class _PlaySessionScreenState extends State<PlaySessionScreen>
     final completer = Completer<bool>();
     late final OverlayEntry selectionLayer;
 
-    void Function() createTapCallback(bool ret) {
+    Future<void> Function() createTapCallback(bool ret) {
       return () async {
         print("Callback with $ret");
         await _redrawSelectionController.forward();
@@ -787,12 +686,12 @@ class _PlaySessionScreenState extends State<PlaySessionScreen>
                                           child: Row(
                                             mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                                             children: [
-                                              _SelectionButton(
+                                              SelectionButton(
                                                 onSelect: createTapCallback(false),
                                                 designRatio: designRatio,
                                                 child: Text("Hold Steady")
                                               ),
-                                              _SelectionButton(
+                                              SelectionButton(
                                                 onSelect: createTapCallback(true),
                                                 designRatio: designRatio,
                                                 child: Text("Redraw!")
@@ -1428,8 +1327,8 @@ class _PlaySessionScreenState extends State<PlaySessionScreen>
             duration: const Duration(milliseconds: 200),
             decoration: BoxDecoration(
               color: battle.movePassNotifier.value
-                  ? palette.buttonSelected
-                  : palette.buttonUnselected,
+                  ? palette.inGameButtonSelected
+                  : palette.inGameButtonUnselected,
               borderRadius: BorderRadius.all(Radius.circular(10)),
               border: Border.all(
                 width: BoardTile.EDGE_WIDTH,
@@ -1673,196 +1572,184 @@ class _PlaySessionScreenState extends State<PlaySessionScreen>
 
     late final Widget screenContents;
     if (mediaQuery.orientation == Orientation.portrait) {
-      screenContents = Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Container(
-            height: mediaQuery.padding.top + 10
-          ),
-          Expanded(
-            flex: 1,
-            child: FractionallySizedBox(
-              widthFactor: 0.95,
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Expanded(
-                    child: Row(
-                      children: [
-                        blueScore,
-                        Container(width: 20),
-                        Expanded(child: RepaintBoundary(child: SpecialMeter(player: battle.blue))),
-                      ],
+      screenContents = Padding(
+        padding: mediaQuery.padding + EdgeInsets.fromLTRB(0, 10, 0, 5),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Expanded(
+              flex: 1,
+              child: FractionallySizedBox(
+                widthFactor: 0.95,
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Expanded(
+                      child: Row(
+                        children: [
+                          blueScore,
+                          Container(width: 20),
+                          Expanded(child: RepaintBoundary(child: SpecialMeter(player: battle.blue))),
+                        ],
+                      ),
                     ),
-                  ),
-                  turnCounter,
-                ]
-              ),
-            ),
-          ),
-          Expanded(
-            flex: 12,
-            child: FractionallySizedBox(
-              heightFactor: 0.9,
-              child: boardWidget
-            ),
-          ),
-          Expanded(
-            flex: 1,
-            child: FractionallySizedBox(
-              widthFactor: 0.95,
-              child: Row(
-                children: [
-                  yellowScore,
-                  Container(width: 20),
-                  Expanded(child: RepaintBoundary(child: SpecialMeter(player: battle.yellow))),
-                  cardDeck,
-                ],
-              ),
-            ),
-          ),
-          Expanded(
-            flex: 6,
-            child: blockCursorMovement(
-              child: RepaintBoundary(
-                child: Container(
-                  padding: EdgeInsets.all(10),
-                  child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                      children: [
-                        Expanded(
-                          flex: 3,
-                          child: fadeOnControlLock(
-                              child: Row(
-                                children: [
-                                  Expanded(
-                                    flex: 2,
-                                    child: handWidget,
-                                  ),
-                                  Expanded(
-                                    flex: 1,
-                                    child: Column(
-                                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                                      children: [Expanded(child: passButton), Expanded(child: specialButton)],
-                                    ),
-                                  ),
-                                ],
-                              )
-                          ),
-                        ),
-                        Expanded(
-                          flex: 1,
-                          child: cardbattles,
-                        )
-                      ]
-                  ),
+                    turnCounter,
+                  ]
                 ),
               ),
             ),
-          ),
-          Container(
-            height: mediaQuery.padding.bottom + 5,
-          )
-        ],
-      );
-    } else {
-      screenContents = Column(
-        children: [
-          Container(
-            height: mediaQuery.padding.top + 10
-          ),
-          Expanded(
-            child: Row(
-              children: [
-                Expanded(
-                  flex: 2,
+            Expanded(
+              flex: 12,
+              child: FractionallySizedBox(
+                heightFactor: 0.9,
+                child: boardWidget
+              ),
+            ),
+            Expanded(
+              flex: 1,
+              child: FractionallySizedBox(
+                widthFactor: 0.95,
+                child: Row(
+                  children: [
+                    yellowScore,
+                    Container(width: 20),
+                    Expanded(child: RepaintBoundary(child: SpecialMeter(player: battle.yellow))),
+                    cardDeck,
+                  ],
+                ),
+              ),
+            ),
+            Expanded(
+              flex: 6,
+              child: blockCursorMovement(
+                child: RepaintBoundary(
                   child: Container(
-                    margin: const EdgeInsets.symmetric(horizontal: 5.0),
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.spaceAround,
-                      children: [
-                        Expanded(
-                          flex: 1,
-                          child: Align(
-                            alignment: Alignment(-0.85, -0.9),
-                            child: FractionallySizedBox(
-                              heightFactor: 1/3,
-                              child: SpecialMeter(player: battle.blue)
-                            )
-                          )
-                        ),
-                        Expanded(
-                          flex: 5,
-                          child: blockCursorMovement(
+                    padding: EdgeInsets.all(10),
+                    child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                        children: [
+                          Expanded(
+                            flex: 3,
                             child: fadeOnControlLock(
-                              child: Column(
-                                children: [
-                                  Expanded(
-                                      child: handWidget
-                                  ),
-                                  Row(
-                                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                                    children: [
-                                      Expanded(
-                                        child: FractionallySizedBox(
-                                          widthFactor: 0.9,
-                                          child: passButton,
-                                        )
+                                child: Row(
+                                  children: [
+                                    Expanded(
+                                      flex: 2,
+                                      child: handWidget,
+                                    ),
+                                    Expanded(
+                                      flex: 1,
+                                      child: Column(
+                                        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                                        children: [Expanded(child: passButton), Expanded(child: specialButton)],
                                       ),
-                                      Expanded(
-                                          child: FractionallySizedBox(
-                                            widthFactor: 0.9,
-                                            child: specialButton,
-                                          )
-                                      )
-                                    ],
-                                  )
-                                ]
-                              ),
+                                    ),
+                                  ],
+                                )
                             ),
                           ),
-                        ),
-                        Expanded(
-                          flex: 1,
-                          child: Align(
-                            alignment: Alignment(-0.85, 0.9),
-                            child: FractionallySizedBox(
-                              heightFactor: 1/3,
-                              child: SpecialMeter(player: battle.yellow)
-                            )
+                          Expanded(
+                            flex: 1,
+                            child: cardbattles,
                           )
-                        ),
-                      ],
+                        ]
                     ),
                   ),
                 ),
-                Expanded(
-                  flex: 2,
-                  child: FractionallySizedBox(
-                    widthFactor: 2/5,
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                      children: [turnCounter, blueScore, yellowScore, cardDeck],
-                    ),
-                  ),
-                ),
-                Expanded(
-                  flex: 3,
-                  child: boardWidget
-                ),
-                Expanded(
-                  flex: 2,
-                  child: blockCursorMovement(
-                    child: cardbattles,
-                  )
-                )
-              ]
+              ),
             ),
-          ),
-          Container(
-            height: mediaQuery.padding.bottom + 5,
-          )
-        ],
+          ],
+        ),
+      );
+    } else {
+      screenContents = Padding(
+        padding: mediaQuery.padding + EdgeInsets.fromLTRB(0, 10, 0, 5),
+        child: Row(
+          children: [
+            Expanded(
+              flex: 2,
+              child: Container(
+                margin: const EdgeInsets.symmetric(horizontal: 5.0),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.spaceAround,
+                  children: [
+                    Expanded(
+                      flex: 1,
+                      child: Align(
+                        alignment: Alignment(-0.85, -0.9),
+                        child: FractionallySizedBox(
+                          heightFactor: 1/3,
+                          child: SpecialMeter(player: battle.blue)
+                        )
+                      )
+                    ),
+                    Expanded(
+                      flex: 5,
+                      child: blockCursorMovement(
+                        child: fadeOnControlLock(
+                          child: Column(
+                            children: [
+                              Expanded(
+                                  child: handWidget
+                              ),
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                                children: [
+                                  Expanded(
+                                    child: FractionallySizedBox(
+                                      widthFactor: 0.9,
+                                      child: passButton,
+                                    )
+                                  ),
+                                  Expanded(
+                                      child: FractionallySizedBox(
+                                        widthFactor: 0.9,
+                                        child: specialButton,
+                                      )
+                                  )
+                                ],
+                              )
+                            ]
+                          ),
+                        ),
+                      ),
+                    ),
+                    Expanded(
+                      flex: 1,
+                      child: Align(
+                        alignment: Alignment(-0.85, 0.9),
+                        child: FractionallySizedBox(
+                          heightFactor: 1/3,
+                          child: SpecialMeter(player: battle.yellow)
+                        )
+                      )
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            Expanded(
+              flex: 2,
+              child: FractionallySizedBox(
+                widthFactor: 2/5,
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                  children: [turnCounter, blueScore, yellowScore, cardDeck],
+                ),
+              ),
+            ),
+            Expanded(
+              flex: 3,
+              child: boardWidget
+            ),
+            Expanded(
+              flex: 2,
+              child: blockCursorMovement(
+                child: cardbattles,
+              )
+            )
+          ]
+        ),
       );
     }
 

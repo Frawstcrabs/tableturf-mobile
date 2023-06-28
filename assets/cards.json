@@ -492,6 +492,7 @@
               [".", ".", ".", ".", ".", ".", ".", "."]]},
  {"num": 42,
   "name": "Ballpoint Splatling",
+  "display_name": "Ballpoint\nSplatling",
   "rarity": "common",
   "special": 4,
   "pattern": [[".", ".", ".", ".", ".", ".", ".", "."],
