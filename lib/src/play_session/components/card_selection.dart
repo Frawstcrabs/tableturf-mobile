@@ -607,7 +607,14 @@ class CardSelectionConfirmButton extends StatelessWidget {
           ),
           borderRadius: BorderRadius.circular(cornerRadius),
         ),
-        child: Center(child: Text("Confirm")),
+        child: Center(
+          child: Text(
+            "Confirm",
+            style: TextStyle(
+              fontSize: min(14.0, 80.0 * (constraints.maxHeight/CardWidget.CARD_HEIGHT))
+            ),
+          )
+        ),
       );
     });
   }
