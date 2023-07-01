@@ -14,6 +14,7 @@ import 'package:tableturf_mobile/src/game_internals/battle.dart';
 import 'package:tableturf_mobile/src/game_internals/card.dart';
 import 'package:tableturf_mobile/src/game_internals/move.dart';
 import 'package:tableturf_mobile/src/game_internals/player.dart';
+import 'package:tableturf_mobile/src/settings/settings.dart';
 import 'package:tableturf_mobile/src/style/palette.dart';
 import 'package:tableturf_mobile/src/style/my_transition.dart';
 
@@ -370,7 +371,7 @@ class _PlaySessionScreenState extends State<PlaySessionScreen>
     _specialMovePulseController = AnimationController(
       duration: const Duration(milliseconds: 175),
       vsync: this
-    )..repeat(reverse: true);
+    );
 
     specialMoveYellowPulse = ColorTween(
       begin: Colors.yellow,
@@ -570,7 +571,6 @@ class _PlaySessionScreenState extends State<PlaySessionScreen>
         weight: 50
       ),
     ]).animate(_redrawSelectionController);
-    _redrawSelectionWaveController.repeat();
 
     _playInitSequence();
   }
@@ -612,15 +612,16 @@ class _PlaySessionScreenState extends State<PlaySessionScreen>
 
   Future<bool> _checkRedrawHand() async {
     _log.info("special move sequence started");
-    final overlayState = Overlay.of(context)!;
+    final overlayState = Overlay.of(context);
     final completer = Completer<bool>();
     late final OverlayEntry selectionLayer;
 
     Future<void> Function() createTapCallback(bool ret) {
       return () async {
-        print("Callback with $ret");
         await _redrawSelectionController.forward();
         selectionLayer.remove();
+        _redrawSelectionWaveController.stop();
+        _redrawSelectionWaveController.value = 0.0;
         completer.complete(ret);
       };
     }
@@ -718,6 +719,7 @@ class _PlaySessionScreenState extends State<PlaySessionScreen>
         }
       );
     });
+    _redrawSelectionWaveController.repeat();
     overlayState.insert(selectionLayer);
     await _redrawSelectionController.animateTo(0.5);
 
@@ -1209,6 +1211,7 @@ class _PlaySessionScreenState extends State<PlaySessionScreen>
     print("screen building");
     final battle = widget.battle;
     final palette = context.watch<Palette>();
+    final settings = context.watch<SettingsController>();
     final mediaQuery = MediaQuery.of(context);
     print(mediaQuery.devicePixelRatio);
 
@@ -1216,6 +1219,7 @@ class _PlaySessionScreenState extends State<PlaySessionScreen>
       battle: battle,
       key: _boardTileKey,
       onTileSize: (ts) => tileSize = ts,
+      loopAnimation: settings.continuousAnimation.value,
     );
 
     final turnCounter = RepaintBoundary(
@@ -1411,10 +1415,12 @@ class _PlaySessionScreenState extends State<PlaySessionScreen>
       moveNotifier: battle.blueMoveNotifier,
       tileColour: palette.tileBlue,
       tileSpecialColour: palette.tileBlueSpecial,
+      loopAnimation: settings.continuousAnimation.value,
     );
     final yellowCardbattle = CardSelectionConfirmButton(
       key: _yellowbattleKey,
-      battle: battle
+      battle: battle,
+      loopAnimation: settings.continuousAnimation.value,
     );
 
     final cardbattleScaleDown = mediaQuery.orientation == Orientation.landscape ? 0.7 : 0.9;

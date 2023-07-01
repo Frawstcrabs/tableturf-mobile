@@ -11,7 +11,12 @@ import 'move_overlay.dart';
  * Mostly just to keep all this in one place since this
  * needs to be built across 3 different pages
  */
-Widget buildBoardWidget({required TableturfBattle battle, Key? key, void Function(double)? onTileSize}) {
+Widget buildBoardWidget({
+  required TableturfBattle battle,
+  Key? key,
+  void Function(double)? onTileSize,
+  required bool loopAnimation,
+}) {
   final boardBuilder = LayoutBuilder(
     builder: (context, constraints) {
       final mediaQuery = MediaQuery.of(context);
@@ -45,6 +50,7 @@ Widget buildBoardWidget({required TableturfBattle battle, Key? key, void Functio
               MoveOverlayWidget(
                 battle,
                 tileSize: boardTileSize,
+                loopAnimation: loopAnimation,
               )
             ]
           ),

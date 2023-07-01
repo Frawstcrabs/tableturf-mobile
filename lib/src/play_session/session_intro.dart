@@ -120,7 +120,8 @@ class _PlaySessionIntroState extends State<PlaySessionIntro>
       child: Padding(
         padding: mediaQuery.padding,
         child: buildBoardWidget(
-          battle: battle
+          battle: battle,
+          loopAnimation: false,
         ),
       ),
     );

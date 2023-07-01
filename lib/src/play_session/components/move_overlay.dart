@@ -243,8 +243,9 @@ class MoveOverlayPainter extends CustomPainter {
 class MoveOverlayWidget extends StatefulWidget {
   final TableturfBattle battle;
   final double tileSize;
+  final bool loopAnimation;
 
-  const MoveOverlayWidget(this.battle, {required this.tileSize});
+  const MoveOverlayWidget(this.battle, {required this.tileSize, required this.loopAnimation});
 
   @override
   State<MoveOverlayWidget> createState() => _MoveOverlayWidgetState();
@@ -261,12 +262,42 @@ class _MoveOverlayWidgetState extends State<MoveOverlayWidget>
       duration: const Duration(milliseconds: 1000),
       vsync: this
     );
-    _animationController.repeat();
+    widget.battle.moveCardNotifier.addListener(_checkHasMove);
+    widget.battle.moveRotationNotifier.addListener(_checkHasMove);
+    widget.battle.moveLocationNotifier.addListener(_checkHasMove);
+    widget.battle.moveIsValidNotifier.addListener(_checkHasMove);
+    widget.battle.movePassNotifier.addListener(_checkHasMove);
+    widget.battle.revealCardsNotifier.addListener(_checkHasMove);
+  }
+
+  void _checkHasMove() {
+    final card = widget.battle.moveCardNotifier.value;
+    final location = widget.battle.moveLocationNotifier.value;
+    final isPassed = widget.battle.movePassNotifier.value;
+    final isRevealed = widget.battle.revealCardsNotifier.value;
+
+    if (card == null || location == null || isRevealed || isPassed) {
+      if (_animationController.status != AnimationStatus.dismissed) {
+        _animationController.stop();
+        _animationController.value = 0.0;
+      }
+    } else {
+      if (_animationController.status != AnimationStatus.forward && widget.loopAnimation) {
+        _animationController.value = 0.0;
+        _animationController.repeat();
+      }
+    }
   }
 
   @override
   void dispose() {
     _animationController.dispose();
+    widget.battle.moveCardNotifier.removeListener(_checkHasMove);
+    widget.battle.moveRotationNotifier.removeListener(_checkHasMove);
+    widget.battle.moveLocationNotifier.removeListener(_checkHasMove);
+    widget.battle.moveIsValidNotifier.removeListener(_checkHasMove);
+    widget.battle.movePassNotifier.removeListener(_checkHasMove);
+    widget.battle.revealCardsNotifier.removeListener(_checkHasMove);
     super.dispose();
   }
 
@@ -281,7 +312,6 @@ class _MoveOverlayWidgetState extends State<MoveOverlayWidget>
             widget.tileSize
           ),
           child: Container(),
-          isComplex: true,
           willChange: true,
         )
       ),

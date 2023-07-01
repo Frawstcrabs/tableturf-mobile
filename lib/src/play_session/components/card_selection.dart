@@ -15,7 +15,8 @@ import 'card_widget.dart';
 import 'flip_card.dart';
 
 class SpeenWidget extends StatefulWidget {
-  const SpeenWidget({super.key});
+  final bool loop;
+  const SpeenWidget({super.key, this.loop = true});
 
   @override
   State<SpeenWidget> createState() => _SpeenWidgetState();
@@ -32,7 +33,8 @@ class _SpeenWidgetState extends State<SpeenWidget>
         vsync: this,
         duration: Duration(milliseconds: 1000)
     );
-    _controller.repeat();
+    if (widget.loop)
+      _controller.repeat();
   }
 
   @override
@@ -80,7 +82,7 @@ class CardFrontWidget extends StatelessWidget {
           final countTextStyle = TextStyle(
             fontFamily: "Splatfont1",
             fontSize: 28.0 * sizeRatio,
-            letterSpacing: 6 * sizeRatio,
+            letterSpacing: 5.0 * sizeRatio,
             shadows: [],
             color: Colors.white,
           );
@@ -98,7 +100,7 @@ class CardFrontWidget extends StatelessWidget {
               Align(
                 alignment: Alignment(0.0, -0.825),
                 child: FractionallySizedBox(
-                  heightFactor: 0.18,
+                  heightFactor: [0.18, 0.18, 0.205][cardNameLines],
                   child: LayoutBuilder(
                     builder: (context, constraints) {
                       final fontSize = 44.0 * sizeRatio;
@@ -116,7 +118,7 @@ class CardFrontWidget extends StatelessWidget {
                       );
 
 
-                      const maxTextWidth = 0.825;
+                      const maxTextWidth = 0.875;
                       final Size textSize = (TextPainter(
                         text: TextSpan(text: cardName, style: textStyle),
                         textScaleFactor: MediaQuery.of(context).textScaleFactor,
@@ -138,7 +140,7 @@ class CardFrontWidget extends StatelessWidget {
                                     style: textStyle.copyWith(
                                       foreground: Paint()
                                         ..style = PaintingStyle.stroke
-                                        ..strokeWidth = 6.0 * sizeRatio
+                                        ..strokeWidth = 7.2 * sizeRatio
                                         ..strokeJoin = StrokeJoin.round
                                         ..color = Colors.black,
                                     )
@@ -237,7 +239,7 @@ class CardFrontWidget extends StatelessWidget {
                                       style: countTextStyle.copyWith(
                                         foreground: Paint()
                                           ..style = PaintingStyle.stroke
-                                          ..strokeWidth = 4.0 * sizeRatio
+                                          ..strokeWidth = 3.0 * sizeRatio
                                           ..strokeJoin = StrokeJoin.round
                                           ..color = {
                                             "common": const Color.fromRGBO(60, 16, 153, 1.0),
@@ -326,6 +328,7 @@ class CardSelectionWidget extends StatefulWidget {
   final TableturfBattle battle;
   final TableturfPlayer player;
   final Color tileColour, tileSpecialColour;
+  final bool loopAnimation;
 
   const CardSelectionWidget({
     super.key,
@@ -334,6 +337,7 @@ class CardSelectionWidget extends StatefulWidget {
     required this.battle,
     required this.tileColour,
     required this.tileSpecialColour,
+    required this.loopAnimation,
   });
 
   @override
@@ -446,7 +450,7 @@ class _CardSelectionWidgetState extends State<CardSelectionWidget>
             ),
             borderRadius: BorderRadius.circular(cornerRadius),
           ),
-          child: Center(child: SpeenWidget()),
+          child: Center(child: SpeenWidget(loop: widget.loopAnimation)),
         );
       }
     );
@@ -578,10 +582,12 @@ class _CardSelectionWidgetState extends State<CardSelectionWidget>
 
 class CardSelectionConfirmButton extends StatelessWidget {
   final TableturfBattle battle;
+  final bool loopAnimation;
 
   const CardSelectionConfirmButton({
     super.key,
     required this.battle,
+    required this.loopAnimation,
   });
 
   void _confirmMove() {
@@ -615,6 +621,7 @@ class CardSelectionConfirmButton extends StatelessWidget {
       moveNotifier: battle.yellowMoveNotifier,
       tileColour: palette.tileYellow,
       tileSpecialColour: palette.tileYellowSpecial,
+      loopAnimation: loopAnimation,
     );
     return Stack(
       fit: StackFit.expand,

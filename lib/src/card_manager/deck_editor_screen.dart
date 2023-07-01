@@ -249,6 +249,7 @@ class _DeckEditorScreenState extends State<DeckEditorScreen>
   bool _lockButtons = false;
   final ChangeNotifier _popupExit = ChangeNotifier();
   late final ValueNotifier<bool> _hasEmptyCards = ValueNotifier(true);
+  late final ValueNotifier<int> _deckTileCount = ValueNotifier(0);
   late final List<ValueNotifier<TableturfCardData?>> deckCards;
   late final String name;
   late final String cardSleeve;
@@ -292,13 +293,19 @@ class _DeckEditorScreenState extends State<DeckEditorScreen>
       cardSleeve = widget.deck!.cardSleeve;
     }
     _checkHasEmptyCards();
+    _computeTileCount();
     for (final card in deckCards) {
       card.addListener(_checkHasEmptyCards);
+      card.addListener(_computeTileCount);
     }
   }
   
   void _checkHasEmptyCards() {
     _hasEmptyCards.value = deckCards.any((v) => v.value == null);
+  }
+
+  void _computeTileCount() {
+    _deckTileCount.value = deckCards.fold(0, (a, c) => a + (c.value?.count ?? 0));
   }
 
   @override
@@ -322,6 +329,7 @@ class _DeckEditorScreenState extends State<DeckEditorScreen>
       _popupExit.removeListener(onPopupExit);
       scrollController.dispose();
     };
+    final unselectedCards = cards.where((card) => deckCards.every((c) => c.value != card)).toList();
     final oldCard = cardNotifier.value;
     overlayEntry = OverlayEntry(builder: (_) {
       const popupBorderWidth = 1.0;
@@ -329,16 +337,16 @@ class _DeckEditorScreenState extends State<DeckEditorScreen>
       const interCardPadding = 5.0;
       return DefaultTextStyle(
         style: TextStyle(
-            fontFamily: "Splatfont2",
-            color: Colors.black,
-            fontSize: 16,
-            letterSpacing: 0.6,
-            shadows: [
-              Shadow(
-                color: const Color.fromRGBO(256, 256, 256, 0.4),
-                offset: Offset(1, 1),
-              )
-            ]
+          fontFamily: "Splatfont2",
+          color: Colors.black,
+          fontSize: 16,
+          letterSpacing: 0.6,
+          shadows: [
+            Shadow(
+              color: const Color.fromRGBO(256, 256, 256, 0.4),
+              offset: Offset(1, 1),
+            )
+          ]
         ),
         child: AnimatedBuilder(
             animation: _cardPickerController,
@@ -381,26 +389,25 @@ class _DeckEditorScreenState extends State<DeckEditorScreen>
                               ),
                               thumbColor: const Color.fromRGBO(0, 0, 0, 0.4),
                               radius: Radius.circular(6),
-                              child: GridView.count(
+                              child: GridView.builder(
                                 controller: scrollController,
-                                crossAxisCount: 3,
-                                childAspectRatio: CardWidget.CARD_RATIO,
+                                gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                                  mainAxisSpacing: interCardPadding,
+                                  crossAxisSpacing: interCardPadding,
+                                  crossAxisCount: 3,
+                                  childAspectRatio: CardWidget.CARD_RATIO
+                                ),
+                                itemCount: unselectedCards.length,
                                 padding: const EdgeInsets.all(cardListPadding),
-                                children: [
-                                  for (final newCard in cards)
-                                    if (true  // card is unlocked
-                                      && deckCards.every((c) => c.value != newCard)// card is not already chosen
-                                    )
-                                      GestureDetector(
-                                        onTap: () {
-                                          onPopupExit(newCard);
-                                        },
-                                        child: Padding(
-                                          padding: const EdgeInsets.all(interCardPadding),
-                                          child: Center(child: DeckCardWidget(card: newCard)),
-                                        )
-                                      )
-                                ],
+                                itemBuilder: (_, i) => GestureDetector(
+                                  onTap: () {
+                                    onPopupExit(unselectedCards[i]);
+                                  },
+                                  child: Padding(
+                                    padding: const EdgeInsets.all(0),
+                                    child: Center(child: DeckCardWidget(card: unselectedCards[i])),
+                                  )
+                                ),
                               ),
                             ),
                           ),
@@ -467,6 +474,7 @@ class _DeckEditorScreenState extends State<DeckEditorScreen>
     final settings = context.watch<SettingsController>();
     final palette = context.watch<Palette>();
     final mediaQuery = MediaQuery.of(context);
+    const titleStyle = TextStyle(height: 1.1);
     final screen = Column(
       children: [
         Expanded(
@@ -476,11 +484,31 @@ class _DeckEditorScreenState extends State<DeckEditorScreen>
               border: Border(bottom: BorderSide())
             ),
             child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Text("Editing "),
-                Text(name),
-              ]
+                Expanded(
+                  child: Center(
+                    child: RepaintBoundary(
+                      child: ValueListenableBuilder<int>(
+                        valueListenable: _deckTileCount,
+                        builder: (_, count, child) {
+                          return Text(count.toString());
+                        }
+                      ),
+                    ),
+                  )
+                ),
+                Expanded(
+                  child: FittedBox(
+                    child: Text(
+                        name,
+                        style: TextStyle(
+                          fontFamily: "Splatfont1",
+                        )
+                    ),
+                  ),
+                ),
+                Expanded(child: Container()),
+              ],
             )
           )
         ),
@@ -490,31 +518,30 @@ class _DeckEditorScreenState extends State<DeckEditorScreen>
             width: 3,
             height: 5,
             children: [
-              for (var i = 0; i < deckCards.length; i++)
+              for (final cardNotifier in deckCards)
                 Padding(
                   padding: const EdgeInsets.all(8.0),
                   child: GestureDetector(
                     onTap: () {
                       if (_lockButtons) return;
-                      _showCardPopup(context, deckCards[i]);
+                      _showCardPopup(context, cardNotifier);
                     },
                     child: LayoutBuilder(
                       builder: (context, constraints) {
-                        final oldCard = deckCards[i];
                         const duration = Duration(milliseconds: 200);
                         return ValueListenableBuilder(
-                          valueListenable: oldCard,
-                          builder: (_, card, child) {
+                          valueListenable: cardNotifier,
+                          builder: (_, TableturfCardData? card, child) {
                             final textStyle = DefaultTextStyle.of(context).style;
                             final cardWidget = SizedBox(
                               height: constraints.maxHeight,
                               width: constraints.maxWidth,
                               child: Center(
-                                child: DeckCardWidget(card: oldCard.value),
+                                child: DeckCardWidget(card: card),
                               ),
                             );
                             return LongPressDraggable(
-                              data: oldCard,
+                              data: cardNotifier,
                               maxSimultaneousDrags: 1,
                               delay: const Duration(milliseconds: 250),
                               child: DragTarget<ValueNotifier<TableturfCardData?>>(
@@ -531,11 +558,11 @@ class _DeckEditorScreenState extends State<DeckEditorScreen>
                                     ),
                                   );
                                 },
-                                onWillAccept: (newCard) => !identical(oldCard, newCard),
+                                onWillAccept: (newCard) => !identical(cardNotifier, newCard),
                                 onAccept: (newCard) {
                                   final temp = newCard.value;
-                                  newCard.value = oldCard.value;
-                                  oldCard.value = temp;
+                                  newCard.value = cardNotifier.value;
+                                  cardNotifier.value = temp;
                                 },
                               ),
                               feedback: DefaultTextStyle(

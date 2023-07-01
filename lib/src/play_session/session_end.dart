@@ -305,7 +305,8 @@ class _PlaySessionEndState extends State<PlaySessionEnd>
     final mediaQuery = MediaQuery.of(context);
 
     final boardWidget = buildBoardWidget(
-      battle: widget.battle
+      battle: widget.battle,
+      loopAnimation: false,
     );
 
     final screen = Container(

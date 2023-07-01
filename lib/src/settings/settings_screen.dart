@@ -56,6 +56,14 @@ class SettingsScreen extends StatelessWidget {
                 onSelected: () => settings.toggleMusicOn(),
               ),
             ),
+            ValueListenableBuilder<bool>(
+              valueListenable: settings.continuousAnimation,
+              builder: (context, continuousAnimation, child) => _SettingsLine(
+                'Loop Animations',
+                Icon(continuousAnimation ? Icons.refresh : Icons.block),
+                onSelected: () => settings.toggleContinuousAnimation(),
+              ),
+            ),
             _SettingsLine(
               'Reset progress',
               const Icon(Icons.delete),
