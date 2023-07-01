@@ -134,6 +134,7 @@ class _CardListScreenState extends State<CardListScreen>
   late final AnimationController _cardPopupController;
   late final Animation<double> _cardScaleForward, _cardScaleReverse, _cardOpacity;
   bool _popupIsActive = false;
+  bool _lockButtons = false;
   final ChangeNotifier _popupExit = ChangeNotifier();
 
   @override
@@ -342,6 +343,7 @@ class _CardListScreenState extends State<CardListScreen>
                   for (int i = 0; i < cards.length; i++)
                     GestureDetector(
                       onTap: () {
+                        if (_lockButtons) return;
                         _showCardPopup(context, cards[i]);
                       },
                       child: CardFrontWidget(
@@ -368,13 +370,18 @@ class _CardListScreenState extends State<CardListScreen>
                           child: SelectionButton(
                             child: Text("Edit Deck"),
                             designRatio: 0.5,
-                            onSelect: () async {
-                              Navigator.of(context).push(MaterialPageRoute(
+                            onPressStart: () async {
+                              if (_lockButtons || _popupIsActive) return false;
+                              _lockButtons = true;
+                              return true;
+                            },
+                            onPressEnd: () async {
+                              await Navigator.of(context).push(MaterialPageRoute(
                                 builder: (_) {
                                   return const DeckListScreen();
                                 }
                               ));
-                              return Future<void>.delayed(const Duration(milliseconds: 100));
+                              _lockButtons = false;
                             },
                           ),
                         ),
@@ -385,7 +392,12 @@ class _CardListScreenState extends State<CardListScreen>
                           child: SelectionButton(
                             child: Text("Back"),
                             designRatio: 0.5,
-                            onSelect: () async {
+                            onPressStart: () async {
+                              if (_lockButtons || _popupIsActive) return false;
+                              _lockButtons = true;
+                              return true;
+                            },
+                            onPressEnd: () async {
                               Navigator.of(context).pop();
                               return Future<void>.delayed(const Duration(milliseconds: 100));
                             },

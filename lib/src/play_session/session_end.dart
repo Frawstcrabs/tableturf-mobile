@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:just_audio/just_audio.dart';
 import 'package:logging/logging.dart' hide Level;
 import 'package:provider/provider.dart';
 
@@ -290,6 +291,7 @@ class _PlaySessionEndState extends State<PlaySessionEnd>
   @override
   void dispose() {
     AudioController().musicPlayer.stop();
+    AudioController().musicPlayer.setAudioSource(ConcatenatingAudioSource(children: []));
     _scoreBarAnimator.dispose();
     _scoreCountersAnimator.dispose();
     _scoreSplashAnimator.dispose();

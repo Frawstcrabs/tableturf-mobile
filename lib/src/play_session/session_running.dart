@@ -4,6 +4,7 @@ import 'dart:ui';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:just_audio/just_audio.dart';
 import 'package:tableturf_mobile/src/audio/sounds.dart';
 import 'package:logging/logging.dart' hide Level;
 import 'package:provider/provider.dart';
@@ -687,12 +688,12 @@ class _PlaySessionScreenState extends State<PlaySessionScreen>
                                             mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                                             children: [
                                               SelectionButton(
-                                                onSelect: createTapCallback(false),
+                                                onPressEnd: createTapCallback(false),
                                                 designRatio: designRatio,
                                                 child: Text("Hold Steady")
                                               ),
                                               SelectionButton(
-                                                onSelect: createTapCallback(true),
+                                                onPressEnd: createTapCallback(true),
                                                 designRatio: designRatio,
                                                 child: Text("Redraw!")
                                               ),
@@ -744,6 +745,7 @@ class _PlaySessionScreenState extends State<PlaySessionScreen>
   @override
   void dispose() {
     AudioController().musicPlayer.stop();
+    AudioController().musicPlayer.setAudioSource(ConcatenatingAudioSource(children: []));
     widget.battle.endOfGameNotifier.removeListener(_onGameEnd);
     widget.battle.specialMoveNotifier.removeListener(_onSpecialMove);
     _outroController.dispose();

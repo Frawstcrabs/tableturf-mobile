@@ -13,7 +13,7 @@ import '../../game_internals/battle.dart';
 import '../../game_internals/tile.dart';
 
 class BoardPainter extends CustomPainter {
-  static const EDGE_WIDTH = 0.0;  // effectively 1 real pixel width
+  static const EDGE_WIDTH = 0.5;
 
   final TileGrid board;
   final Set<Coords> activatedSpecials;

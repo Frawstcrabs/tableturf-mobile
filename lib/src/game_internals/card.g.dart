@@ -6,23 +6,24 @@ part of 'card.dart';
 // JsonSerializableGenerator
 // **************************************************************************
 
-TableturfCardData _$TableturfCardFromJson(Map<String, dynamic> json) =>
+TableturfCardData _$TableturfCardDataFromJson(Map<String, dynamic> json) =>
     TableturfCardData(
       json['num'] as int,
       json['name'] as String,
       json['rarity'] as String,
       json['special'] as int,
       (json['pattern'] as List<dynamic>)
-          .map((e) => (e as List<dynamic>)
-              .map((e) => $enumDecode(_$TileStateEnumMap, e))
-              .toList())
+          .map((e) =>
+              (e as List<dynamic>).map((e) => TileState.fromJson(e)).toList())
           .toList(),
+      json['displayName'] as String?,
     );
 
-Map<String, dynamic> _$TableturfCardToJson(TableturfCardData instance) =>
+Map<String, dynamic> _$TableturfCardDataToJson(TableturfCardData instance) =>
     <String, dynamic>{
       'num': instance.num,
       'name': instance.name,
+      'displayName': instance.displayName,
       'rarity': instance.rarity,
       'special': instance.special,
       'pattern': instance.pattern

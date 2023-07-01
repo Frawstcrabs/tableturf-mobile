@@ -4,6 +4,7 @@ import 'dart:math';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:tableturf_mobile/src/game_internals/opponentAI.dart';
 import 'package:tableturf_mobile/src/game_internals/player.dart';
 import 'package:tableturf_mobile/src/level_selection/opponents.dart';
@@ -13,10 +14,12 @@ import 'package:tableturf_mobile/src/play_session/components/selection_button.da
 import '../audio/audio_controller.dart';
 import '../audio/sounds.dart';
 import '../game_internals/card.dart';
+import '../game_internals/deck.dart';
 import '../game_internals/tile.dart';
 import '../play_session/build_game_session_page.dart';
 import '../play_session/components/card_widget.dart';
 import '../player_progress/player_progress.dart';
+import '../settings/settings.dart';
 import '../style/palette.dart';
 import '../style/responsive_screen.dart';
 
@@ -60,188 +63,596 @@ class DeckCardWidget extends StatelessWidget {
     }
     final pattern = card.pattern;
     return LayoutBuilder(
-        builder: (context, constraints) {
-          final cardAspectRatio = CardWidget.CARD_WIDTH / CardWidget.CARD_HEIGHT;
-          final countBox = AspectRatio(
-              aspectRatio: 1.0,
-              child: LayoutBuilder(
-                  builder: (context, constraints) {
-                    return DecoratedBox(
-                      decoration: BoxDecoration(
-                        color: Colors.black,
-                        borderRadius: BorderRadius.all(Radius.circular(
-                            constraints.maxHeight * (80/CardWidget.CARD_HEIGHT)
-                        )),
-                      ),
-                      child: Center(
-                          child: FractionallySizedBox(
-                            heightFactor: 0.95,
-                            widthFactor: 0.95,
-                            child: FittedBox(
-                              fit: BoxFit.fitHeight,
-                              child: Text(
-                                  "${card.count}",
-                                  style: TextStyle(
-                                      fontFamily: "Splatfont1",
-                                      color: Colors.white,
-                                      //fontStyle: FontStyle.italic,
-                                      fontSize: 12,
-                                      letterSpacing: 3.5
-                                  )
-                              ),
+      builder: (context, constraints) {
+        final isLandscape = (constraints.maxWidth / constraints.maxHeight) > 1.0;
+        final cardAspectRatio = isLandscape
+            ? CardWidget.CARD_HEIGHT / CardWidget.CARD_WIDTH
+            : CardWidget.CARD_WIDTH / CardWidget.CARD_HEIGHT;
+
+        final countBox = AspectRatio(
+            aspectRatio: 1.0,
+            child: LayoutBuilder(
+                builder: (context, constraints) {
+                  return DecoratedBox(
+                    decoration: BoxDecoration(
+                      color: Colors.black,
+                      borderRadius: BorderRadius.all(Radius.circular(
+                          constraints.maxHeight * (80/CardWidget.CARD_HEIGHT)
+                      )),
+                    ),
+                    child: Center(
+                        child: FractionallySizedBox(
+                          heightFactor: 0.95,
+                          widthFactor: 0.95,
+                          child: FittedBox(
+                            fit: BoxFit.fitHeight,
+                            child: Text(
+                                "${card.count}",
+                                style: TextStyle(
+                                    fontFamily: "Splatfont1",
+                                    color: Colors.white,
+                                    //fontStyle: FontStyle.italic,
+                                    fontSize: 12,
+                                    letterSpacing: 3.5
+                                )
                             ),
-                          )
-                      ),
-                    );
-                  }
-              )
-          );
-          final specialCountGrid = FractionallySizedBox(
-            heightFactor: false ? 0.9 : 0.7,
-            widthFactor: false ? 0.7 : 0.9,
-            child: GridView.count(
-                crossAxisCount: false ? 2 : 5,
-                padding: EdgeInsets.zero,
-                //physics: const NeverScrollableScrollPhysics(),
-                children: Iterable.generate(card.special, (_) {
-                  return AspectRatio(
-                    aspectRatio: 1.0,
-                    child: DecoratedBox(
-                      decoration: BoxDecoration(
-                        color: Palette().tileYellowSpecial,
-                        border: Border.all(
-                          width: CardPatternWidget.EDGE_WIDTH,
-                          color: Colors.black,
-                        ),
-                      ),
-                    ),
-                  );
-                }).toList(growable: false)
-            ),
-          );
-          return AspectRatio(
-            aspectRatio: cardAspectRatio,
-            child: Stack(
-              fit: StackFit.expand,
-              children: [
-                DecoratedBox(
-                  decoration: BoxDecoration(
-                    color: palette.cardBackgroundSelectable,
-                    border: Border.all(
-                      width: 1.0,
-                      color: Palette().cardEdge,
-                    ),
-                  ),
-                ),
-                Image.asset(
-                  card.designSprite,
-                  opacity: const AlwaysStoppedAnimation(0.7),
-                ),
-                Flex(
-                  direction: false ? Axis.horizontal : Axis.vertical,
-                  children: [
-                    AspectRatio(
-                        aspectRatio: 1.0,
-                        child: Center(
-                            child: FractionallySizedBox(
-                                heightFactor: 0.9,
-                                widthFactor: 0.9,
-                                child: CardPatternWidget(pattern, const YellowTraits())
-                            )
+                          ),
                         )
                     ),
-                    Expanded(
-                      child: Align(
-                        alignment: false ? Alignment.centerLeft : Alignment.topCenter,
-                        child: FractionallySizedBox(
-                          heightFactor: false ? 0.8 : 0.9,
-                          widthFactor: false ? 0.9 : 0.9,
-                          child: Flex(
-                            direction: false ? Axis.vertical : Axis.horizontal,
-                            mainAxisAlignment: MainAxisAlignment.spaceAround,
-                            crossAxisAlignment: CrossAxisAlignment.center,
-                            children: false ? [
-                              Expanded(
-                                child: Center(
-                                  child: specialCountGrid,
-                                ),
+                  );
+                }
+            )
+        );
+        final specialCountGrid = FractionallySizedBox(
+          heightFactor: isLandscape ? 0.9 : 0.7,
+          widthFactor: isLandscape ? 0.7 : 0.9,
+          child: GridView.count(
+              crossAxisCount: isLandscape ? 2 : 5,
+              padding: EdgeInsets.zero,
+              //physics: const NeverScrollableScrollPhysics(),
+              children: Iterable.generate(card.special, (_) {
+                return AspectRatio(
+                  aspectRatio: 1.0,
+                  child: DecoratedBox(
+                    decoration: BoxDecoration(
+                      color: Palette().tileYellowSpecial,
+                      border: Border.all(
+                        width: CardPatternWidget.EDGE_WIDTH,
+                        color: Colors.black,
+                      ),
+                    ),
+                  ),
+                );
+              }).toList(growable: false)
+          ),
+        );
+        return AspectRatio(
+          aspectRatio: cardAspectRatio,
+          child: Stack(
+            fit: StackFit.expand,
+            children: [
+              DecoratedBox(
+                decoration: BoxDecoration(
+                  color: palette.cardBackgroundSelectable,
+                  border: Border.all(
+                    width: 1.0,
+                    color: Palette().cardEdge,
+                  ),
+                ),
+              ),
+              Image.asset(
+                card.designSprite,
+                opacity: const AlwaysStoppedAnimation(0.7),
+              ),
+              Flex(
+                direction: isLandscape ? Axis.horizontal : Axis.vertical,
+                children: [
+                  AspectRatio(
+                      aspectRatio: 1.0,
+                      child: Center(
+                          child: FractionallySizedBox(
+                              heightFactor: 0.9,
+                              widthFactor: 0.9,
+                              child: CardPatternWidget(pattern, const YellowTraits())
+                          )
+                      )
+                  ),
+                  Expanded(
+                    child: Align(
+                      alignment: isLandscape ? Alignment.centerLeft : Alignment.topCenter,
+                      child: FractionallySizedBox(
+                        heightFactor: isLandscape ? 0.8 : 0.9,
+                        widthFactor: isLandscape ? 0.9 : 0.9,
+                        child: Flex(
+                          direction: isLandscape ? Axis.vertical : Axis.horizontal,
+                          mainAxisAlignment: MainAxisAlignment.spaceAround,
+                          crossAxisAlignment: CrossAxisAlignment.center,
+                          children: isLandscape ? [
+                            Expanded(
+                              child: Center(
+                                child: specialCountGrid,
                               ),
-                              countBox,
-                            ] : [
-                              countBox,
-                              Expanded(
-                                child: Center(
-                                  child: specialCountGrid,
-                                ),
+                            ),
+                            countBox,
+                          ] : [
+                            countBox,
+                            Expanded(
+                              child: Center(
+                                child: specialCountGrid,
                               ),
-                            ],
-                          ),
+                            ),
+                          ],
                         ),
                       ),
                     ),
-                  ],
-                ),
-              ],
-            ),
-          );
-        }
+                  ),
+                ],
+              ),
+            ],
+          ),
+        );
+      }
     );
   }
 }
 
 
+class ExactGrid extends StatelessWidget {
+  final int height, width;
+  final List<Widget> children;
+  const ExactGrid({
+    super.key,
+    required this.height,
+    required this.width,
+    this.children = const [],
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        for (int i = 0; i < height * width; i += width)
+          Expanded(
+            child: Center(
+              child: Row(
+                children: [
+                  for (int j = 0; j < width; j++)
+                    Expanded(
+                      child: Center(
+                        child: i+j >= children.length ? Container() : children[i+j]
+                      )
+                    )
+                ]
+              ),
+            )
+          )
+      ]
+    );
+  }
+}
+
 
 class DeckEditorScreen extends StatefulWidget {
-  final String name;
-  final List<TableturfCardData?> cards;
-  const DeckEditorScreen({
-    super.key,
-    required this.name,
-    this.cards = const [
-      null, null, null,
-      null, null, null,
-      null, null, null,
-      null, null, null,
-      null, null, null,
-    ],
-  });
+  final TableturfDeck? deck;
+  final String? name;
+  const DeckEditorScreen(this.deck, {super.key, this.name});
 
   @override
   State<DeckEditorScreen> createState() => _DeckEditorScreenState();
 }
 
-class _DeckEditorScreenState extends State<DeckEditorScreen> {
+class _DeckEditorScreenState extends State<DeckEditorScreen>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _cardPickerController;
+  late final Animation<double> _popupScaleForward, _popupScaleReverse, _cardOpacity;
+  bool _popupIsActive = false;
+  bool _lockButtons = false;
+  final ChangeNotifier _popupExit = ChangeNotifier();
+  late final ValueNotifier<bool> _hasEmptyCards = ValueNotifier(true);
+  late final List<ValueNotifier<TableturfCardData?>> deckCards;
+  late final String name;
+  late final String cardSleeve;
+
+  @override
+  void initState() {
+    super.initState();
+    _cardPickerController = AnimationController(
+      duration: const Duration(milliseconds: 150),
+      vsync: this
+    );
+    _popupScaleForward = Tween(
+        begin: 0.6,
+        end: 1.0
+    )
+        .chain(CurveTween(curve: Curves.easeOutBack))
+        .animate(_cardPickerController);
+    _popupScaleReverse = Tween(
+        begin: 0.6,
+        end: 1.0
+    )
+    //.chain(CurveTween(curve: Curves.easeOut))
+        .animate(_cardPickerController);
+    _cardOpacity = Tween(
+        begin: 0.0,
+        end: 1.0
+    )
+    //.chain(CurveTween(curve: Curves.easeOut))
+        .animate(_cardPickerController);
+
+    if (widget.deck == null) {
+      deckCards = Iterable.generate(
+        15,
+        (_) => ValueNotifier<TableturfCardData?>(null)
+      ).toList();
+      name = widget.name!;
+      cardSleeve = "assets/images/card_sleeves/sleeve_default.png";
+    } else {
+      deckCards = widget.deck!.cards.map(ValueNotifier<TableturfCardData?>.new).toList();
+      name = widget.deck!.name;
+      cardSleeve = widget.deck!.cardSleeve;
+    }
+    _checkHasEmptyCards();
+    for (final card in deckCards) {
+      card.addListener(_checkHasEmptyCards);
+    }
+  }
+  
+  void _checkHasEmptyCards() {
+    _hasEmptyCards.value = deckCards.any((v) => v.value == null);
+  }
+
+  @override
+  void dispose() {
+    _cardPickerController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _showCardPopup(BuildContext context, ValueNotifier<TableturfCardData?> cardNotifier) async {
+    final overlayState = Overlay.of(context);
+    late final OverlayEntry overlayEntry;
+    late final void Function([TableturfCardData? retCard]) onPopupExit;
+    final ScrollController scrollController = ScrollController();
+    onPopupExit = ([retCard]) async {
+      if (retCard != null) {
+        cardNotifier.value = retCard;
+      }
+      await _cardPickerController.reverse();
+      overlayEntry.remove();
+      _popupIsActive = false;
+      _popupExit.removeListener(onPopupExit);
+      scrollController.dispose();
+    };
+    final oldCard = cardNotifier.value;
+    overlayEntry = OverlayEntry(builder: (_) {
+      const popupBorderWidth = 1.0;
+      const cardListPadding = 10.0;
+      const interCardPadding = 5.0;
+      return DefaultTextStyle(
+        style: TextStyle(
+            fontFamily: "Splatfont2",
+            color: Colors.black,
+            fontSize: 16,
+            letterSpacing: 0.6,
+            shadows: [
+              Shadow(
+                color: const Color.fromRGBO(256, 256, 256, 0.4),
+                offset: Offset(1, 1),
+              )
+            ]
+        ),
+        child: AnimatedBuilder(
+            animation: _cardPickerController,
+            child: Center(
+              child: FractionallySizedBox(
+                heightFactor: 0.8,
+                widthFactor: 0.8,
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    border: Border.all(
+                      width: popupBorderWidth,
+                    ),
+                    borderRadius: BorderRadius.circular(10),
+                    color: const Color.fromRGBO(192, 192, 192, 1.0),
+                  ),
+                  child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Container(
+                          height: 75,
+                          decoration: BoxDecoration(
+                            border: Border(bottom: BorderSide())
+                          ),
+                          child: Center(
+                            child: Text(
+                              oldCard == null ? "Select card" : "Replace ${oldCard.name}",
+                            )
+                          ),
+                        ),
+                        Expanded(
+                          child: RepaintBoundary(
+                            child: RawScrollbar(
+                              controller: scrollController,
+                              thickness: popupBorderWidth + (cardListPadding / 2),
+                              padding: const EdgeInsets.fromLTRB(
+                                (popupBorderWidth + interCardPadding) / 2,
+                                popupBorderWidth + cardListPadding + interCardPadding,
+                                (popupBorderWidth + interCardPadding) / 2,
+                                popupBorderWidth + cardListPadding + interCardPadding,
+                              ),
+                              thumbColor: const Color.fromRGBO(0, 0, 0, 0.4),
+                              radius: Radius.circular(6),
+                              child: GridView.count(
+                                controller: scrollController,
+                                crossAxisCount: 3,
+                                childAspectRatio: CardWidget.CARD_RATIO,
+                                padding: const EdgeInsets.all(cardListPadding),
+                                children: [
+                                  for (final newCard in cards)
+                                    if (true  // card is unlocked
+                                      && deckCards.every((c) => c.value != newCard)// card is not already chosen
+                                    )
+                                      GestureDetector(
+                                        onTap: () {
+                                          onPopupExit(newCard);
+                                        },
+                                        child: Padding(
+                                          padding: const EdgeInsets.all(interCardPadding),
+                                          child: Center(child: DeckCardWidget(card: newCard)),
+                                        )
+                                      )
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+                        Container(
+                          decoration: BoxDecoration(
+                            border: Border(top: BorderSide())
+                          ),
+                          child: AspectRatio(
+                            aspectRatio: 4.0,
+                            child: Padding(
+                              padding: const EdgeInsets.all(5),
+                              child: SelectionButton(
+                                child: Text("Cancel"),
+                                designRatio: 0.5,
+                                onPressEnd: () async {
+                                  onPopupExit();
+                                  return Future<void>.delayed(const Duration(milliseconds: 100));
+                                },
+                              ),
+                            ),
+                          ),
+                        ),
+                      ]
+                  ),
+                ),
+              ),
+            ),
+            builder: (_, child) {
+              return Stack(
+                  children: [
+                    GestureDetector(
+                        onTap: onPopupExit,
+                        child: DecoratedBox(
+                          decoration: BoxDecoration(
+                            color: Color.fromRGBO(0, 0, 0, _cardPickerController.value * 0.7)
+                          ),
+                          child: Container(),
+                        )
+                    ),
+                    Opacity(
+                        opacity: _cardOpacity.value,
+                        child: Transform.scale(
+                          scale: _cardPickerController.status == AnimationStatus.forward
+                            ? _popupScaleForward.value
+                            : _popupScaleReverse.value,
+                          child: child!,
+                        )
+                    )
+                  ]
+              );
+            }
+        ),
+      );
+    });
+    _popupIsActive = true;
+    overlayState.insert(overlayEntry);
+    _cardPickerController.forward(from: 0.0);
+    _popupExit.addListener(onPopupExit);
+  }
+
   @override
   Widget build(BuildContext context) {
+    final settings = context.watch<SettingsController>();
     final palette = context.watch<Palette>();
     final mediaQuery = MediaQuery.of(context);
     final screen = Column(
       children: [
         Expanded(
           flex: 1,
-          child: Center(
-            child: Text("Editing ${widget.name}")
+          child: Container(
+            decoration: BoxDecoration(
+              border: Border(bottom: BorderSide())
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Text("Editing "),
+                Text(name),
+              ]
+            )
           )
         ),
         Expanded(
           flex: 9,
-          child: GridView.count(
-            crossAxisCount: 3,
-            padding: const EdgeInsets.all(10),
-            childAspectRatio: CardWidget.CARD_RATIO,
+          child: ExactGrid(
+            width: 3,
+            height: 5,
             children: [
-              for (final card in widget.cards)
+              for (var i = 0; i < deckCards.length; i++)
                 Padding(
-                  padding: const EdgeInsets.all(3.0),
-                  child: DeckCardWidget(card: card),
+                  padding: const EdgeInsets.all(8.0),
+                  child: GestureDetector(
+                    onTap: () {
+                      if (_lockButtons) return;
+                      _showCardPopup(context, deckCards[i]);
+                    },
+                    child: LayoutBuilder(
+                      builder: (context, constraints) {
+                        final oldCard = deckCards[i];
+                        const duration = Duration(milliseconds: 200);
+                        return ValueListenableBuilder(
+                          valueListenable: oldCard,
+                          builder: (_, card, child) {
+                            final textStyle = DefaultTextStyle.of(context).style;
+                            final cardWidget = SizedBox(
+                              height: constraints.maxHeight,
+                              width: constraints.maxWidth,
+                              child: Center(
+                                child: DeckCardWidget(card: oldCard.value),
+                              ),
+                            );
+                            return LongPressDraggable(
+                              data: oldCard,
+                              maxSimultaneousDrags: 1,
+                              delay: const Duration(milliseconds: 250),
+                              child: DragTarget<ValueNotifier<TableturfCardData?>>(
+                                builder: (_, accepted, rejected) {
+                                  return AnimatedOpacity(
+                                    opacity: accepted.length > 0 ? 0.8 : 1.0,
+                                    duration: duration,
+                                    //curve: curve,
+                                    child: AnimatedScale(
+                                      scale: accepted.length > 0 ? 0.8 : 1.0,
+                                      duration: duration,
+                                      curve: Curves.ease,
+                                      child: cardWidget
+                                    ),
+                                  );
+                                },
+                                onWillAccept: (newCard) => !identical(oldCard, newCard),
+                                onAccept: (newCard) {
+                                  final temp = newCard.value;
+                                  newCard.value = oldCard.value;
+                                  oldCard.value = temp;
+                                },
+                              ),
+                              feedback: DefaultTextStyle(
+                                style: textStyle,
+                                child: Opacity(
+                                  opacity: 0.9,
+                                  child: cardWidget,
+                                ),
+                              ),
+                              childWhenDragging: Container(),
+                            );
+                          }
+                        );
+                      }
+                    )
+                  ),
                 )
-            ]
+            ],
           )
+        ),
+        Expanded(
+          flex: 1,
+          child: Container(
+            decoration: BoxDecoration(
+              border: Border(top: BorderSide())
+            ),
+            child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                children: [
+                  Expanded(
+                    child: Padding(
+                      padding: const EdgeInsets.all(10),
+                      child: ValueListenableBuilder(
+                        valueListenable: _hasEmptyCards,
+                        child: SelectionButton(
+                          child: Text(
+                            "Save and exit",
+                            style: TextStyle(fontSize: 16),
+                          ),
+                          designRatio: 0.5,
+                          onPressStart: () async {
+                            if (_lockButtons || _popupIsActive || _hasEmptyCards.value) {
+                              return false;
+                            }
+                            _lockButtons = true;
+                            return true;
+                          },
+                          onPressEnd: () async {
+                            if (widget.deck == null) {
+                              settings.createDeck(
+                                cards: deckCards.map((v) => v.value!).toList(),
+                                name: name,
+                                cardSleeve: cardSleeve
+                              );
+                            } else {
+                              settings.updateDeck(
+                                deckID: widget.deck!.deckID,
+                                cards: deckCards.map((v) => v.value!).toList(),
+                                name: name,
+                                cardSleeve: cardSleeve
+                              );
+                            }
+                            Navigator.of(context).pop(true);
+                            return Future<void>.delayed(const Duration(milliseconds: 100));
+                          },
+                        ),
+                        builder: (_, bool hasEmptyCards, child) {
+                          print("deck has ${hasEmptyCards ? "" : "no "}empty cards");
+                          if (!hasEmptyCards) {
+                            return child!;
+                          }
+                          return ColorFiltered(
+                            colorFilter: ColorFilter.mode(
+                              Colors.black.withOpacity(0.5),
+                              BlendMode.srcATop,
+                            ),
+                            child: child,
+                          );
+                        }
+                      ),
+                    ),
+                  ),
+                  Expanded(
+                    child: Padding(
+                      padding: const EdgeInsets.all(10),
+                      child: SelectionButton(
+                        child: Text(
+                          "Exit without saving",
+                          style: TextStyle(fontSize: 16),
+                        ),
+                        designRatio: 0.5,
+                        onPressStart: () async {
+                          if (_lockButtons || _popupIsActive) return false;
+                          _lockButtons = true;
+                          return true;
+                        },
+                        onPressEnd: () async {
+                          Navigator.of(context).pop(false);
+                          return Future<void>.delayed(const Duration(milliseconds: 100));
+                        },
+                      ),
+                    ),
+                  ),
+                ]
+            ),
+          ),
         )
       ]
     );
     return WillPopScope(
-      onWillPop: () async => true,
+      onWillPop: () async {
+        if (_popupIsActive) {
+          _popupExit.notifyListeners();
+          return false;
+        }
+        return true;
+      },
       child: Scaffold(
         backgroundColor: palette.backgroundDeckEditor,
         body: DefaultTextStyle(

@@ -1,12 +1,14 @@
 import 'package:flutter/material.dart';
 
 class SelectionButton extends StatefulWidget {
-  final Future<void> Function() onSelect;
+  final Future<bool> Function()? onPressStart;
+  final Future<void> Function()? onPressEnd;
   final double designRatio;
   final Widget child;
   const SelectionButton({
     super.key,
-    required this.onSelect,
+    this.onPressStart,
+    this.onPressEnd,
     this.designRatio = 1,
     required this.child,
   });
@@ -64,9 +66,13 @@ class SelectionButtonState extends State<SelectionButton>
   Widget build(BuildContext context) {
     return GestureDetector(
       onTap: () async {
+        final shouldPress = await widget.onPressStart?.call() ?? true;
+        if (!shouldPress) {
+          return;
+        }
         await _selectController.forward(from: 0.0);
         await Future<void>.delayed(const Duration(milliseconds: 50));
-        await widget.onSelect();
+        await widget.onPressEnd?.call();
         _selectController.value = 0.0;
       },
       child: AnimatedBuilder(

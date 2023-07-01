@@ -134,7 +134,8 @@ Coords rotatePatternPoint(Coords point, int height, int width, int rot) {
 @JsonSerializable()
 class TableturfCardData {
   final int num;
-  final String name, displayName;
+  final String name;
+  final String? displayName;
   final String rarity;
   final int special;
   final TileGrid pattern;
@@ -149,18 +150,10 @@ class TableturfCardData {
       this.rarity,
       this.special,
       this.pattern,
+      this.displayName,
       [String? design]
   ):
       designSprite = design ?? "assets/images/card_illustrations/${num}.png",
-      displayName = {
-        31: "E-liter 4K\nScope",
-        32: "Bamboozler\n14 Mk I",
-        36: "Sloshing\nMachine",
-        42: "Ballpoint\nSplatling",
-        47: "Dualie\nSquelchers",
-        48: "Dark Tetra\nDualies",
-        51: "Undercover\nBrella",
-      }[num] ?? name,
       count = countLayout(pattern),
       minPattern = getMinPattern(pattern),
       selectPoint = (() {
@@ -171,7 +164,7 @@ class TableturfCardData {
         );
       }());
 
-  factory TableturfCardData.fromJson(Map<String, dynamic> json) => _$TableturfCardFromJson(json);
+  factory TableturfCardData.fromJson(Map<String, dynamic> json) => _$TableturfCardDataFromJson(json);
 
   bool operator==(Object other) {
     return other is TableturfCardData && other.num == this.num;
@@ -179,7 +172,7 @@ class TableturfCardData {
 
   int get hashCode => num.hashCode;
 
-  Map<String, dynamic> toJson() => _$TableturfCardToJson(this);
+  Map<String, dynamic> toJson() => _$TableturfCardDataToJson(this);
 }
 
 const TileStateEnumMap = _$TileStateEnumMap;

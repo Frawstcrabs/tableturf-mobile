@@ -1,8 +1,10 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:math';
 
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:tableturf_mobile/src/card_manager/deck_editor_screen.dart';
 import 'package:tableturf_mobile/src/game_internals/opponentAI.dart';
 import 'package:tableturf_mobile/src/game_internals/player.dart';
@@ -13,10 +15,12 @@ import 'package:tableturf_mobile/src/play_session/components/selection_button.da
 import '../audio/audio_controller.dart';
 import '../audio/sounds.dart';
 import '../game_internals/card.dart';
+import '../game_internals/deck.dart';
 import '../game_internals/tile.dart';
 import '../play_session/build_game_session_page.dart';
 import '../play_session/components/card_widget.dart';
 import '../player_progress/player_progress.dart';
+import '../settings/settings.dart';
 import '../style/palette.dart';
 import '../style/responsive_screen.dart';
 
@@ -28,118 +32,142 @@ class DeckListScreen extends StatefulWidget {
 }
 
 class _DeckListScreenState extends State<DeckListScreen> {
+  bool _lockButtons = false;
+
   @override
   Widget build(BuildContext context) {
+    final settings = context.watch<SettingsController>();
+    final decks = settings.decks;
     final palette = context.watch<Palette>();
     final mediaQuery = MediaQuery.of(context);
-    final exampleDecks = [
-      {
-        "name": "My Deck",
-        "sleeve": "default",
-      },
-      {
-        "name": "My better deck",
-        "sleeve": "cool",
-      },
-      {
-        "name": "My name is Dis",
-        "sleeve": "supercool",
-      },
-      {
-        "name": "Can dis deck fit in yo mouth lmao",
-        "sleeve": "ultracool",
-      },
-    ];
     final screen = Column(
       children: [
         Expanded(
-          flex: 1,
-          child: Center(
-            child: Text("Edit Deck", style: TextStyle(
-              fontFamily: "Splatfont1",
-              color: Colors.black
-            ))
-          )
+            flex: 1,
+            child: Container(
+              decoration: BoxDecoration(
+                border: Border(bottom: BorderSide())
+              ),
+              child: Center(
+                child: Text("Edit Deck", style: TextStyle(
+                  fontFamily: "Splatfont1",
+                  color: Colors.black
+                ))
+              ),
+            )
         ),
         Expanded(
           flex: 9,
-          child: Container(
-            margin: const EdgeInsets.all(10),
-            decoration: BoxDecoration(
-              border: Border.all()
-            ),
-            child: ListView(
-              padding: const EdgeInsets.all(10),
-              children: [
-                for (final deck in exampleDecks)
-                  Container(
-                    decoration: BoxDecoration(
-                      border: Border.all(),
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    margin: const EdgeInsets.all(5),
-                    child: GestureDetector(
-                      onTap: () {
-                        Navigator.of(context).push(
-                          MaterialPageRoute(builder: (_) {
-                            return DeckEditorScreen(
-                              name: deck["name"]!
-                            );
-                          })
-                        );
-                      },
-                      child: AspectRatio(
-                        aspectRatio: 4.3,
-                        child: Stack(
-                          fit: StackFit.expand,
-                          children: [
-                            ClipRRect(
-                              borderRadius: BorderRadius.circular(9),
-                              child: FractionallySizedBox(
-                                widthFactor: (CardWidget.CARD_WIDTH + 40) / CardWidget.CARD_WIDTH,
-                                child: Image.asset(
-                                  "assets/images/card_sleeves/sleeve_${deck["sleeve"]}.png",
-                                  color: Color.fromRGBO(32, 32, 32, 0.4),
-                                  colorBlendMode: BlendMode.srcATop,
-                                  fit: BoxFit.fitWidth,
-                                ),
-                              ),
-                            ),
-                            Center(child: Text(deck["name"]!))
-                          ],
-                        ),
-                      ),
-                    ),
+          child: ListView(
+            padding: const EdgeInsets.all(10),
+            children: [
+              for (final deck in decks)
+                Container(
+                  decoration: BoxDecoration(
+                    border: Border.all(),
+                    borderRadius: BorderRadius.circular(10),
                   ),
-                Padding(
-                  padding: const EdgeInsets.all(5),
+                  margin: const EdgeInsets.all(5),
                   child: GestureDetector(
-                    onTap: () {
-                      Navigator.of(context).push(
+                    onTap: () async {
+                      if (_lockButtons) return;
+                      _lockButtons = true;
+                      final bool changesMade = await Navigator.of(context).push(
                         MaterialPageRoute(builder: (_) {
-                          return DeckEditorScreen(
-                            name: "Deck ${exampleDecks.length + 1}"
-                          );
+                          return DeckEditorScreen(deck);
                         })
                       );
+                      if (changesMade) {
+                        setState(() {});
+                      }
+                      _lockButtons = false;
                     },
                     child: AspectRatio(
                       aspectRatio: 4.3,
-                      child: Container(
-                        decoration: BoxDecoration(
-                          border: Border.all(),
-                          borderRadius: BorderRadius.circular(10),
-                          color: Colors.black54,
-                        ),
-                        child: Center(child: Text("Create New")),
+                      child: Stack(
+                        fit: StackFit.expand,
+                        children: [
+                          ClipRRect(
+                            borderRadius: BorderRadius.circular(9),
+                            child: FractionallySizedBox(
+                              widthFactor: (CardWidget.CARD_WIDTH + 40) / CardWidget.CARD_WIDTH,
+                              child: Image.asset(
+                                "assets/images/card_sleeves/sleeve_${deck.cardSleeve}.png",
+                                color: Color.fromRGBO(32, 32, 32, 0.4),
+                                colorBlendMode: BlendMode.srcATop,
+                                fit: BoxFit.fitWidth,
+                              ),
+                            ),
+                          ),
+                          Center(child: Text(deck.name))
+                        ],
                       ),
+                    ),
+                  ),
+                ),
+              Padding(
+                padding: const EdgeInsets.all(5),
+                child: GestureDetector(
+                  onTap: () async {
+                    if (_lockButtons) return;
+                    _lockButtons = true;
+                    final bool changesMade = await Navigator.of(context).push(
+                      MaterialPageRoute(builder: (_) {
+                        return DeckEditorScreen(null,
+                          name: "Deck ${decks.length + 1}"
+                        );
+                      })
+                    );
+                    if (changesMade) {
+                      setState(() {});
+                    }
+                    _lockButtons = false;
+                  },
+                  child: AspectRatio(
+                    aspectRatio: 4.3,
+                    child: Container(
+                      decoration: BoxDecoration(
+                        border: Border.all(),
+                        borderRadius: BorderRadius.circular(10),
+                        color: Colors.black54,
+                      ),
+                      child: Center(child: Text("Create New")),
+                    ),
+                  ),
+                ),
+              )
+            ]
+          )
+        ),
+        Expanded(
+          child: Container(
+            decoration: BoxDecoration(
+              border: Border(top: BorderSide())
+            ),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Container(
+                    padding: const EdgeInsets.all(10),
+                    child: SelectionButton(
+                      child: Text("Back"),
+                      designRatio: 0.5,
+                      onPressStart: () async {
+                        if (_lockButtons) return false;
+                        _lockButtons = true;
+                        return true;
+                      },
+                      onPressEnd: () async {
+                        Navigator.of(context).pop();
+                        return Future<void>.delayed(const Duration(milliseconds: 100));
+                      },
                     ),
                   ),
                 )
               ]
             )
-          )
-        )
+          ),
+        ),
       ]
     );
     return WillPopScope(

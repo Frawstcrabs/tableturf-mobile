@@ -1,4 +1,5 @@
 import 'dart:math';
+import 'dart:ui';
 
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -84,7 +85,7 @@ class CardFrontWidget extends StatelessWidget {
             color: Colors.white,
           );
           final cardCountText = "\u200b${card.count}";
-          final cardName = card.displayName;
+          final cardName = card.displayName ?? card.name;
           final cardNameLines = "\n".allMatches(cardName).length + 1;
 
           Widget cardWidget = Stack(
@@ -95,7 +96,7 @@ class CardFrontWidget extends StatelessWidget {
                 color: isHidden ? Colors.black : null,
               ),
               Align(
-                alignment: Alignment(0.0, [-0.825, -0.825, -0.825][cardNameLines]),
+                alignment: Alignment(0.0, -0.825),
                 child: FractionallySizedBox(
                   heightFactor: 0.18,
                   child: LayoutBuilder(
@@ -120,9 +121,7 @@ class CardFrontWidget extends StatelessWidget {
                         text: TextSpan(text: cardName, style: textStyle),
                         textScaleFactor: MediaQuery.of(context).textScaleFactor,
                         textDirection: TextDirection.ltr)
-                          ..layout(maxWidth: cardNameLines > 1
-                              ? constraints.maxWidth * maxTextWidth
-                              : double.infinity)
+                          ..layout()
                       ).size;
 
                       var strokeText = FractionallySizedBox(

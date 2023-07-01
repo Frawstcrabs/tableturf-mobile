@@ -7,11 +7,13 @@
 // import 'package:firebase_core/firebase_core.dart';
 // import 'firebase_options.dart';
 
+import 'dart:convert';
 import 'dart:math';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:tableturf_mobile/src/game_internals/card.dart';
 import 'package:logging/logging.dart';
 import 'package:provider/provider.dart';
@@ -23,8 +25,6 @@ import 'src/main_menu/main_menu_screen.dart';
 import 'src/player_progress/persistence/local_storage_player_progress_persistence.dart';
 import 'src/player_progress/persistence/player_progress_persistence.dart';
 import 'src/player_progress/player_progress.dart';
-import 'src/settings/persistence/local_storage_settings_persistence.dart';
-import 'src/settings/persistence/settings_persistence.dart';
 import 'src/settings/settings.dart';
 import 'src/style/palette.dart';
 import 'src/style/snack_bar.dart';
@@ -33,11 +33,11 @@ Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await loadCards();
   await loadMaps();
-  guardedMain();
+  await guardedMain();
 }
 
 /// Without logging and crash reporting, this would be `void main()`.
-void guardedMain() {
+Future<void> guardedMain() async {
   if (kReleaseMode) {
     // Don't log anything below warnings in production.
     Logger.root.level = Level.WARNING;
@@ -48,16 +48,30 @@ void guardedMain() {
         '${record.message}');
   });
 
-  WidgetsFlutterBinding.ensureInitialized();
-
   _log.info('Going full screen');
   SystemChrome.setEnabledSystemUIMode(
     SystemUiMode.edgeToEdge,
   );
 
+  final SharedPreferences prefs = await SharedPreferences.getInstance();
+  if (!prefs.containsKey("tableturf-deck_nextID")) {
+    print("Initialising deck data");
+    await prefs.setInt("tableturf-deck_nextID", 1);
+    await prefs.setString("tableturf-deck_list", "[0]");
+    await prefs.setString("tableturf-deck_deck-0", '''{
+      "name": "Deck 1",
+      "cardSleeve": "default",
+      "deckID": 0,
+      "cards": ${jsonEncode([
+        for (final cardID in [5, 12, 21, 27, 33, 39, 44, 51, 54, 55, 91, 102, 136, 140, 158])
+          cards[cardID].toJson()
+      ])}
+    }''');
+  }
+
   runApp(
     MyApp(
-      settingsPersistence: LocalStorageSettingsPersistence(),
+      sharedPreferences: prefs,
       playerProgressPersistence: LocalStoragePlayerProgressPersistence(),
     ),
   );
@@ -67,11 +81,11 @@ Logger _log = Logger('main.dart');
 
 class MyApp extends StatelessWidget {
   final PlayerProgressPersistence playerProgressPersistence;
-  final SettingsPersistence settingsPersistence;
+  final SharedPreferences sharedPreferences;
 
   const MyApp({
     required this.playerProgressPersistence,
-    required this.settingsPersistence,
+    required this.sharedPreferences,
     super.key,
   });
 
@@ -90,7 +104,7 @@ class MyApp extends StatelessWidget {
           Provider<SettingsController>(
             lazy: false,
             create: (context) => SettingsController(
-              persistence: settingsPersistence,
+              prefs: sharedPreferences,
             )..loadStateFromPersistence(),
           ),
           ProxyProvider2<SettingsController, ValueNotifier<AppLifecycleState>,
