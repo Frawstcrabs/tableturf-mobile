@@ -13,15 +13,15 @@ import '../../game_internals/move.dart';
 import 'card_widget.dart';
 import 'flip_card.dart';
 
-class SpeenWidget extends StatefulWidget {
+class SpinnerWidget extends StatefulWidget {
   final bool loop;
-  const SpeenWidget({super.key, this.loop = true});
+  const SpinnerWidget({super.key, this.loop = true});
 
   @override
-  State<SpeenWidget> createState() => _SpeenWidgetState();
+  State<SpinnerWidget> createState() => _SpinnerWidgetState();
 }
 
-class _SpeenWidgetState extends State<SpeenWidget>
+class _SpinnerWidgetState extends State<SpinnerWidget>
     with SingleTickerProviderStateMixin {
   late final AnimationController _controller;
 
@@ -448,7 +448,7 @@ class _CardSelectionWidgetState extends State<CardSelectionWidget>
             ),
             borderRadius: BorderRadius.circular(cornerRadius),
           ),
-          child: Center(child: SpeenWidget(loop: widget.loopAnimation)),
+          child: Center(child: SpinnerWidget(loop: widget.loopAnimation)),
         );
       }
     );
