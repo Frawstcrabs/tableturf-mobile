@@ -72,7 +72,6 @@ class CardFrontWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final palette = context.watch<Palette>();
     return AspectRatio(
       aspectRatio: CardWidget.CARD_WIDTH / CardWidget.CARD_HEIGHT,
       child: LayoutBuilder(
