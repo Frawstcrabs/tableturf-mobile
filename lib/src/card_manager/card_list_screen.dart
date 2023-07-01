@@ -3,21 +3,13 @@ import 'dart:math';
 
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:tableturf_mobile/src/game_internals/opponentAI.dart';
 import 'package:tableturf_mobile/src/game_internals/player.dart';
-import 'package:tableturf_mobile/src/level_selection/opponents.dart';
 import 'package:tableturf_mobile/src/play_session/components/card_selection.dart';
 import 'package:tableturf_mobile/src/play_session/components/selection_button.dart';
 
-import '../audio/audio_controller.dart';
-import '../audio/sounds.dart';
 import '../game_internals/card.dart';
-import '../game_internals/tile.dart';
-import '../play_session/build_game_session_page.dart';
 import '../play_session/components/card_widget.dart';
-import '../player_progress/player_progress.dart';
 import '../style/palette.dart';
-import '../style/responsive_screen.dart';
 import 'deck_list_screen.dart';
 
 class CardRarityDisplay extends StatefulWidget {
@@ -171,7 +163,7 @@ class _CardListScreenState extends State<CardListScreen>
   }
 
   Future<void> _showCardPopup(BuildContext context, TableturfCardData card) async {
-    final overlayState = Overlay.of(context)!;
+    final overlayState = Overlay.of(context);
     late final OverlayEntry overlayEntry;
     late final void Function() onPopupExit;
     onPopupExit = () async {

@@ -1,11 +1,7 @@
-import 'dart:ui';
-
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
-import '../../audio/audio_controller.dart';
-import '../../audio/sounds.dart';
 import '../../game_internals/card.dart';
 import '../../style/palette.dart';
 

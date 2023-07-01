@@ -12,7 +12,6 @@ import 'package:tableturf_mobile/src/game_internals/battle.dart';
 import 'package:tableturf_mobile/src/game_internals/player.dart';
 import 'package:tableturf_mobile/src/style/palette.dart';
 
-import 'components/arc_tween.dart';
 import 'components/build_board_widget.dart';
 import 'components/score_counter.dart';
 

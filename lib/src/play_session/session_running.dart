@@ -764,7 +764,7 @@ class _PlaySessionScreenState extends State<PlaySessionScreen>
 
   Future<void> _onSpecialMove() async {
     _log.info("special move sequence started");
-    final overlayState = Overlay.of(context)!;
+    final overlayState = Overlay.of(context);
     final animationLayer = OverlayEntry(builder: (_) {
       final mediaQuery = MediaQuery.of(context);
       final isLandscape = mediaQuery.orientation == Orientation.landscape;
@@ -985,7 +985,7 @@ class _PlaySessionScreenState extends State<PlaySessionScreen>
   Future<void> _onGameEnd() async {
     _log.info("outro sequence started");
     final audioController = AudioController();
-    final overlayState = Overlay.of(context)!;
+    final overlayState = Overlay.of(context);
     final animationLayer = OverlayEntry(builder: (_) {
       final mediaQuery = MediaQuery.of(context);
       return DefaultTextStyle(

@@ -1,28 +1,14 @@
 import 'dart:async';
-import 'dart:convert';
-import 'dart:math';
 
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import 'package:tableturf_mobile/src/card_manager/deck_editor_screen.dart';
-import 'package:tableturf_mobile/src/game_internals/opponentAI.dart';
-import 'package:tableturf_mobile/src/game_internals/player.dart';
-import 'package:tableturf_mobile/src/level_selection/opponents.dart';
-import 'package:tableturf_mobile/src/play_session/components/card_selection.dart';
 import 'package:tableturf_mobile/src/play_session/components/selection_button.dart';
 
-import '../audio/audio_controller.dart';
-import '../audio/sounds.dart';
-import '../game_internals/card.dart';
 import '../game_internals/deck.dart';
-import '../game_internals/tile.dart';
-import '../play_session/build_game_session_page.dart';
 import '../play_session/components/card_widget.dart';
-import '../player_progress/player_progress.dart';
 import '../settings/settings.dart';
 import '../style/palette.dart';
-import '../style/responsive_screen.dart';
 
 class DeckListScreen extends StatefulWidget {
   const DeckListScreen({Key? key}) : super(key: key);

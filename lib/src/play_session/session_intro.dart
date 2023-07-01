@@ -1,7 +1,6 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
-import 'package:just_audio/just_audio.dart';
 import 'package:logging/logging.dart' hide Level;
 import 'package:provider/provider.dart';
 
@@ -60,7 +59,7 @@ class _PlaySessionIntroState extends State<PlaySessionIntro>
   FutureOr<void> _playInitSequence() async {
     _log.info("init sequence started");
     await Future<void>.delayed(const Duration(milliseconds: 500));
-    final overlayState = Overlay.of(context)!;
+    final overlayState = Overlay.of(context);
     final animationLayer = OverlayEntry(builder: (_) {
       return Container(
         color: Color.fromRGBO(0, 0, 0, 0.5),

@@ -6,9 +6,6 @@ import 'package:tableturf_mobile/src/game_internals/battle.dart';
 import 'package:tableturf_mobile/src/game_internals/card.dart';
 import 'package:tableturf_mobile/src/game_internals/tile.dart';
 
-import '../../style/palette.dart';
-import 'board_widget.dart';
-
 class MoveOverlayPainter extends CustomPainter {
   final TableturfBattle battle;
   final Animation<double> animation;

@@ -10,12 +10,9 @@ import 'package:tableturf_mobile/src/game_internals/opponentAI.dart';
 import 'package:tableturf_mobile/src/game_internals/player.dart';
 import 'package:tableturf_mobile/src/level_selection/opponents.dart';
 
-import '../audio/audio_controller.dart';
-import '../audio/sounds.dart';
 import '../game_internals/card.dart';
 import '../game_internals/tile.dart';
 import '../play_session/build_game_session_page.dart';
-import '../player_progress/player_progress.dart';
 import '../style/palette.dart';
 import '../style/responsive_screen.dart';
 import 'levels.dart';
@@ -143,7 +140,7 @@ class LevelSelectionScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final palette = context.watch<Palette>();
-    final playerProgress = context.watch<PlayerProgress>();
+    //final playerProgress = context.watch<PlayerProgress>();
 
     return Scaffold(
       backgroundColor: palette.backgroundLevelSelection,

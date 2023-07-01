@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
 import 'package:tableturf_mobile/src/audio/sounds.dart';
 import 'package:tableturf_mobile/src/game_internals/battle.dart';
 
@@ -127,7 +126,7 @@ class _TurnCounterState extends State<TurnCounter>
   Future<void> _onTurnCountChange() async {
     final newValue = widget.battle.turnCountNotifier.value;
     final audioController = AudioController();
-    final overlayState = Overlay.of(context)!;
+    final overlayState = Overlay.of(context);
 
     final backgroundLayer = OverlayEntry(builder: (_) {
       return DecoratedBoxTransition(
