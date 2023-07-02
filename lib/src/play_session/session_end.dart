@@ -554,7 +554,7 @@ class _PlaySessionEndState extends State<PlaySessionEnd>
             Expanded(
               flex: 8,
               child: Center(
-                child: Text("some other shit goes here")
+                child: Text("some other fancy shit goes here")
               )
             ),
             Expanded(
