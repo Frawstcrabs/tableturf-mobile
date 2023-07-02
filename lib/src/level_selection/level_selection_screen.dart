@@ -121,13 +121,15 @@ List<TableturfCardData> createPureRandomDeck() {
       }
     }
 
+    final name = cardNameCharacters.randomSample(3 + rng.nextInt(7)).join();
     final specialCost = max(1, specialCosts[size] - (hasSpecial ? 0 : 2));
     ret.add(TableturfCardData(
       -id,
-      cardNameCharacters.randomSample(3 + rng.nextInt(7)).join(),
+      name,
       "randomiser",
       specialCost,
       centeredPattern,
+      name,
       "assets/images/card_illustrations/random${rng.nextInt(4)}.png"
     ));
   }
@@ -152,8 +154,7 @@ class LevelSelectionScreen extends StatelessWidget {
               child: Center(
                 child: Text(
                   'Select level',
-                  style:
-                      TextStyle(fontFamily: 'Splatfont1', fontSize: 30),
+                  style: TextStyle(fontFamily: 'Splatfont1', fontSize: 30),
                 ),
               ),
             ),

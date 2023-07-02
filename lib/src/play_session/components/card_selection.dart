@@ -89,11 +89,13 @@ class CardFrontWidget extends StatelessWidget {
           final cardNameLines = "\n".allMatches(cardName).length + 1;
 
           Widget cardWidget = Stack(
+            fit: StackFit.expand,
             children: [
               Image.asset("assets/images/card_components/bg_${card.rarity}_lv1.png"),
               Image.asset(
                 card.designSprite,
                 color: isHidden ? Colors.black : null,
+                fit: BoxFit.fill,
               ),
               Align(
                 alignment: Alignment(0.0, -0.825),
@@ -227,7 +229,7 @@ class CardFrontWidget extends StatelessWidget {
                           aspectRatio: 1.0,
                           child: Stack(
                             children: [
-                              Image.asset("assets/images/card_components/count_${card.rarity}.png"),
+                              Center(child: Image.asset("assets/images/card_components/count_${card.rarity}.png")),
                               Center(
                                 child: Stack(
                                   children: [
@@ -596,6 +598,7 @@ class CardSelectionConfirmButton extends StatelessWidget {
     final palette = context.watch<Palette>();
     return LayoutBuilder(builder: (context, constraints) {
       final cornerRadius = CardWidget.CORNER_RADIUS * (constraints.maxHeight/CardWidget.CARD_HEIGHT);
+      final textStyle = DefaultTextStyle.of(context).style;
       return Container(
         decoration: BoxDecoration(
           color: palette.inGameButtonSelected,
@@ -609,7 +612,8 @@ class CardSelectionConfirmButton extends StatelessWidget {
           child: Text(
             "Confirm",
             style: TextStyle(
-              fontSize: min(14.0, 80.0 * (constraints.maxHeight/CardWidget.CARD_HEIGHT))
+              fontSize: min(48.0, 80.0 * (constraints.maxHeight/CardWidget.CARD_HEIGHT)),
+              shadows: textStyle.shadows?.map((s) => s.scale(4 * (constraints.maxHeight/CardWidget.CARD_HEIGHT))).toList()
             ),
           )
         ),

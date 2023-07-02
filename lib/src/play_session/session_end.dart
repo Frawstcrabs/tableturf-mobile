@@ -15,6 +15,11 @@ import 'package:tableturf_mobile/src/style/palette.dart';
 import 'components/build_board_widget.dart';
 import 'components/score_counter.dart';
 
+enum ScoreBarSide {
+  blue,
+  yellow,
+}
+
 class ScoreBarPainter extends CustomPainter {
   final Animation<double> yellowLength, blueLength, waveAnimation, opacity;
   final Orientation orientation;
@@ -42,10 +47,10 @@ class ScoreBarPainter extends CustomPainter {
     final palette = const Palette();
     if (opacity.value == 0.0) return;
     canvas.clipRRect(
-      RRect.fromRectAndRadius(
-        Offset.zero & size,
-        Radius.circular(size.width)
-      )
+        RRect.fromRectAndRadius(
+            Offset.zero & size,
+            Radius.circular(size.width)
+        )
     );
 
     canvas.drawColor(Colors.black38, BlendMode.srcOver);
@@ -53,12 +58,12 @@ class ScoreBarPainter extends CustomPainter {
     final paint = Paint()
       ..style = PaintingStyle.fill
       ..strokeJoin = StrokeJoin.miter;
-    final waveWidth = size.height * WAVE_WIDTH;
+    final waveWidth = (orientation == Orientation.landscape ? size.width : size.height) * WAVE_WIDTH;
     final waveHeight = waveWidth * WAVE_HEIGHT;
     final yellowPath = Path();
     final bluePath = Path();
 
-    if (orientation == Orientation.landscape) {
+    if (orientation == Orientation.portrait) {
       var d = (waveWidth * -2) * (1 - waveAnimation.value);
       yellowPath.moveTo(size.width, size.height);
       yellowPath.lineTo(size.width, 0.0);
@@ -92,12 +97,12 @@ class ScoreBarPainter extends CustomPainter {
       var d = size.width + (waveWidth * 2) * (1 - waveAnimation.value);
       yellowPath.moveTo(0.0, size.height);
       yellowPath.lineTo(size.width, size.height);
-      yellowPath.lineTo(d, size.height * yellowLength.value);
+      yellowPath.lineTo(d, size.height * (1.0 - yellowLength.value));
       var outWave = true;
 
       for (; d > 0.0; d -= waveWidth) {
         yellowPath.relativeQuadraticBezierTo(
-          waveWidth/2, outWave ? waveHeight : -waveHeight,
+          -waveWidth/2, outWave ? waveHeight : -waveHeight,
           -waveWidth, 0.0,
         );
         outWave = !outWave;
@@ -105,14 +110,14 @@ class ScoreBarPainter extends CustomPainter {
       yellowPath.close();
 
       d = size.width + (waveWidth * 2) * (1 - waveAnimation.value);
-      bluePath.moveTo(0.0, size.height);
-      bluePath.lineTo(size.width, size.height);
+      bluePath.moveTo(0.0, 0.0);
+      bluePath.lineTo(size.width, 0.0);
       bluePath.lineTo(d, size.height * blueLength.value);
       outWave = true;
 
       for (; d > 0.0; d -= waveWidth) {
         bluePath.relativeQuadraticBezierTo(
-          waveWidth/2, outWave ? waveHeight : -waveHeight,
+          -waveWidth/2, outWave ? waveHeight : -waveHeight,
           -waveWidth, 0.0,
         );
         outWave = !outWave;
@@ -125,6 +130,164 @@ class ScoreBarPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(ScoreBarPainter oldDelegate) {
+    return this.orientation != oldDelegate.orientation;
+  }
+}
+
+void paintScoreBar({
+  required Canvas canvas,
+  required Size size,
+  required Animation<double> length,
+  required Animation<double> waveAnimation,
+  required Animation<double> opacity,
+  required AxisDirection direction,
+  required Color color,
+}) {
+  const WAVE_WIDTH = 0.3;
+  const WAVE_HEIGHT = 0.4;
+  const OVERPAINT = 5.0;
+  if (opacity.value == 0.0) return;
+
+  canvas.drawColor(Colors.black38, BlendMode.srcOver);
+
+  final paint = Paint()
+    ..style = PaintingStyle.fill
+    ..strokeJoin = StrokeJoin.miter;
+  final waveWidth = (direction == AxisDirection.up || direction == AxisDirection.down ? size.width : size.height) * WAVE_WIDTH;
+  final waveHeight = waveWidth * WAVE_HEIGHT;
+  final path = Path();
+
+  switch (direction) {
+    case AxisDirection.up:
+      var d = size.width + (waveWidth * 2) * (1 - waveAnimation.value) + OVERPAINT;
+      path.moveTo(-OVERPAINT, size.height + OVERPAINT);
+      path.lineTo(size.width + OVERPAINT, size.height + OVERPAINT);
+      path.lineTo(d, size.height * (1.0 - length.value));
+      var outWave = true;
+
+      for (; d > -OVERPAINT; d -= waveWidth) {
+        path.relativeQuadraticBezierTo(
+          -waveWidth/2, outWave ? waveHeight : -waveHeight,
+          -waveWidth, 0.0,
+        );
+        outWave = !outWave;
+      }
+      break;
+    case AxisDirection.right:
+      var d = (waveWidth * -2) * (1 - waveAnimation.value) - OVERPAINT;
+      path.moveTo(size.width + OVERPAINT, size.height + OVERPAINT);
+      path.lineTo(size.width + OVERPAINT, -OVERPAINT);
+      path.lineTo(size.width * (1.0 - length.value), d);
+      var outWave = true;
+
+      for (; d < size.height + OVERPAINT; d += waveWidth) {
+        path.relativeQuadraticBezierTo(
+          outWave ? waveHeight : -waveHeight, waveWidth/2,
+          0.0, waveWidth,
+        );
+        outWave = !outWave;
+      }
+      break;
+    case AxisDirection.down:
+      var d = size.width + (waveWidth * 2) * (1 - waveAnimation.value) + OVERPAINT;
+      path.moveTo(-OVERPAINT,-OVERPAINT);
+      path.lineTo(size.width + OVERPAINT, -OVERPAINT);
+      path.lineTo(d, size.height * length.value);
+      var outWave = true;
+
+      for (; d > - OVERPAINT; d -= waveWidth) {
+        path.relativeQuadraticBezierTo(
+          -waveWidth/2, outWave ? waveHeight : -waveHeight,
+          -waveWidth, 0.0,
+        );
+        outWave = !outWave;
+      }
+      break;
+    case AxisDirection.left:
+      var d = (waveWidth * -2) * (1 - waveAnimation.value) - OVERPAINT;
+      path.moveTo(-OVERPAINT, -OVERPAINT);
+      path.lineTo(size.width * length.value, d);
+      var outWave = true;
+
+      for (; d < size.height + OVERPAINT; d += waveWidth) {
+        path.relativeQuadraticBezierTo(
+          outWave ? waveHeight : -waveHeight, waveWidth/2,
+          0.0, waveWidth,
+        );
+        outWave = !outWave;
+      }
+      path.lineTo(-OVERPAINT, size.height + OVERPAINT);
+      break;
+  }
+  path.close();
+  canvas.drawPath(path, paint..color = color.withOpacity(opacity.value));
+}
+
+class NewScoreBarPainter extends CustomPainter {
+  final Animation<double> yellowLength, blueLength, waveAnimation, opacity;
+  final Orientation orientation;
+
+  NewScoreBarPainter({
+    required this.yellowLength,
+    required this.blueLength,
+    required this.waveAnimation,
+    required this.orientation,
+    required this.opacity,
+  }):
+        super(repaint: Listenable.merge([
+        yellowLength,
+        blueLength,
+        waveAnimation,
+        opacity,
+      ]))
+  ;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final palette = const Palette();
+    if (orientation == Orientation.portrait) {
+      paintScoreBar(
+        canvas: canvas,
+        size: size,
+        length: blueLength,
+        waveAnimation: waveAnimation,
+        opacity: opacity,
+        direction: AxisDirection.left,
+        color: palette.tileBlue,
+      );
+      paintScoreBar(
+        canvas: canvas,
+        size: size,
+        length: yellowLength,
+        waveAnimation: waveAnimation,
+        opacity: opacity,
+        direction: AxisDirection.right,
+        color: palette.tileYellow,
+      );
+    } else {
+      paintScoreBar(
+        canvas: canvas,
+        size: size,
+        length: blueLength,
+        waveAnimation: waveAnimation,
+        opacity: opacity,
+        direction: AxisDirection.down,
+        color: palette.tileBlue,
+      );
+      paintScoreBar(
+        canvas: canvas,
+        size: size,
+        length: yellowLength,
+        waveAnimation: waveAnimation,
+        opacity: opacity,
+        direction: AxisDirection.up,
+        color: palette.tileYellow,
+      );
+    }
+  }
+
+  @override
+  bool shouldRepaint(NewScoreBarPainter oldDelegate) {
     return this.orientation != oldDelegate.orientation;
   }
 }
@@ -308,78 +471,157 @@ class _PlaySessionEndState extends State<PlaySessionEnd>
       loopAnimation: false,
     );
 
-    final screen = Container(
-      color: palette.backgroundPlaySession,
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-        children: [
-          Container(
-            height: mediaQuery.padding.top
-          ),
-          const Spacer(flex: 1),
-          Expanded(
-            flex: 8,
-            child: boardWidget
-          ),
-          Expanded(
-            flex: 1,
-            child: AnimatedBuilder(
-              animation: _scoreCountersAnimator,
-              builder: (_, __) {
-                return Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                  children: [
-                    Transform.scale(
-                      scale: scoreSize.value,
-                      child: Opacity(
-                        opacity: scoreFade.value,
-                        child: ScoreCounter(
-                            scoreNotifier: widget.battle.blueCountNotifier,
-                            traits: const BlueTraits()
-                        ),
+    late final Widget screen;
+    if (mediaQuery.orientation == Orientation.portrait) {
+      screen = Container(
+        color: palette.backgroundPlaySession,
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+          children: [
+            const Spacer(flex: 1),
+            Expanded(
+                flex: 8,
+                child: boardWidget
+            ),
+            Expanded(
+                flex: 1,
+                child: AnimatedBuilder(
+                    animation: _scoreCountersAnimator,
+                    builder: (_, __) {
+                      return Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                          children: [
+                            Transform.scale(
+                              scale: scoreSize.value,
+                              child: Opacity(
+                                opacity: scoreFade.value,
+                                child: ScoreCounter(
+                                    scoreNotifier: widget.battle.blueCountNotifier,
+                                    traits: const BlueTraits()
+                                ),
+                              ),
+                            ),
+                            Transform.scale(
+                              scale: scoreSize.value,
+                              child: Opacity(
+                                opacity: scoreFade.value,
+                                child: ScoreCounter(
+                                    scoreNotifier: widget.battle.yellowCountNotifier,
+                                    traits: const YellowTraits()
+                                ),
+                              ),
+                            ),
+                          ]
+                      );
+                    }
+                )
+            ),
+            Expanded(
+              flex: 1,
+              child: Center(
+                child: RepaintBoundary(
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(mediaQuery.size.longestSide),
+                    child: CustomPaint(
+                      painter: NewScoreBarPainter(
+                        yellowLength: yellowScoreAnimation,
+                        blueLength: blueScoreAnimation,
+                        waveAnimation: _scoreWaveAnimator,
+                        orientation: mediaQuery.orientation,
+                        opacity: AlwaysStoppedAnimation(1.0),
                       ),
-                    ),
-                    Transform.scale(
-                      scale: scoreSize.value,
-                      child: Opacity(
-                        opacity: scoreFade.value,
-                        child: ScoreCounter(
-                            scoreNotifier: widget.battle.yellowCountNotifier,
-                            traits: const YellowTraits()
-                        ),
+                      child: FractionallySizedBox(
+                        widthFactor: 0.8,
+                        heightFactor: 0.5,
                       ),
+                      willChange: true,
                     ),
-                  ]
-                );
-              }
-            )
-          ),
-          Expanded(
-            flex: 1,
-            child: Center(
-              child: CustomPaint(
-                painter: ScoreBarPainter(
-                  yellowLength: yellowScoreAnimation,
-                  blueLength: blueScoreAnimation,
-                  waveAnimation: _scoreWaveAnimator,
-                  orientation: Orientation.landscape,
-                  opacity: AlwaysStoppedAnimation(1.0),
+                  ),
                 ),
-                child: FractionallySizedBox(
-                  widthFactor: 0.8,
-                  heightFactor: 0.5,
-                ),
-                willChange: true,
               ),
             ),
-          ),
-          const Spacer(flex: 1),
-          Container(
-            height: mediaQuery.padding.bottom,
-          )
-        ],
-      ),
-    );
+            const Spacer(flex: 1),
+          ],
+        ),
+      );
+    } else {
+      screen = Container(
+        color: palette.backgroundPlaySession,
+        padding: mediaQuery.padding,
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+          children: [
+            Expanded(
+              flex: 8,
+              child: Center(
+                child: Text("some other shit goes here")
+              )
+            ),
+            Expanded(
+              flex: 1,
+              child: AnimatedBuilder(
+                    animation: _scoreCountersAnimator,
+                    builder: (_, __) {
+                      return Column(
+                          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                          children: [
+                            Transform.scale(
+                              scale: scoreSize.value,
+                              child: Opacity(
+                                opacity: scoreFade.value,
+                                child: ScoreCounter(
+                                    scoreNotifier: widget.battle.blueCountNotifier,
+                                    traits: const BlueTraits()
+                                ),
+                              ),
+                            ),
+                            Transform.scale(
+                              scale: scoreSize.value,
+                              child: Opacity(
+                                opacity: scoreFade.value,
+                                child: ScoreCounter(
+                                    scoreNotifier: widget.battle.yellowCountNotifier,
+                                    traits: const YellowTraits()
+                                ),
+                              ),
+                            ),
+                          ]
+                      );
+                    }
+                )
+            ),
+            Expanded(
+              flex: 1,
+              child: Center(
+                child: RepaintBoundary(
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(mediaQuery.size.longestSide),
+                    child: CustomPaint(
+                      painter: NewScoreBarPainter(
+                        yellowLength: yellowScoreAnimation,
+                        blueLength: blueScoreAnimation,
+                        waveAnimation: _scoreWaveAnimator,
+                        orientation: mediaQuery.orientation,
+                        opacity: AlwaysStoppedAnimation(1.0),
+                      ),
+                      child: FractionallySizedBox(
+                        heightFactor: 0.8,
+                        widthFactor: 0.8,
+                      ),
+                      willChange: true,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+            Expanded(
+              flex: 10,
+              child: boardWidget
+            ),
+          ],
+        ),
+      );
+    }
 
     return DefaultTextStyle(
       style: TextStyle(
@@ -394,7 +636,10 @@ class _PlaySessionEndState extends State<PlaySessionEnd>
           )
         ]
       ),
-      child: screen
+      child: Padding(
+        padding: mediaQuery.padding,
+        child: screen,
+      )
     );
   }
 }

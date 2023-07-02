@@ -107,8 +107,8 @@ class CardWidget extends StatefulWidget {
 }
 
 class _CardWidgetState extends State<CardWidget>
-    with TickerProviderStateMixin {
-  late AnimationController _transitionController, _testController;
+    with SingleTickerProviderStateMixin {
+  late AnimationController _transitionController;
   late Animation<double> transitionOutShrink, transitionOutFade, transitionInMove, transitionInFade;
   late TableturfCard? _prevCard;
   Widget _prevWidget = Container();
@@ -119,11 +119,6 @@ class _CardWidgetState extends State<CardWidget>
         duration: const Duration(milliseconds: 125),
         vsync: this
     );
-    _testController = AnimationController(
-        duration: const Duration(milliseconds: 125),
-        vsync: this
-    );
-    //_testController.repeat();
     _transitionController.addStatusListener((status) {setState(() {});});
     _transitionController.value = widget.cardNotifier.value == null ? 0.0 : 1.0;
     transitionOutShrink = Tween<double>(
@@ -216,16 +211,15 @@ class _CardWidgetState extends State<CardWidget>
                       heightFactor: 0.95,
                       widthFactor: 0.95,
                       child: FittedBox(
-                        fit: BoxFit.fitHeight,
                         child: Text(
-                            "${card.count}",
-                            style: TextStyle(
-                                fontFamily: "Splatfont1",
-                                color: Colors.white,
-                                //fontStyle: FontStyle.italic,
-                                fontSize: 12,
-                                letterSpacing: 3.5
-                            )
+                          "${card.count}",
+                          style: TextStyle(
+                            fontFamily: "Splatfont1",
+                            color: Colors.white,
+                            //fontStyle: FontStyle.italic,
+                            fontSize: 12,
+                            letterSpacing: 3.5
+                          )
                         ),
                       ),
                     )
@@ -349,7 +343,6 @@ class _CardWidgetState extends State<CardWidget>
     var reactiveCard = GestureDetector(
       child: AnimatedBuilder(
         animation: Listenable.merge([
-          _testController,
           widget.cardNotifier,
           widget.battle.playerControlLock,
           widget.battle.moveSpecialNotifier,
