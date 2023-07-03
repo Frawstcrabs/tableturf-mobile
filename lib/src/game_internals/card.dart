@@ -130,9 +130,56 @@ Coords rotatePatternPoint(Coords point, int height, int width, int rot) {
   }
 }
 
+enum TableturfCardType {
+  @JsonValue("official")
+  official,
+  @JsonValue("custom")
+  custom,
+  @JsonValue("randomiser")
+  randomiser,
+}
+
+@JsonSerializable()
+class TableturfCardIdentifier {
+  final int num;
+  final TableturfCardType type;
+  const TableturfCardIdentifier(this.num, this.type);
+
+  bool operator==(Object other) {
+    return other is TableturfCardIdentifier
+        && other.num == num
+        && other.type == type;
+  }
+
+  int get hashCode {
+    // jenkins hash functions
+    // stolen unashamedly from the library `quiver`
+    int _combine(int hash, int value) {
+      hash = 0x1fffffff & (hash + value);
+      hash = 0x1fffffff & (hash + ((0x0007ffff & hash) << 10));
+      return hash ^ (hash >> 6);
+    }
+
+    int _finish(int hash) {
+      hash = 0x1fffffff & (hash + ((0x03ffffff & hash) << 3));
+      hash = hash ^ (hash >> 11);
+      return 0x1fffffff & (hash + ((0x00003fff & hash) << 15));
+    }
+
+    return _finish(_combine(_combine(0, num.hashCode), type.hashCode));
+  }
+
+  String toString() {
+    return "TableturfCardIdentifier($num, $type)";
+  }
+
+  factory TableturfCardIdentifier.fromJson(Map<String, dynamic> json) => _$TableturfCardIdentifierFromJson(json);
+  Map<String, dynamic> toJson() => _$TableturfCardIdentifierToJson(this);
+}
+
 @JsonSerializable()
 class TableturfCardData {
-  final int num;
+  final TableturfCardIdentifier ident;
   final String name;
   final String? displayName;
   final String rarity;
@@ -144,14 +191,16 @@ class TableturfCardData {
   final String designSprite;
 
   TableturfCardData(
-      this.num,
+      int num,
       this.name,
       this.rarity,
       this.special,
       this.pattern,
       this.displayName,
+      TableturfCardType type,
       [String? design]
   ):
+      ident = TableturfCardIdentifier(num, type),
       designSprite = design ?? "assets/images/card_illustrations/${num}.png",
       count = countLayout(pattern),
       minPattern = getMinPattern(pattern),
@@ -166,10 +215,12 @@ class TableturfCardData {
   factory TableturfCardData.fromJson(Map<String, dynamic> json) => _$TableturfCardDataFromJson(json);
 
   bool operator==(Object other) {
-    return other is TableturfCardData && other.num == this.num;
+    return other is TableturfCardData && other.ident == ident;
   }
 
-  int get hashCode => num.hashCode;
+  int get hashCode => ident.hashCode;
+  int get num => ident.num;
+  TableturfCardType get type => ident.type;
 
   Map<String, dynamic> toJson() => _$TableturfCardDataToJson(this);
 }

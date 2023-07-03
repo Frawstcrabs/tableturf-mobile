@@ -9,8 +9,10 @@ import 'package:provider/provider.dart';
 import 'package:tableturf_mobile/src/game_internals/opponentAI.dart';
 import 'package:tableturf_mobile/src/game_internals/player.dart';
 import 'package:tableturf_mobile/src/level_selection/opponents.dart';
+import 'package:tableturf_mobile/src/settings/settings.dart';
 
 import '../game_internals/card.dart';
+import '../game_internals/deck.dart';
 import '../game_internals/tile.dart';
 import '../play_session/build_game_session_page.dart';
 import '../style/palette.dart';
@@ -37,6 +39,7 @@ Set<Coords> getSurroundingCoords(Coords point, [bool checkBounds = true]) {
   ])..remove(point);
 }
 
+int randomiserCardID = 0;
 List<TableturfCardData> createPureRandomDeck() {
   const cardSizes = [
     1, 2, 3, 4, 5, 6,
@@ -124,14 +127,16 @@ List<TableturfCardData> createPureRandomDeck() {
     final name = cardNameCharacters.randomSample(3 + rng.nextInt(7)).join();
     final specialCost = max(1, specialCosts[size] - (hasSpecial ? 0 : 2));
     ret.add(TableturfCardData(
-      -id,
+        randomiserCardID,
       name,
       "randomiser",
       specialCost,
       centeredPattern,
       name,
+      TableturfCardType.randomiser,
       "assets/images/card_illustrations/random${rng.nextInt(4)}.png"
     ));
+    randomiserCardID += 1;
   }
   return ret;
 }
@@ -142,6 +147,7 @@ class LevelSelectionScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final palette = context.watch<Palette>();
+    final settings = SettingsController();
     //final playerProgress = context.watch<PlayerProgress>();
 
     return Scaffold(
@@ -153,7 +159,7 @@ class LevelSelectionScreen extends StatelessWidget {
               padding: EdgeInsets.all(16),
               child: Center(
                 child: Text(
-                  'Select level',
+                  'Select Level',
                   style: TextStyle(fontFamily: 'Splatfont1', fontSize: 30),
                 ),
               ),
@@ -165,19 +171,17 @@ class LevelSelectionScreen extends StatelessWidget {
                   for (final opponent in opponents)
                     ListTile(
                       onTap: () {
-                        const playerDeck = [97, 98, 158, 12, 44, 136, 21, 51, 140, 27, 54, 102, 0, 55, 91];
+                        final yellowDeck = settings.decks[0].value;
                         Navigator.of(context).push(buildGameSessionPage(
                           context: context,
                           stage: opponent.map,
-                          yellowDeck: playerDeck.map((i) => cards[i]).toList(),
-                          yellowSleeve: "ultracool",
+                          yellowDeck: yellowDeck,
                           blueDeck: (
                             opponent.name == "Clone Jelly"
-                              ? playerDeck
+                              ? yellowDeck
                               : opponent.deck
-                          ).map((i) => cards[i]).toList(),
+                          ),
                           blueName: opponent.name,
-                          blueSleeve: opponent.sleeveDesign,
                           aiLevel: AILevel.level4,
                         ));
                       },
@@ -187,19 +191,34 @@ class LevelSelectionScreen extends StatelessWidget {
                       )
                     ),
                   ListTile(
-                    onTap: () {
-                      final yellowDeck = createPureRandomDeck();
-                      final blueDeck = createPureRandomDeck();
-                      Navigator.of(context).push(buildGameSessionPage(
+                    onTap: () async {
+                      final randomCards = createPureRandomDeck() + createPureRandomDeck();
+                      for (final card in randomCards) {
+                        settings.registerTempCard(card);
+                      }
+                      final yellowDeck = TableturfDeck(
+                          deckID: -1,
+                          name: "Randomiser",
+                          cardSleeve: "randomiser",
+                          cards: [for (final card in randomCards.sublist(0, 15)) card.ident]
+                      );
+                      final blueDeck = TableturfDeck(
+                          deckID: -1,
+                          name: "Randomiser",
+                          cardSleeve: "randomiser",
+                          cards: [for (final card in randomCards.sublist(15, 30)) card.ident]
+                      );
+                      await Navigator.of(context).push(buildGameSessionPage(
                         context: context,
                         stage: maps.keys.toList().random(),
                         yellowDeck: yellowDeck,
-                        yellowSleeve: "randomiser",
                         blueDeck: blueDeck,
                         blueName: "Randomiser",
-                        blueSleeve: "randomiser",
                         aiLevel: AILevel.level4,
                       ));
+                      for (final card in randomCards) {
+                        settings.removeTempCard(card.ident);
+                      }
                     },
                     title: Text(
                       "Randomiser",

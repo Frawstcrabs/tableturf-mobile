@@ -238,7 +238,7 @@ class _DeckEditorScreenState extends State<DeckEditorScreen>
   final ChangeNotifier _popupExit = ChangeNotifier();
   late final ValueNotifier<bool> _hasEmptyCards = ValueNotifier(true);
   late final ValueNotifier<int> _deckTileCount = ValueNotifier(0);
-  late final List<ValueNotifier<TableturfCardData?>> deckCards;
+  late final List<ValueNotifier<TableturfCardIdentifier?>> deckCards;
   late final TextEditingController _textEditingController;
   late final ValueNotifier<String> cardSleeve = ValueNotifier("");
 
@@ -273,12 +273,12 @@ class _DeckEditorScreenState extends State<DeckEditorScreen>
     if (widget.deck == null) {
       deckCards = Iterable.generate(
         15,
-        (_) => ValueNotifier<TableturfCardData?>(null)
+        (_) => ValueNotifier<TableturfCardIdentifier?>(null)
       ).toList();
       name = widget.name!;
       cardSleeve.value = "default";
     } else {
-      deckCards = widget.deck!.cards.map(ValueNotifier<TableturfCardData?>.new).toList();
+      deckCards = widget.deck!.cards.map(ValueNotifier<TableturfCardIdentifier?>.new).toList();
       name = widget.deck!.name;
       cardSleeve.value = widget.deck!.cardSleeve;
     }
@@ -296,7 +296,10 @@ class _DeckEditorScreenState extends State<DeckEditorScreen>
   }
 
   void _computeTileCount() {
-    _deckTileCount.value = deckCards.fold(0, (a, c) => a + (c.value?.count ?? 0));
+    final settings = SettingsController();
+    _deckTileCount.value = deckCards
+        .map((i) => i.value != null ? settings.identToCard(i.value!) : null)
+        .fold(0, (a, c) => a + (c?.count ?? 0));
   }
 
   @override
@@ -306,10 +309,10 @@ class _DeckEditorScreenState extends State<DeckEditorScreen>
     super.dispose();
   }
 
-  Future<void> _showCardPopup(BuildContext context, ValueNotifier<TableturfCardData?> cardNotifier) async {
+  Future<void> _showCardPopup(BuildContext context, ValueNotifier<TableturfCardIdentifier?> cardNotifier) async {
     final overlayState = Overlay.of(context);
     late final OverlayEntry overlayEntry;
-    late final void Function([TableturfCardData? retCard]) onPopupExit;
+    late final void Function([TableturfCardIdentifier? retCard]) onPopupExit;
     final ScrollController scrollController = ScrollController();
     onPopupExit = ([retCard]) async {
       if (retCard != null) {
@@ -321,7 +324,6 @@ class _DeckEditorScreenState extends State<DeckEditorScreen>
       _popupExit.removeListener(onPopupExit);
       scrollController.dispose();
     };
-    final unselectedCards = cards.where((card) => deckCards.every((c) => c.value != card)).toList();
     final oldCard = cardNotifier.value;
     overlayEntry = OverlayEntry(builder: (_) {
       const popupBorderWidth = 1.0;
@@ -365,7 +367,7 @@ class _DeckEditorScreenState extends State<DeckEditorScreen>
                             ),
                             child: Center(
                                 child: Text(
-                                  oldCard == null ? "Select card" : "Replace ${oldCard.name}",
+                                  oldCard == null ? "Select card" : "Replace card?",
                                 )
                             ),
                           ),
@@ -392,16 +394,29 @@ class _DeckEditorScreenState extends State<DeckEditorScreen>
                                     crossAxisCount: 3,
                                     childAspectRatio: CardWidget.CARD_RATIO
                                 ),
-                                itemCount: unselectedCards.length,
+                                itemCount: cards.length,
                                 padding: const EdgeInsets.all(cardListPadding),
                                 itemBuilder: (_, i) => GestureDetector(
-                                    onTap: () {
-                                      onPopupExit(unselectedCards[i]);
-                                    },
-                                    child: Padding(
-                                      padding: const EdgeInsets.all(0),
-                                      child: Center(child: DeckCardWidget(card: unselectedCards[i])),
-                                    )
+                                  onTap: () {
+                                    if (deckCards.any((c) => c.value == cards[i].ident)) {
+                                      return;
+                                    }
+                                    onPopupExit(cards[i].ident);
+                                  },
+                                  child: Padding(
+                                    padding: const EdgeInsets.all(0),
+                                    child: Center(
+                                      child: ColorFiltered(
+                                        colorFilter: ColorFilter.mode(
+                                          deckCards.any((c) => c.value == cards[i].ident)
+                                            ? const Color.fromRGBO(0, 0, 0, 0.4)
+                                            : Colors.transparent,
+                                          BlendMode.srcATop
+                                        ),
+                                        child: DeckCardWidget(card: cards[i])
+                                      )
+                                    ),
+                                  )
                                 ),
                               ),
                             ),
@@ -736,7 +751,10 @@ class _DeckEditorScreenState extends State<DeckEditorScreen>
                         const duration = Duration(milliseconds: 200);
                         return ValueListenableBuilder(
                           valueListenable: cardNotifier,
-                          builder: (_, TableturfCardData? card, child) {
+                          builder: (_, TableturfCardIdentifier? cardIdent, child) {
+                            final card = cardIdent != null
+                                ? settings.identToCard(cardIdent)
+                                : null;
                             final textStyle = DefaultTextStyle.of(context).style;
                             final cardWidget = SizedBox(
                               height: constraints.maxHeight,
@@ -749,7 +767,7 @@ class _DeckEditorScreenState extends State<DeckEditorScreen>
                               data: cardNotifier,
                               maxSimultaneousDrags: 1,
                               delay: const Duration(milliseconds: 250),
-                              child: DragTarget<ValueNotifier<TableturfCardData?>>(
+                              child: DragTarget<ValueNotifier<TableturfCardIdentifier?>>(
                                 builder: (_, accepted, rejected) {
                                   return AnimatedOpacity(
                                     opacity: accepted.length > 0 ? 0.8 : 1.0,

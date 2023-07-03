@@ -9,17 +9,23 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../game_internals/card.dart';
 import '../game_internals/deck.dart';
+import '../game_internals/tile.dart';
+import '../level_selection/levels.dart';
 import '../level_selection/opponents.dart';
 
 /// An class that holds settings like [playerName] or [musicOn],
 /// and saves them to an injected persistence store.
 class SettingsController {
-  final SharedPreferences _prefs;
+  late final SharedPreferences _prefs;
   static const commitChanges = false;
 
-  /// Creates a new instance of [SettingsController] backed by [persistence].
-  SettingsController({required SharedPreferences prefs})
-      : _prefs = prefs;
+  static final SettingsController _controller = SettingsController._internal();
+
+  factory SettingsController() {
+    return _controller;
+  }
+
+  SettingsController._internal() {}
 
   // Whether or not the sound is on at all. This overrides both music and sound.
   ValueNotifier<bool> _muted = ValueNotifier(false);
@@ -29,6 +35,7 @@ class SettingsController {
   ValueNotifier<String> _playerName = ValueNotifier('Player');
   late List<ValueNotifier<TableturfDeck>> _decks;
   late int _nextDeckID;
+  final Map<TableturfCardIdentifier, TableturfCardData> _tempCards = {};
 
   ValueListenable<bool> get muted => _muted;
   ValueListenable<bool> get soundsOn => _soundsOn;
@@ -38,7 +45,8 @@ class SettingsController {
   List<ValueNotifier<TableturfDeck>> get decks => List.unmodifiable(_decks);
 
   /// Asynchronously loads values from the injected persistence store.
-  Future<void> loadStateFromPersistence() async {
+  Future<void> loadStateFromPersistence(SharedPreferences prefs) async {
+    _prefs = prefs;
     _musicOn.value = _prefs.getBool('musicOn') ?? true;
     _soundsOn.value = _prefs.getBool('soundsOn') ?? true;
     _continuousAnimation.value = _prefs.getBool('continuousAnimation') ?? false;
@@ -61,15 +69,8 @@ class SettingsController {
     }).toList();
     */
     _nextDeckID = opponents.length - 1;
-    _decks = opponents.sublist(0, opponents.length - 1).asMap().entries.map((entry) {
-      final i = entry.key;
-      final opponent = entry.value;
-      return ValueNotifier(TableturfDeck(
-        deckID: i,
-        cards: opponent.deck.map((c) => cards[c]).toList(),
-        name: opponent.name,
-        cardSleeve: opponent.sleeveDesign,
-      ));
+    _decks = opponents.sublist(0, opponents.length - 1).map((opponent) {
+      return ValueNotifier(opponent.deck);
     }).toList();
   }
 
@@ -138,7 +139,7 @@ class SettingsController {
 
   void updateDeck({
     required int deckID,
-    List<TableturfCardData>? cards,
+    List<TableturfCardIdentifier>? cards,
     String? name,
     String? cardSleeve,
   }) {
@@ -155,7 +156,7 @@ class SettingsController {
   }
 
   TableturfDeck createDeck({
-    required List<TableturfCardData> cards,
+    required List<TableturfCardIdentifier> cards,
     required String name,
     required String cardSleeve,
   }) {
@@ -173,5 +174,31 @@ class SettingsController {
       await _writeDeckIndexes();
     }();
     return deck;
+  }
+
+  void registerTempCard(TableturfCardData card) {
+    _tempCards[card.ident] = card;
+  }
+
+  void removeTempCard(TableturfCardIdentifier ident) {
+    _tempCards.remove(ident);
+  }
+
+  TableturfCardData identToCard(TableturfCardIdentifier ident) {
+    switch (ident.type) {
+      case TableturfCardType.official:
+        return cards[ident.num - 1];
+      case TableturfCardType.custom:
+        throw Exception("custom ident passed");
+      case TableturfCardType.randomiser:
+        return _tempCards[ident]!;
+    }
+  }
+
+  TileGrid getMap(String stage) {
+    if (maps.containsKey(stage)) {
+      return maps[stage]!.copy();
+    }
+    throw Exception("unknown map name");
   }
 }

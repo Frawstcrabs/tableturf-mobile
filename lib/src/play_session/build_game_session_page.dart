@@ -7,32 +7,31 @@ import 'package:tableturf_mobile/src/level_selection/levels.dart';
 import 'package:tableturf_mobile/src/style/my_transition.dart';
 import 'package:tableturf_mobile/src/style/palette.dart';
 
+import '../game_internals/deck.dart';
 import '../game_internals/opponentAI.dart';
+import '../settings/settings.dart';
 import 'session_intro.dart';
 
 PageRouteBuilder<T> buildGameSessionPage<T>({
   required BuildContext context,
   required String stage,
-  required List<TableturfCardData> yellowDeck,
-  required List<TableturfCardData> blueDeck,
+  required TableturfDeck yellowDeck,
+  required TableturfDeck blueDeck,
   String yellowName = "You",
   required String blueName,
-  String yellowSleeve = "default",
-  required String blueSleeve,
   required AILevel aiLevel,
   Palette palette = const Palette(),
 }) {
+  final settings = SettingsController();
 
-  final TileGrid board = maps[stage]!.map<List<TileState>>((row) {
-    return (row as List<dynamic>).map(TileState.fromJson).toList(growable: false);
-  }).toList(growable: false);
+  final board = settings.getMap(stage);
 
-  final yellowDeckCards = yellowDeck
-      .map(TableturfCard.new)
+  final yellowDeckCards = yellowDeck.cards
+      .map((ident) => TableturfCard(settings.identToCard(ident)))
       .toList();
 
-  final blueDeckCards = blueDeck
-      .map(TableturfCard.new)
+  final blueDeckCards = blueDeck.cards
+      .map((ident) => TableturfCard(settings.identToCard(ident)))
       .toList();
   final blueHand = blueDeckCards.randomSample(4);
   for (final card in blueHand) {
@@ -44,7 +43,7 @@ PageRouteBuilder<T> buildGameSessionPage<T>({
     deck: yellowDeckCards,
     hand: Iterable.generate(4, (c) => ValueNotifier<TableturfCard?>(null)).toList(),
     traits: const YellowTraits(),
-    cardSleeve: "assets/images/card_sleeves/sleeve_${yellowSleeve}.png",
+    cardSleeve: "assets/images/card_sleeves/sleeve_${yellowDeck.cardSleeve}.png",
     special: 0,
   );
   final bluePlayer = TableturfPlayer(
@@ -52,7 +51,7 @@ PageRouteBuilder<T> buildGameSessionPage<T>({
     deck: blueDeckCards,
     hand: blueHand.map((c) => ValueNotifier(c)).toList(),
     traits: const BlueTraits(),
-    cardSleeve: "assets/images/card_sleeves/sleeve_${blueSleeve}.png",
+    cardSleeve: "assets/images/card_sleeves/sleeve_${blueDeck.cardSleeve}.png",
     special: 0,
   );
 

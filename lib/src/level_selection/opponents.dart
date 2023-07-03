@@ -1,12 +1,14 @@
+import 'package:tableturf_mobile/src/game_internals/card.dart';
+
+import '../game_internals/deck.dart';
+
 class TableturfOpponent {
   final String name;
-  final String sleeveDesign;
   final String map;
-  final List<int> deck;
+  final TableturfDeck deck;
 
   const TableturfOpponent({
     required this.name,
-    required this.sleeveDesign,
     required this.map,
     required this.deck,
   });
@@ -14,117 +16,193 @@ class TableturfOpponent {
 
 const List<TableturfOpponent> opponents = [
   TableturfOpponent(
-    name: "Baby Jelly",
-    sleeveDesign: "default",
-    map: "main_street",
-    deck: [5, 12, 21, 27, 33, 39, 44, 51, 54, 55, 91, 102, 136, 140, 158],
+      name: "Baby Jelly",
+      map: "main_street",
+      deck: TableturfDeck(
+        deckID: -1,
+        name: "Baby Jelly",
+        cardSleeve: "default",
+        cards: [TableturfCardIdentifier(5, TableturfCardType.official), TableturfCardIdentifier(12, TableturfCardType.official), TableturfCardIdentifier(21, TableturfCardType.official), TableturfCardIdentifier(27, TableturfCardType.official), TableturfCardIdentifier(33, TableturfCardType.official), TableturfCardIdentifier(39, TableturfCardType.official), TableturfCardIdentifier(44, TableturfCardType.official), TableturfCardIdentifier(51, TableturfCardType.official), TableturfCardIdentifier(54, TableturfCardType.official), TableturfCardIdentifier(55, TableturfCardType.official), TableturfCardIdentifier(91, TableturfCardType.official), TableturfCardIdentifier(102, TableturfCardType.official), TableturfCardIdentifier(136, TableturfCardType.official), TableturfCardIdentifier(140, TableturfCardType.official), TableturfCardIdentifier(158, TableturfCardType.official)],
+      )
   ),
   TableturfOpponent(
-    name: "Cool Jelly",
-    sleeveDesign: "default",
-    map: "main_street",
-    deck: [2, 4, 7, 26, 36, 48, 56, 106, 113, 116, 119, 122, 129, 141, 155],
+      name: "Cool Jelly",
+      map: "main_street",
+      deck: TableturfDeck(
+        deckID: -1,
+        name: "Cool Jelly",
+        cardSleeve: "default",
+        cards: [TableturfCardIdentifier(2, TableturfCardType.official), TableturfCardIdentifier(4, TableturfCardType.official), TableturfCardIdentifier(7, TableturfCardType.official), TableturfCardIdentifier(26, TableturfCardType.official), TableturfCardIdentifier(36, TableturfCardType.official), TableturfCardIdentifier(48, TableturfCardType.official), TableturfCardIdentifier(56, TableturfCardType.official), TableturfCardIdentifier(106, TableturfCardType.official), TableturfCardIdentifier(113, TableturfCardType.official), TableturfCardIdentifier(116, TableturfCardType.official), TableturfCardIdentifier(119, TableturfCardType.official), TableturfCardIdentifier(122, TableturfCardType.official), TableturfCardIdentifier(129, TableturfCardType.official), TableturfCardIdentifier(141, TableturfCardType.official), TableturfCardIdentifier(155, TableturfCardType.official)],
+      )
   ),
   TableturfOpponent(
-    name: "Aggro Jelly",
-    sleeveDesign: "default",
-    map: "thunder_point",
-    deck: [8, 9, 14, 16, 23, 25, 35, 40, 42, 46, 53, 110, 125, 131, 150],
+      name: "Aggro Jelly",
+      map: "thunder_point",
+      deck: TableturfDeck(
+        deckID: -1,
+        name: "Aggro Jelly",
+        cardSleeve: "default",
+        cards: [TableturfCardIdentifier(8, TableturfCardType.official), TableturfCardIdentifier(9, TableturfCardType.official), TableturfCardIdentifier(14, TableturfCardType.official), TableturfCardIdentifier(16, TableturfCardType.official), TableturfCardIdentifier(23, TableturfCardType.official), TableturfCardIdentifier(25, TableturfCardType.official), TableturfCardIdentifier(35, TableturfCardType.official), TableturfCardIdentifier(40, TableturfCardType.official), TableturfCardIdentifier(42, TableturfCardType.official), TableturfCardIdentifier(46, TableturfCardType.official), TableturfCardIdentifier(53, TableturfCardType.official), TableturfCardIdentifier(110, TableturfCardType.official), TableturfCardIdentifier(125, TableturfCardType.official), TableturfCardIdentifier(131, TableturfCardType.official), TableturfCardIdentifier(150, TableturfCardType.official)],
+      )
   ),
   TableturfOpponent(
-    name: "Sheldon",
-    sleeveDesign: "sheldon",
-    map: "x_marks_the_garden",
-    deck: [9, 13, 23, 24, 30, 36, 41, 47, 49, 52, 53, 58, 60, 83, 84],
+      name: "Sheldon",
+      map: "x_marks_the_garden",
+      deck: TableturfDeck(
+        deckID: -1,
+        name: "Sheldon",
+        cardSleeve: "sheldon",
+        cards: [TableturfCardIdentifier(9, TableturfCardType.official), TableturfCardIdentifier(13, TableturfCardType.official), TableturfCardIdentifier(23, TableturfCardType.official), TableturfCardIdentifier(24, TableturfCardType.official), TableturfCardIdentifier(30, TableturfCardType.official), TableturfCardIdentifier(36, TableturfCardType.official), TableturfCardIdentifier(41, TableturfCardType.official), TableturfCardIdentifier(47, TableturfCardType.official), TableturfCardIdentifier(49, TableturfCardType.official), TableturfCardIdentifier(52, TableturfCardType.official), TableturfCardIdentifier(53, TableturfCardType.official), TableturfCardIdentifier(58, TableturfCardType.official), TableturfCardIdentifier(60, TableturfCardType.official), TableturfCardIdentifier(83, TableturfCardType.official), TableturfCardIdentifier(84, TableturfCardType.official)],
+      )
   ),
   TableturfOpponent(
-    name: "Gnarly Eddy",
-    sleeveDesign: "gnarlyeddy",
-    map: "thunder_point",
-    deck: [11, 19, 43, 52, 68, 74, 85, 104, 108, 109, 112, 117, 124, 142, 160],
+      name: "Gnarly Eddy",
+      map: "thunder_point",
+      deck: TableturfDeck(
+        deckID: -1,
+        name: "Gnarly Eddy",
+        cardSleeve: "gnarlyeddy",
+        cards: [TableturfCardIdentifier(11, TableturfCardType.official), TableturfCardIdentifier(19, TableturfCardType.official), TableturfCardIdentifier(43, TableturfCardType.official), TableturfCardIdentifier(52, TableturfCardType.official), TableturfCardIdentifier(68, TableturfCardType.official), TableturfCardIdentifier(74, TableturfCardType.official), TableturfCardIdentifier(85, TableturfCardType.official), TableturfCardIdentifier(104, TableturfCardType.official), TableturfCardIdentifier(108, TableturfCardType.official), TableturfCardIdentifier(109, TableturfCardType.official), TableturfCardIdentifier(112, TableturfCardType.official), TableturfCardIdentifier(117, TableturfCardType.official), TableturfCardIdentifier(124, TableturfCardType.official), TableturfCardIdentifier(142, TableturfCardType.official), TableturfCardIdentifier(160, TableturfCardType.official)],
+      )
   ),
   TableturfOpponent(
-    name: "Jel La Fleur",
-    sleeveDesign: "jellafleur",
-    map: "square_squared",
-    deck: [63, 72, 86, 104, 105, 107, 110, 111, 112, 113, 114, 116, 117, 118, 127],
+      name: "Jel La Fleur",
+      map: "square_squared",
+      deck: TableturfDeck(
+        deckID: -1,
+        name: "Jel La Fleur",
+        cardSleeve: "jellafleur",
+        cards: [TableturfCardIdentifier(63, TableturfCardType.official), TableturfCardIdentifier(72, TableturfCardType.official), TableturfCardIdentifier(86, TableturfCardType.official), TableturfCardIdentifier(104, TableturfCardType.official), TableturfCardIdentifier(105, TableturfCardType.official), TableturfCardIdentifier(107, TableturfCardType.official), TableturfCardIdentifier(110, TableturfCardType.official), TableturfCardIdentifier(111, TableturfCardType.official), TableturfCardIdentifier(112, TableturfCardType.official), TableturfCardIdentifier(113, TableturfCardType.official), TableturfCardIdentifier(114, TableturfCardType.official), TableturfCardIdentifier(116, TableturfCardType.official), TableturfCardIdentifier(117, TableturfCardType.official), TableturfCardIdentifier(118, TableturfCardType.official), TableturfCardIdentifier(127, TableturfCardType.official)],
+      )
   ),
   TableturfOpponent(
-    name: "Mr. Coco",
-    sleeveDesign: "mrcoco",
-    map: "square_squared",
-    deck: [9, 22, 30, 37, 39, 40, 61, 80, 87, 104, 112, 113, 130, 134, 153],
+      name: "Mr. Coco",
+      map: "square_squared",
+      deck: TableturfDeck(
+        deckID: -1,
+        name: "Mr. Coco",
+        cardSleeve: "mrcoco",
+        cards: [TableturfCardIdentifier(9, TableturfCardType.official), TableturfCardIdentifier(22, TableturfCardType.official), TableturfCardIdentifier(30, TableturfCardType.official), TableturfCardIdentifier(37, TableturfCardType.official), TableturfCardIdentifier(39, TableturfCardType.official), TableturfCardIdentifier(40, TableturfCardType.official), TableturfCardIdentifier(61, TableturfCardType.official), TableturfCardIdentifier(80, TableturfCardType.official), TableturfCardIdentifier(87, TableturfCardType.official), TableturfCardIdentifier(104, TableturfCardType.official), TableturfCardIdentifier(112, TableturfCardType.official), TableturfCardIdentifier(113, TableturfCardType.official), TableturfCardIdentifier(130, TableturfCardType.official), TableturfCardIdentifier(134, TableturfCardType.official), TableturfCardIdentifier(153, TableturfCardType.official)],
+      )
   ),
   TableturfOpponent(
-    name: "Harmony",
-    sleeveDesign: "harmony",
-    map: "lakefront_property",
-    deck: [19, 29, 39, 66, 67, 79, 88, 113, 115, 118, 128, 137, 145, 146, 154],
+      name: "Harmony",
+      map: "lakefront_property",
+      deck: TableturfDeck(
+        deckID: -1,
+        name: "Harmony",
+        cardSleeve: "harmony",
+        cards: [TableturfCardIdentifier(19, TableturfCardType.official), TableturfCardIdentifier(29, TableturfCardType.official), TableturfCardIdentifier(39, TableturfCardType.official), TableturfCardIdentifier(66, TableturfCardType.official), TableturfCardIdentifier(67, TableturfCardType.official), TableturfCardIdentifier(79, TableturfCardType.official), TableturfCardIdentifier(88, TableturfCardType.official), TableturfCardIdentifier(113, TableturfCardType.official), TableturfCardIdentifier(115, TableturfCardType.official), TableturfCardIdentifier(118, TableturfCardType.official), TableturfCardIdentifier(128, TableturfCardType.official), TableturfCardIdentifier(137, TableturfCardType.official), TableturfCardIdentifier(145, TableturfCardType.official), TableturfCardIdentifier(146, TableturfCardType.official), TableturfCardIdentifier(154, TableturfCardType.official)],
+      )
   ),
   TableturfOpponent(
-    name: "Judd",
-    sleeveDesign: "judd",
-    map: "x_marks_the_garden",
-    deck: [5, 15, 22, 24, 28, 34, 42, 58, 62, 69, 100, 101, 159, 160, 161],
+      name: "Judd",
+      map: "x_marks_the_garden",
+      deck: TableturfDeck(
+        deckID: -1,
+        name: "Judd",
+        cardSleeve: "judd",
+        cards: [TableturfCardIdentifier(5, TableturfCardType.official), TableturfCardIdentifier(15, TableturfCardType.official), TableturfCardIdentifier(22, TableturfCardType.official), TableturfCardIdentifier(24, TableturfCardType.official), TableturfCardIdentifier(28, TableturfCardType.official), TableturfCardIdentifier(34, TableturfCardType.official), TableturfCardIdentifier(42, TableturfCardType.official), TableturfCardIdentifier(58, TableturfCardType.official), TableturfCardIdentifier(62, TableturfCardType.official), TableturfCardIdentifier(69, TableturfCardType.official), TableturfCardIdentifier(100, TableturfCardType.official), TableturfCardIdentifier(101, TableturfCardType.official), TableturfCardIdentifier(159, TableturfCardType.official), TableturfCardIdentifier(160, TableturfCardType.official), TableturfCardIdentifier(161, TableturfCardType.official)],
+      )
   ),
   TableturfOpponent(
-    name: "Li'l Judd",
-    sleeveDesign: "liljudd",
-    map: "double_gemini",
-    deck: [78, 90, 101, 92, 140, 141, 143, 144, 145, 146, 147, 148, 149, 156, 154],
+      name: "Li'l Judd",
+      map: "double_gemini",
+      deck: TableturfDeck(
+        deckID: -1,
+        name: "Li'l Judd",
+        cardSleeve: "liljudd",
+        cards: [TableturfCardIdentifier(78, TableturfCardType.official), TableturfCardIdentifier(90, TableturfCardType.official), TableturfCardIdentifier(101, TableturfCardType.official), TableturfCardIdentifier(92, TableturfCardType.official), TableturfCardIdentifier(140, TableturfCardType.official), TableturfCardIdentifier(141, TableturfCardType.official), TableturfCardIdentifier(143, TableturfCardType.official), TableturfCardIdentifier(144, TableturfCardType.official), TableturfCardIdentifier(145, TableturfCardType.official), TableturfCardIdentifier(146, TableturfCardType.official), TableturfCardIdentifier(147, TableturfCardType.official), TableturfCardIdentifier(148, TableturfCardType.official), TableturfCardIdentifier(149, TableturfCardType.official), TableturfCardIdentifier(156, TableturfCardType.official), TableturfCardIdentifier(154, TableturfCardType.official)],
+      )
   ),
   TableturfOpponent(
-    name: "Murch",
-    sleeveDesign: "murch",
-    map: "lakefront_property",
-    deck: [25, 32, 49, 50, 58, 64, 65, 67, 75, 89, 102, 103, 107, 118, 135],
+      name: "Murch",
+      map: "lakefront_property",
+      deck: TableturfDeck(
+        deckID: -1,
+        name: "Murch",
+        cardSleeve: "murch",
+        cards: [TableturfCardIdentifier(25, TableturfCardType.official), TableturfCardIdentifier(32, TableturfCardType.official), TableturfCardIdentifier(49, TableturfCardType.official), TableturfCardIdentifier(50, TableturfCardType.official), TableturfCardIdentifier(58, TableturfCardType.official), TableturfCardIdentifier(64, TableturfCardType.official), TableturfCardIdentifier(65, TableturfCardType.official), TableturfCardIdentifier(67, TableturfCardType.official), TableturfCardIdentifier(75, TableturfCardType.official), TableturfCardIdentifier(89, TableturfCardType.official), TableturfCardIdentifier(102, TableturfCardType.official), TableturfCardIdentifier(103, TableturfCardType.official), TableturfCardIdentifier(107, TableturfCardType.official), TableturfCardIdentifier(118, TableturfCardType.official), TableturfCardIdentifier(135, TableturfCardType.official)],
+      )
   ),
   TableturfOpponent(
-    name: "Shiver",
-    sleeveDesign: "shiver",
-    map: "river_drift",
-    deck: [51, 52, 58, 67, 68, 81, 97, 98, 99, 126, 131, 132, 146, 147, 151],
+      name: "Shiver",
+      map: "river_drift",
+      deck: TableturfDeck(
+        deckID: -1,
+        name: "Shiver",
+        cardSleeve: "shiver",
+        cards: [TableturfCardIdentifier(51, TableturfCardType.official), TableturfCardIdentifier(52, TableturfCardType.official), TableturfCardIdentifier(58, TableturfCardType.official), TableturfCardIdentifier(67, TableturfCardType.official), TableturfCardIdentifier(68, TableturfCardType.official), TableturfCardIdentifier(81, TableturfCardType.official), TableturfCardIdentifier(97, TableturfCardType.official), TableturfCardIdentifier(98, TableturfCardType.official), TableturfCardIdentifier(99, TableturfCardType.official), TableturfCardIdentifier(126, TableturfCardType.official), TableturfCardIdentifier(131, TableturfCardType.official), TableturfCardIdentifier(132, TableturfCardType.official), TableturfCardIdentifier(146, TableturfCardType.official), TableturfCardIdentifier(147, TableturfCardType.official), TableturfCardIdentifier(151, TableturfCardType.official)],
+      )
   ),
   TableturfOpponent(
-    name: "Frye",
-    sleeveDesign: "frye",
-    map: "main_street",
-    deck: [53, 54, 56, 60, 71, 97, 98, 99, 121, 123, 134, 136, 144, 150, 158],
+      name: "Frye",
+      map: "main_street",
+      deck: TableturfDeck(
+        deckID: -1,
+        name: "Frye",
+        cardSleeve: "frye",
+        cards: [TableturfCardIdentifier(53, TableturfCardType.official), TableturfCardIdentifier(54, TableturfCardType.official), TableturfCardIdentifier(56, TableturfCardType.official), TableturfCardIdentifier(60, TableturfCardType.official), TableturfCardIdentifier(71, TableturfCardType.official), TableturfCardIdentifier(97, TableturfCardType.official), TableturfCardIdentifier(98, TableturfCardType.official), TableturfCardIdentifier(99, TableturfCardType.official), TableturfCardIdentifier(121, TableturfCardType.official), TableturfCardIdentifier(123, TableturfCardType.official), TableturfCardIdentifier(134, TableturfCardType.official), TableturfCardIdentifier(136, TableturfCardType.official), TableturfCardIdentifier(144, TableturfCardType.official), TableturfCardIdentifier(150, TableturfCardType.official), TableturfCardIdentifier(158, TableturfCardType.official)],
+      )
   ),
   TableturfOpponent(
-    name: "Big Man",
-    sleeveDesign: "bigman",
-    map: "thunder_point",
-    deck: [51, 55, 57, 63, 65, 66, 68, 82, 97, 98, 99, 124, 126, 127, 154],
+      name: "Big Man",
+      map: "thunder_point",
+      deck: TableturfDeck(
+        deckID: -1,
+        name: "Big Man",
+        cardSleeve: "bigman",
+        cards: [TableturfCardIdentifier(51, TableturfCardType.official), TableturfCardIdentifier(55, TableturfCardType.official), TableturfCardIdentifier(57, TableturfCardType.official), TableturfCardIdentifier(63, TableturfCardType.official), TableturfCardIdentifier(65, TableturfCardType.official), TableturfCardIdentifier(66, TableturfCardType.official), TableturfCardIdentifier(68, TableturfCardType.official), TableturfCardIdentifier(82, TableturfCardType.official), TableturfCardIdentifier(97, TableturfCardType.official), TableturfCardIdentifier(98, TableturfCardType.official), TableturfCardIdentifier(99, TableturfCardType.official), TableturfCardIdentifier(124, TableturfCardType.official), TableturfCardIdentifier(126, TableturfCardType.official), TableturfCardIdentifier(127, TableturfCardType.official), TableturfCardIdentifier(154, TableturfCardType.official)],
+      )
   ),
   TableturfOpponent(
-    name: "Staff",
-    sleeveDesign: "staff",
-    map: "box_seats",
-    deck: [2, 17, 38, 55, 56, 57, 60, 61, 62, 63, 66, 68, 73, 91, 120],
+      name: "Staff",
+      map: "box_seats",
+      deck: TableturfDeck(
+        deckID: -1,
+        name: "Staff",
+        cardSleeve: "staff",
+        cards: [TableturfCardIdentifier(2, TableturfCardType.official), TableturfCardIdentifier(17, TableturfCardType.official), TableturfCardIdentifier(38, TableturfCardType.official), TableturfCardIdentifier(55, TableturfCardType.official), TableturfCardIdentifier(56, TableturfCardType.official), TableturfCardIdentifier(57, TableturfCardType.official), TableturfCardIdentifier(60, TableturfCardType.official), TableturfCardIdentifier(61, TableturfCardType.official), TableturfCardIdentifier(62, TableturfCardType.official), TableturfCardIdentifier(63, TableturfCardType.official), TableturfCardIdentifier(66, TableturfCardType.official), TableturfCardIdentifier(68, TableturfCardType.official), TableturfCardIdentifier(73, TableturfCardType.official), TableturfCardIdentifier(91, TableturfCardType.official), TableturfCardIdentifier(120, TableturfCardType.official)],
+      )
   ),
   TableturfOpponent(
-    name: "Cuttlefish",
-    sleeveDesign: "cuttlefish",
-    map: "x_marks_the_garden",
-    deck: [0, 31, 76, 92, 93, 94, 119, 120, 121, 123, 126, 133, 138, 139, 158],
+      name: "Cuttlefish",
+      map: "x_marks_the_garden",
+      deck: TableturfDeck(
+        deckID: -1,
+        name: "Cuttlefish",
+        cardSleeve: "cuttlefish",
+        cards: [TableturfCardIdentifier(0, TableturfCardType.official), TableturfCardIdentifier(31, TableturfCardType.official), TableturfCardIdentifier(76, TableturfCardType.official), TableturfCardIdentifier(92, TableturfCardType.official), TableturfCardIdentifier(93, TableturfCardType.official), TableturfCardIdentifier(94, TableturfCardType.official), TableturfCardIdentifier(119, TableturfCardType.official), TableturfCardIdentifier(120, TableturfCardType.official), TableturfCardIdentifier(121, TableturfCardType.official), TableturfCardIdentifier(123, TableturfCardType.official), TableturfCardIdentifier(126, TableturfCardType.official), TableturfCardIdentifier(133, TableturfCardType.official), TableturfCardIdentifier(138, TableturfCardType.official), TableturfCardIdentifier(139, TableturfCardType.official), TableturfCardIdentifier(158, TableturfCardType.official)],
+      )
   ),
   TableturfOpponent(
-    name: "Agent 1",
-    sleeveDesign: "callie",
-    map: "square_squared",
-    deck: [20, 21, 22, 23, 56, 61, 70, 95, 96, 123, 127, 128, 132, 134, 139],
+      name: "Agent 1",
+      map: "square_squared",
+      deck: TableturfDeck(
+        deckID: -1,
+        name: "Agent 1",
+        cardSleeve: "callie",
+        cards: [TableturfCardIdentifier(20, TableturfCardType.official), TableturfCardIdentifier(21, TableturfCardType.official), TableturfCardIdentifier(22, TableturfCardType.official), TableturfCardIdentifier(23, TableturfCardType.official), TableturfCardIdentifier(56, TableturfCardType.official), TableturfCardIdentifier(61, TableturfCardType.official), TableturfCardIdentifier(70, TableturfCardType.official), TableturfCardIdentifier(95, TableturfCardType.official), TableturfCardIdentifier(96, TableturfCardType.official), TableturfCardIdentifier(123, TableturfCardType.official), TableturfCardIdentifier(127, TableturfCardType.official), TableturfCardIdentifier(128, TableturfCardType.official), TableturfCardIdentifier(132, TableturfCardType.official), TableturfCardIdentifier(134, TableturfCardType.official), TableturfCardIdentifier(139, TableturfCardType.official)],
+      )
   ),
   TableturfOpponent(
-    name: "Agent 2",
-    sleeveDesign: "marie",
-    map: "river_drift",
-    deck: [26, 27, 28, 29, 30, 31, 32, 50, 55, 59, 65, 77, 84, 95, 96],
+      name: "Agent 2",
+      map: "river_drift",
+      deck: TableturfDeck(
+        deckID: -1,
+        name: "Agent 2",
+        cardSleeve: "marie",
+        cards: [TableturfCardIdentifier(26, TableturfCardType.official), TableturfCardIdentifier(27, TableturfCardType.official), TableturfCardIdentifier(28, TableturfCardType.official), TableturfCardIdentifier(29, TableturfCardType.official), TableturfCardIdentifier(30, TableturfCardType.official), TableturfCardIdentifier(31, TableturfCardType.official), TableturfCardIdentifier(32, TableturfCardType.official), TableturfCardIdentifier(50, TableturfCardType.official), TableturfCardIdentifier(55, TableturfCardType.official), TableturfCardIdentifier(59, TableturfCardType.official), TableturfCardIdentifier(65, TableturfCardType.official), TableturfCardIdentifier(77, TableturfCardType.official), TableturfCardIdentifier(84, TableturfCardType.official), TableturfCardIdentifier(95, TableturfCardType.official), TableturfCardIdentifier(96, TableturfCardType.official)],
+      )
   ),
   TableturfOpponent(
-    name: "Clone Jelly",
-    sleeveDesign: "default",
-    map: "main_street",
-    deck: [],
+      name: "Clone Jelly",
+      map: "main_street",
+      deck: TableturfDeck(
+        deckID: -1,
+        name: "Clone Jelly",
+        cardSleeve: "default",
+        cards: [],
+      )
   ),
 ];

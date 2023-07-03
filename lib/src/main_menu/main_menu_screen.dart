@@ -50,7 +50,18 @@ class MainMenuScreen extends StatelessWidget {
                   color: palette.backgroundLevelSelection,
                 ));
               },
-              child: const Text('Play'),
+              child: const Text('Continue'),
+            ),
+            _gap,
+            ElevatedButton(
+              onPressed: () {
+                //audioController.playSfx(SfxType.buttonTap);
+                Navigator.of(context).push(buildMyTransition<void>(
+                  child: const LevelSelectionScreen(),
+                  color: palette.backgroundLevelSelection,
+                ));
+              },
+              child: const Text('Free play'),
             ),
             _gap,
             ElevatedButton(

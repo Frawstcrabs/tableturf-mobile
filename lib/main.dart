@@ -102,9 +102,8 @@ class MyApp extends StatelessWidget {
           ),
           Provider<SettingsController>(
             lazy: false,
-            create: (context) => SettingsController(
-              prefs: sharedPreferences,
-            )..loadStateFromPersistence(),
+            create: (context) => SettingsController()
+              ..loadStateFromPersistence(sharedPreferences),
           ),
           ProxyProvider2<SettingsController, ValueNotifier<AppLifecycleState>,
               AudioController>(

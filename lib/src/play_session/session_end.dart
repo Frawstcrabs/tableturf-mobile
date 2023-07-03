@@ -20,120 +20,6 @@ enum ScoreBarSide {
   yellow,
 }
 
-class ScoreBarPainter extends CustomPainter {
-  final Animation<double> yellowLength, blueLength, waveAnimation, opacity;
-  final Orientation orientation;
-
-  static const WAVE_WIDTH = 0.3;
-  static const WAVE_HEIGHT = 0.4;
-
-  ScoreBarPainter({
-    required this.yellowLength,
-    required this.blueLength,
-    required this.waveAnimation,
-    required this.orientation,
-    required this.opacity,
-  }):
-    super(repaint: Listenable.merge([
-      yellowLength,
-      blueLength,
-      waveAnimation,
-      opacity,
-    ]))
-  ;
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final palette = const Palette();
-    if (opacity.value == 0.0) return;
-    canvas.clipRRect(
-        RRect.fromRectAndRadius(
-            Offset.zero & size,
-            Radius.circular(size.width)
-        )
-    );
-
-    canvas.drawColor(Colors.black38, BlendMode.srcOver);
-
-    final paint = Paint()
-      ..style = PaintingStyle.fill
-      ..strokeJoin = StrokeJoin.miter;
-    final waveWidth = (orientation == Orientation.landscape ? size.width : size.height) * WAVE_WIDTH;
-    final waveHeight = waveWidth * WAVE_HEIGHT;
-    final yellowPath = Path();
-    final bluePath = Path();
-
-    if (orientation == Orientation.portrait) {
-      var d = (waveWidth * -2) * (1 - waveAnimation.value);
-      yellowPath.moveTo(size.width, size.height);
-      yellowPath.lineTo(size.width, 0.0);
-      yellowPath.lineTo(size.width * (1.0 - yellowLength.value), d);
-      var outWave = true;
-
-      for (; d < size.height; d += waveWidth) {
-        yellowPath.relativeQuadraticBezierTo(
-          outWave ? waveHeight : -waveHeight, waveWidth/2,
-          0.0, waveWidth,
-        );
-        outWave = !outWave;
-      }
-      yellowPath.close();
-
-      d = (waveWidth * -2) * (1 - waveAnimation.value);
-      bluePath.moveTo(0.0, 0.0);
-      bluePath.lineTo(size.width * blueLength.value, d);
-      outWave = true;
-
-      for (; d < size.height; d += waveWidth) {
-        bluePath.relativeQuadraticBezierTo(
-          outWave ? waveHeight : -waveHeight, waveWidth/2,
-          0.0, waveWidth,
-        );
-        outWave = !outWave;
-      }
-      bluePath.lineTo(0.0, size.height);
-      bluePath.close();
-    } else {
-      var d = size.width + (waveWidth * 2) * (1 - waveAnimation.value);
-      yellowPath.moveTo(0.0, size.height);
-      yellowPath.lineTo(size.width, size.height);
-      yellowPath.lineTo(d, size.height * (1.0 - yellowLength.value));
-      var outWave = true;
-
-      for (; d > 0.0; d -= waveWidth) {
-        yellowPath.relativeQuadraticBezierTo(
-          -waveWidth/2, outWave ? waveHeight : -waveHeight,
-          -waveWidth, 0.0,
-        );
-        outWave = !outWave;
-      }
-      yellowPath.close();
-
-      d = size.width + (waveWidth * 2) * (1 - waveAnimation.value);
-      bluePath.moveTo(0.0, 0.0);
-      bluePath.lineTo(size.width, 0.0);
-      bluePath.lineTo(d, size.height * blueLength.value);
-      outWave = true;
-
-      for (; d > 0.0; d -= waveWidth) {
-        bluePath.relativeQuadraticBezierTo(
-          -waveWidth/2, outWave ? waveHeight : -waveHeight,
-          -waveWidth, 0.0,
-        );
-        outWave = !outWave;
-      }
-      bluePath.close();
-    }
-    canvas.drawPath(bluePath, paint..color = palette.tileBlue.withOpacity(opacity.value));
-    canvas.drawPath(yellowPath, paint..color = palette.tileYellow.withOpacity(opacity.value));
-  }
-
-  @override
-  bool shouldRepaint(ScoreBarPainter oldDelegate) {
-    return this.orientation != oldDelegate.orientation;
-  }
-}
-
 void paintScoreBar({
   required Canvas canvas,
   required Size size,
@@ -223,11 +109,11 @@ void paintScoreBar({
   canvas.drawPath(path, paint..color = color.withOpacity(opacity.value));
 }
 
-class NewScoreBarPainter extends CustomPainter {
+class ScoreBarPainter extends CustomPainter {
   final Animation<double> yellowLength, blueLength, waveAnimation, opacity;
   final Orientation orientation;
 
-  NewScoreBarPainter({
+  ScoreBarPainter({
     required this.yellowLength,
     required this.blueLength,
     required this.waveAnimation,
@@ -287,7 +173,7 @@ class NewScoreBarPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(NewScoreBarPainter oldDelegate) {
+  bool shouldRepaint(ScoreBarPainter oldDelegate) {
     return this.orientation != oldDelegate.orientation;
   }
 }
@@ -311,6 +197,7 @@ class _PlaySessionEndState extends State<PlaySessionEnd>
   late final AnimationController _scoreBarAnimator, _scoreSplashAnimator, _scoreCountersAnimator, _scoreWaveAnimator;
   late final Animation<double> yellowScoreAnimation, blueScoreAnimation;
   late final Animation<double> winScoreMoveAnimation, winScoreFadeAnimation;
+
   late final List<Animation<Offset>> winScoreDropletMoveAnimations;
   late final Animation<double> scoreFade, scoreSize;
 
@@ -436,6 +323,7 @@ class _PlaySessionEndState extends State<PlaySessionEnd>
     await Future<void>.delayed(const Duration(milliseconds: 1300));
     audioController.playSfx(SfxType.scoreBarFill);
     await _scoreBarAnimator.forward();
+    _scoreSplashAnimator.forward();
     audioController.playSfx(SfxType.scoreBarImpact);
     await Future<void>.delayed(const Duration(milliseconds: 300));
     await _scoreCountersAnimator.forward();
@@ -523,7 +411,7 @@ class _PlaySessionEndState extends State<PlaySessionEnd>
                   child: ClipRRect(
                     borderRadius: BorderRadius.circular(mediaQuery.size.longestSide),
                     child: CustomPaint(
-                      painter: NewScoreBarPainter(
+                      painter: ScoreBarPainter(
                         yellowLength: yellowScoreAnimation,
                         blueLength: blueScoreAnimation,
                         waveAnimation: _scoreWaveAnimator,
@@ -597,7 +485,7 @@ class _PlaySessionEndState extends State<PlaySessionEnd>
                   child: ClipRRect(
                     borderRadius: BorderRadius.circular(mediaQuery.size.longestSide),
                     child: CustomPaint(
-                      painter: NewScoreBarPainter(
+                      painter: ScoreBarPainter(
                         yellowLength: yellowScoreAnimation,
                         blueLength: blueScoreAnimation,
                         waveAnimation: _scoreWaveAnimator,

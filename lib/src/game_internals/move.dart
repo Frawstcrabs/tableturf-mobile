@@ -142,20 +142,6 @@ bool _specialMoveIsValid(TileGrid board, TableturfMove move) {
   return isTouchingYellow;
 }
 
-extension ApplySquare on TileGrid {
-  void applySquare(int y, int x, TileState newState, PlayerTraits traits) {
-    if (newState == TileState.yellow) {
-      this[y][x] = traits.normalTile;
-    } else if (newState == TileState.yellowSpecial) {
-      this[y][x] = traits.specialTile;
-    }
-  }
-
-  TileGrid copy() {
-    return map((row) => row.toList()).toList();
-  }
-}
-
 void applyMoveToBoard(TileGrid board, TableturfMove move) {
   for (final entry in move.boardChanges.entries) {
     board[entry.key.y][entry.key.x] = entry.value;

@@ -10,7 +10,8 @@ TableturfDeck _$TableturfDeckFromJson(Map<String, dynamic> json) =>
     TableturfDeck(
       deckID: json['deckID'] as int,
       cards: (json['cards'] as List<dynamic>)
-          .map((e) => TableturfCardData.fromJson(e as Map<String, dynamic>))
+          .map((e) =>
+              TableturfCardIdentifier.fromJson(e as Map<String, dynamic>))
           .toList(),
       name: json['name'] as String,
       cardSleeve: json['cardSleeve'] as String,

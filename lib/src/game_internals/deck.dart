@@ -7,7 +7,7 @@ part 'deck.g.dart';
 @JsonSerializable()
 class TableturfDeck {
   final int deckID;
-  final List<TableturfCardData> cards;
+  final List<TableturfCardIdentifier> cards;
   final String name;
   final String cardSleeve;
 

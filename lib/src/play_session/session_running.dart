@@ -1095,7 +1095,7 @@ class _PlaySessionScreenState extends State<PlaySessionScreen>
                   : palette.inGameButtonUnselected,
               borderRadius: BorderRadius.all(Radius.circular(10)),
               border: Border.all(
-                width: BoardTile.EDGE_WIDTH,
+                width: 0.5,
                 color: Colors.black,
               ),
             ),
@@ -1154,7 +1154,7 @@ class _PlaySessionScreenState extends State<PlaySessionScreen>
                   : Color.fromRGBO(109, 161, 198, 1),
               borderRadius: BorderRadius.all(Radius.circular(10)),
               border: Border.all(
-                width: BoardTile.EDGE_WIDTH,
+                width: 0.5,
                 color: Colors.black,
               ),
             ),

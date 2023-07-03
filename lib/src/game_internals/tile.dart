@@ -1,5 +1,6 @@
 import 'package:json_annotation/json_annotation.dart';
 import 'package:flutter/foundation.dart';
+import 'package:tableturf_mobile/src/game_internals/player.dart';
 
 import 'card.dart';
 
@@ -73,3 +74,17 @@ class TableturfTile {
 
 typedef TileGrid = List<List<TileState>>;
 //typedef BoardGrid = List<List<TableturfTile>>;
+
+extension ApplySquare on TileGrid {
+  void applySquare(int y, int x, TileState newState, PlayerTraits traits) {
+    if (newState == TileState.yellow) {
+      this[y][x] = traits.normalTile;
+    } else if (newState == TileState.yellowSpecial) {
+      this[y][x] = traits.specialTile;
+    }
+  }
+
+  TileGrid copy() {
+    return map((row) => row.toList()).toList();
+  }
+}

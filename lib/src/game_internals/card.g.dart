@@ -6,6 +6,26 @@ part of 'card.dart';
 // JsonSerializableGenerator
 // **************************************************************************
 
+TableturfCardIdentifier _$TableturfCardIdentifierFromJson(
+        Map<String, dynamic> json) =>
+    TableturfCardIdentifier(
+      json['num'] as int,
+      $enumDecode(_$TableturfCardTypeEnumMap, json['type']),
+    );
+
+Map<String, dynamic> _$TableturfCardIdentifierToJson(
+        TableturfCardIdentifier instance) =>
+    <String, dynamic>{
+      'num': instance.num,
+      'type': _$TableturfCardTypeEnumMap[instance.type]!,
+    };
+
+const _$TableturfCardTypeEnumMap = {
+  TableturfCardType.official: 'official',
+  TableturfCardType.custom: 'custom',
+  TableturfCardType.randomiser: 'randomiser',
+};
+
 TableturfCardData _$TableturfCardDataFromJson(Map<String, dynamic> json) =>
     TableturfCardData(
       json['num'] as int,
@@ -17,11 +37,11 @@ TableturfCardData _$TableturfCardDataFromJson(Map<String, dynamic> json) =>
               (e as List<dynamic>).map((e) => TileState.fromJson(e)).toList())
           .toList(),
       json['displayName'] as String?,
+      $enumDecode(_$TableturfCardTypeEnumMap, json['type']),
     );
 
 Map<String, dynamic> _$TableturfCardDataToJson(TableturfCardData instance) =>
     <String, dynamic>{
-      'num': instance.num,
       'name': instance.name,
       'displayName': instance.displayName,
       'rarity': instance.rarity,
@@ -29,6 +49,8 @@ Map<String, dynamic> _$TableturfCardDataToJson(TableturfCardData instance) =>
       'pattern': instance.pattern
           .map((e) => e.map((e) => _$TileStateEnumMap[e]!).toList())
           .toList(),
+      'num': instance.num,
+      'type': _$TableturfCardTypeEnumMap[instance.type]!,
     };
 
 const _$TileStateEnumMap = {
