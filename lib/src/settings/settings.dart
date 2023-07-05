@@ -52,26 +52,42 @@ class SettingsController {
     _continuousAnimation.value = _prefs.getBool('continuousAnimation') ?? false;
     _muted.value = _prefs.getBool('muted') ?? kIsWeb;
     _playerName.value = _prefs.getString('playerName') ?? "Player";
-    /*
-    _nextDeckID = _prefs.getInt("tableturf-deck_nextID")!;
-    final deckIDs = jsonDecode(_prefs.getString("tableturf-deck_list")!) as List<dynamic>;
+    _nextDeckID = _prefs.getInt("tableturf-deck_nextID") ?? 1;
+    final List<dynamic> deckIDs = jsonDecode(_prefs.getString("tableturf-deck_list") ?? "[0]");
     _decks = deckIDs.map((deckID) {
-      final deck = jsonDecode(_prefs.getString("tableturf-deck_deck-${deckID}")!);
+      final deckDefault = '''{
+        "name": "Deck 1",
+        "cardSleeve": "default",
+        "deckID": 0,
+        "cards": ${jsonEncode([
+          for (final cardID in [5, 12, 21, 27, 33, 39, 44, 51, 54, 55, 91, 102, 136, 140, 158])
+            cards[cardID].ident.toJson()
+        ])}
+      }''';
+      print(deckDefault);
+      final Map<String, dynamic> deck = jsonDecode(
+        _prefs.getString("tableturf-deck_deck-${deckID}") ?? deckDefault
+      );
       return ValueNotifier(TableturfDeck(
         deckID: deckID,
         cards: [
-          for (final cardJson in deck["cards"]!)
-            TableturfCardData.fromJson(cardJson)
+          for (final cardJson in deck["cards"])
+            TableturfCardIdentifier.fromJson(cardJson)
         ],
-        name: deck["name"]!,
-        cardSleeve: deck["cardSleeve"]!,
+        name: deck["name"],
+        cardSleeve: deck["cardSleeve"],
       ));
     }).toList();
-    */
+    /*
     _nextDeckID = opponents.length - 1;
     _decks = opponents.sublist(0, opponents.length - 1).map((opponent) {
       return ValueNotifier(opponent.deck);
     }).toList();
+     */
+  }
+
+  Iterable<int> get items sync* {
+    yield 1;
   }
 
   void setPlayerName(String name) {

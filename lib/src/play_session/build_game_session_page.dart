@@ -20,6 +20,7 @@ PageRouteBuilder<T> buildGameSessionPage<T>({
   String yellowName = "You",
   required String blueName,
   required AILevel aiLevel,
+  AILevel? playerAI,
   Palette palette = const Palette(),
 }) {
   final settings = SettingsController();
@@ -61,6 +62,7 @@ PageRouteBuilder<T> buildGameSessionPage<T>({
       blue: bluePlayer,
       board: board,
       aiLevel: aiLevel,
+      playerAI: playerAI,
       key: const Key('play session intro'),
     ),
     color: palette.backgroundPlaySession,

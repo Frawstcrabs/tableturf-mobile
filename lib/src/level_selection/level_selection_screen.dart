@@ -50,10 +50,7 @@ List<TableturfCardData> createPureRandomDeck() {
   final rng = Random();
   var noSpecialCards = 2;
   final List<TableturfCardData> ret = [];
-  for (final entry in cardSizes.randomSample(15).asMap().entries) {
-    final id = entry.key;
-    final size = entry.value;
-
+  for (final size in cardSizes.randomSample(15)) {
     final rawPattern = [
       for (int i = 0; i < 8; i++) [
         for (int j = 0; j < 8; j++)
@@ -176,11 +173,7 @@ class LevelSelectionScreen extends StatelessWidget {
                           context: context,
                           stage: opponent.map,
                           yellowDeck: yellowDeck,
-                          blueDeck: (
-                            opponent.name == "Clone Jelly"
-                              ? yellowDeck
-                              : opponent.deck
-                          ),
+                          blueDeck: opponent.deck,
                           blueName: opponent.name,
                           aiLevel: AILevel.level4,
                         ));
@@ -190,6 +183,23 @@ class LevelSelectionScreen extends StatelessWidget {
                         style: TextStyle(fontFamily: "Splatfont2")
                       )
                     ),
+                  ListTile(
+                    onTap: () {
+                      final yellowDeck = settings.decks[0].value;
+                      Navigator.of(context).push(buildGameSessionPage(
+                        context: context,
+                        stage: "main_street",
+                        yellowDeck: yellowDeck,
+                        blueDeck: yellowDeck,
+                        blueName: "Clone Jelly",
+                        aiLevel: AILevel.level4,
+                      ));
+                    },
+                    title: Text(
+                      "Clone Jelly",
+                      style: TextStyle(fontFamily: "Splatfont2")
+                    )
+                  ),
                   ListTile(
                     onTap: () async {
                       final randomCards = createPureRandomDeck() + createPureRandomDeck();

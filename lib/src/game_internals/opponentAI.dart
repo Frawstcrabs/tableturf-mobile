@@ -413,13 +413,13 @@ RatedMove findBestMove({
   switch (aiLevel) {
     case AILevel.level1:
       const lowerBound = 0.5;
-      const upperBound = 0.9;
+      const upperBound = 1.0;
       final selection = lowerBound + (Random().nextDouble() * (upperBound - lowerBound));
       return ratedMoves[(ratedMoves.length * selection).floor()];
 
     case AILevel.level2:
       const lowerBound = 0.7;
-      const upperBound = 0.95;
+      const upperBound = 1.0;
       final selection = lowerBound + (Random().nextDouble() * (upperBound - lowerBound));
       return ratedMoves[(ratedMoves.length * selection).floor()];
 

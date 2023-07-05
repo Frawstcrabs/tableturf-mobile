@@ -14,6 +14,7 @@ import 'package:tableturf_mobile/src/game_internals/battle.dart';
 import 'package:tableturf_mobile/src/game_internals/card.dart';
 import 'package:tableturf_mobile/src/game_internals/move.dart';
 import 'package:tableturf_mobile/src/game_internals/player.dart';
+import 'package:tableturf_mobile/src/game_internals/tile.dart';
 import 'package:tableturf_mobile/src/play_session/components/multi_choice_prompt.dart';
 import 'package:tableturf_mobile/src/settings/settings.dart';
 import 'package:tableturf_mobile/src/style/palette.dart';
@@ -202,6 +203,9 @@ class _PlaySessionScreenState extends State<PlaySessionScreen>
       _lockInputs = true;
   Timer? tapTimer;
 
+  final ValueNotifier<int?> newYellowScoreNotifier = ValueNotifier(null);
+  final ValueNotifier<int?> newBlueScoreNotifier = ValueNotifier(null);
+
   late final AnimationController _turnFadeController, _scoreFadeController;
   late final Animation<double> scoreFade, scoreSize, turnFade, turnSize;
 
@@ -228,6 +232,11 @@ class _PlaySessionScreenState extends State<PlaySessionScreen>
     super.initState();
     widget.battle.endOfGameNotifier.addListener(_onGameEnd);
     widget.battle.specialMoveNotifier.addListener(_onSpecialMove);
+
+    if (widget.battle.playerAI != null) {
+      widget.battle.playerControlLock.value = false;
+      widget.battle.playerControlLock.addListener(_resetPlayerLock);
+    }
 
     _scoreFadeController = AnimationController(
       duration: const Duration(milliseconds: 100),
@@ -436,7 +445,19 @@ class _PlaySessionScreenState extends State<PlaySessionScreen>
         .chain(CurveTween(curve: Curves.easeOut))
         .animate(_deckScaleController);
 
+    widget.battle.moveIsValidNotifier.addListener(_calculateNewScores);
+    widget.battle.playerControlLock.addListener(_calculateNewScores);
+    widget.battle.moveRotationNotifier.addListener(_calculateNewScores);
+    widget.battle.moveLocationNotifier.addListener(_calculateNewScores);
+    widget.battle.moveCardNotifier.addListener(_calculateNewScores);
+    widget.battle.movePassNotifier.addListener(_calculateNewScores);
+    widget.battle.moveSpecialNotifier.addListener(_calculateNewScores);
+
     _playInitSequence();
+  }
+
+  void _resetPlayerLock() {
+    widget.battle.playerControlLock.value = false;
   }
 
   Future<void> _playInitSequence() async {
@@ -446,16 +467,17 @@ class _PlaySessionScreenState extends State<PlaySessionScreen>
     await _deckScaleController.forward(from: 0.0);
     await _dealHand();
 
-    /*
-    final redrawChoice = await showMultiChoicePrompt(
-      context,
-      title: "Redraw hand?",
-      options: ["Hold Steady", "Redraw!"],
-      useWave: true,
-    );
-
-     */
-    final redrawChoice = 0;
+    int redrawChoice;
+    if (widget.battle.playerAI != null) {
+      redrawChoice = 0;
+    } else {
+      redrawChoice = await showMultiChoicePrompt(
+        context,
+        title: "Redraw hand?",
+        options: ["Hold Steady", "Redraw!"],
+        useWave: true,
+      );
+    }
     if (redrawChoice == 1) {
       for (final card in widget.battle.yellow.hand) {
         final heldCard = card.value;
@@ -480,7 +502,9 @@ class _PlaySessionScreenState extends State<PlaySessionScreen>
       _lockInputs = false;
     });
     widget.battle.runBlueAI();
-    //widget.battle.runYellowAI();
+    if (widget.battle.playerAI != null) {
+      widget.battle.runYellowAI();
+    }
   }
 
   Future<void> _dealHand() async {
@@ -507,6 +531,14 @@ class _PlaySessionScreenState extends State<PlaySessionScreen>
     AudioController().musicPlayer.setAudioSource(ConcatenatingAudioSource(children: []));
     widget.battle.endOfGameNotifier.removeListener(_onGameEnd);
     widget.battle.specialMoveNotifier.removeListener(_onSpecialMove);
+    widget.battle.moveIsValidNotifier.removeListener(_calculateNewScores);
+    widget.battle.playerControlLock.removeListener(_calculateNewScores);
+    widget.battle.playerControlLock.removeListener(_resetPlayerLock);
+    widget.battle.moveRotationNotifier.removeListener(_calculateNewScores);
+    widget.battle.moveLocationNotifier.removeListener(_calculateNewScores);
+    widget.battle.moveCardNotifier.removeListener(_calculateNewScores);
+    widget.battle.movePassNotifier.removeListener(_calculateNewScores);
+    widget.battle.moveSpecialNotifier.removeListener(_calculateNewScores);
     _outroController.dispose();
     _turnFadeController.dispose();
     _scoreFadeController.dispose();
@@ -826,6 +858,58 @@ class _PlaySessionScreenState extends State<PlaySessionScreen>
     ));
   }
 
+  void _calculateNewScores() {
+    final battle = widget.battle;
+    if (!battle.moveIsValidNotifier.value
+        || !battle.playerControlLock.value
+        || battle.movePassNotifier.value) {
+      newBlueScoreNotifier.value = null;
+      newYellowScoreNotifier.value = null;
+      return;
+    }
+    final card = battle.moveCardNotifier.value!;
+    final location = battle.moveLocationNotifier.value!;
+    final rot = battle.moveRotationNotifier.value;
+    final selectPoint = rotatePatternPoint(
+      card.selectPoint,
+      card.minPattern.length,
+      card.minPattern[0].length,
+      rot,
+    );
+    final locationX = location.x - selectPoint.x;
+    final locationY = location.y - selectPoint.y;
+    final move = TableturfMove(
+      card: card,
+      rotation: rot,
+      x: locationX,
+      y: locationY,
+      pass: false,
+      special: battle.moveSpecialNotifier.value,
+    );
+    final board = battle.board.copy();
+    applyMoveToBoard(board, move);
+    int newYellowScore = 0;
+    int newBlueScore = 0;
+    for (final row in board) {
+      for (final tile in row) {
+        switch (tile) {
+          case TileState.yellow:
+          case TileState.yellowSpecial:
+            newYellowScore += 1;
+            break;
+          case TileState.blue:
+          case TileState.blueSpecial:
+            newBlueScore += 1;
+            break;
+          default:
+            break;
+        }
+      }
+    }
+    newYellowScoreNotifier.value = newYellowScore;
+    newBlueScoreNotifier.value = newBlueScore;
+  }
+
   void _updateLocation(PointerEvent details, BuildContext rootContext) {
     final battle = widget.battle;
     if (battle.yellowMoveNotifier.value != null && battle.moveCardNotifier.value != null) {
@@ -1002,8 +1086,9 @@ class _PlaySessionScreenState extends State<PlaySessionScreen>
       child: AnimatedBuilder(
         animation: _scoreFadeController,
         child: ScoreCounter(
-            scoreNotifier: battle.blueCountNotifier,
-            traits: const BlueTraits()
+          scoreNotifier: battle.blueCountNotifier,
+            newScoreNotifier: newBlueScoreNotifier,
+          traits: const BlueTraits()
         ),
         builder: (_, child) {
           return Transform.scale(
@@ -1022,6 +1107,7 @@ class _PlaySessionScreenState extends State<PlaySessionScreen>
         animation: _scoreFadeController,
         child: ScoreCounter(
           scoreNotifier: battle.yellowCountNotifier,
+          newScoreNotifier: newYellowScoreNotifier,
           traits: const YellowTraits()
         ),
         builder: (_, child) {
@@ -1344,7 +1430,7 @@ class _PlaySessionScreenState extends State<PlaySessionScreen>
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Expanded(
-              flex: 1,
+              flex: 3,
               child: FractionallySizedBox(
                 widthFactor: 0.95,
                 child: Row(
@@ -1365,14 +1451,14 @@ class _PlaySessionScreenState extends State<PlaySessionScreen>
               ),
             ),
             Expanded(
-              flex: 12,
+              flex: 36,
               child: FractionallySizedBox(
                 heightFactor: 0.9,
                 child: boardWidget
               ),
             ),
             Expanded(
-              flex: 1,
+              flex: 3,
               child: FractionallySizedBox(
                 widthFactor: 0.95,
                 child: Row(
@@ -1386,7 +1472,7 @@ class _PlaySessionScreenState extends State<PlaySessionScreen>
               ),
             ),
             Expanded(
-              flex: 6,
+              flex: 18,
               child: blockCursorMovement(
                 child: RepaintBoundary(
                   child: Container(
@@ -1500,7 +1586,29 @@ class _PlaySessionScreenState extends State<PlaySessionScreen>
                 widthFactor: 2/5,
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                  children: [turnCounter, blueScore, yellowScore, cardDeck],
+                  children: [
+                    Spacer(flex: 1),
+                    Expanded(
+                      flex: 3,
+                      child: Center(
+                        child: turnCounter
+                      )
+                    ),
+                    Spacer(flex: 2),
+                    Expanded(
+                      flex: 10,
+                      child: Center(
+                        child: FractionallySizedBox(
+                          widthFactor: 0.75,
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                            children: [blueScore, yellowScore, cardDeck]
+                          ),
+                        ),
+                      )
+                    ),
+                    Spacer(flex: 1),
+                  ],
                 ),
               ),
             ),

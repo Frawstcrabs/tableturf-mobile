@@ -20,6 +20,7 @@ class PlaySessionIntro extends StatefulWidget {
   final TableturfPlayer yellow, blue;
   final TileGrid board;
   final AILevel aiLevel;
+  final AILevel? playerAI;
 
   const PlaySessionIntro({
     super.key,
@@ -27,6 +28,7 @@ class PlaySessionIntro extends StatefulWidget {
     required this.blue,
     required this.board,
     required this.aiLevel,
+    this.playerAI,
   });
 
   @override
@@ -52,13 +54,14 @@ class _PlaySessionIntroState extends State<PlaySessionIntro>
       blue: widget.blue,
       board: widget.board,
       aiLevel: widget.aiLevel,
+      playerAI: widget.playerAI,
     );
     _playInitSequence();
   }
 
   FutureOr<void> _playInitSequence() async {
     _log.info("init sequence started");
-    await Future<void>.delayed(const Duration(milliseconds: 500));
+    await Future<void>.delayed(const Duration(milliseconds: 400));
     final overlayState = Overlay.of(context);
     final animationLayer = OverlayEntry(builder: (_) {
       return Container(

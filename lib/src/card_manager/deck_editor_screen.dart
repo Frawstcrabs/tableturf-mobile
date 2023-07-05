@@ -17,7 +17,7 @@ class DeckCardWidget extends StatelessWidget {
   const DeckCardWidget({super.key, required this.card});
 
   @override
-  Widget build(BuildContext context) {
+  Widget _build(BuildContext context) {
     final palette = context.watch<Palette>();
     final card = this.card;
     if (card == null) {
@@ -181,6 +181,10 @@ class DeckCardWidget extends StatelessWidget {
         );
       }
     );
+  }
+
+  Widget build(BuildContext context) {
+    return HandCardWidget(card: card!, background: const Palette().cardBackgroundSelectable);
   }
 }
 
@@ -405,16 +409,11 @@ class _DeckEditorScreenState extends State<DeckEditorScreen>
                                   },
                                   child: Padding(
                                     padding: const EdgeInsets.all(0),
-                                    child: Center(
-                                      child: ColorFiltered(
-                                        colorFilter: ColorFilter.mode(
-                                          deckCards.any((c) => c.value == cards[i].ident)
-                                            ? const Color.fromRGBO(0, 0, 0, 0.4)
-                                            : Colors.transparent,
-                                          BlendMode.srcATop
-                                        ),
-                                        child: DeckCardWidget(card: cards[i])
-                                      )
+                                    child: HandCardWidget(
+                                      card: cards[i],
+                                      overlayColor: deckCards.any((c) => c.value == cards[i].ident)
+                                        ? const Color.fromRGBO(0, 0, 0, 0.4)
+                                        : Colors.transparent
                                     ),
                                   )
                                 ),

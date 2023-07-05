@@ -83,12 +83,13 @@ class TableturfBattle {
 
   final ValueNotifier<int> yellowCountNotifier = ValueNotifier(1);
   final ValueNotifier<int> blueCountNotifier = ValueNotifier(1);
-  final ValueNotifier<int> turnCountNotifier = ValueNotifier(1);
+  final ValueNotifier<int> turnCountNotifier = ValueNotifier(12);
   int _yellowSpecialCount = 0, _blueSpecialCount = 0;
 
   final TableturfPlayer yellow;
   final TableturfPlayer blue;
   final AILevel aiLevel;
+  final AILevel? playerAI;
 
   final TileGrid board;
 
@@ -97,6 +98,7 @@ class TableturfBattle {
     required this.blue,
     required this.board,
     required this.aiLevel,
+    this.playerAI,
   }) {
     moveCardNotifier.addListener(_updateMoveHighlight);
     moveLocationNotifier.addListener(_updateMoveHighlight);
@@ -331,7 +333,9 @@ class TableturfBattle {
     }
     playerControlLock.value = true;
     runBlueAI();
-    //runYellowAI();
+    if (playerAI != null) {
+      runYellowAI();
+    }
     _log.info("turn complete");
   }
 
@@ -669,13 +673,14 @@ class TableturfBattle {
   }
 
   Future<void> runYellowAI() async {
+    assert(playerAI != null);
     final TableturfMove yellowMove = (await Future.wait([
       compute(findBestBlueMove, [
         board,
         yellow.hand.map((v) => v.value!).toList(),
         yellow.special.value,
         turnCountNotifier.value,
-        AILevel.level4,
+        playerAI,
         false,
       ]),
       Future.delayed(Duration(milliseconds: 1500 + Random().nextInt(500)))

@@ -15,11 +15,6 @@ import 'package:tableturf_mobile/src/style/palette.dart';
 import 'components/build_board_widget.dart';
 import 'components/score_counter.dart';
 
-enum ScoreBarSide {
-  blue,
-  yellow,
-}
-
 void paintScoreBar({
   required Canvas canvas,
   required Size size,
@@ -33,8 +28,6 @@ void paintScoreBar({
   const WAVE_HEIGHT = 0.4;
   const OVERPAINT = 5.0;
   if (opacity.value == 0.0) return;
-
-  canvas.drawColor(Colors.black38, BlendMode.srcOver);
 
   final paint = Paint()
     ..style = PaintingStyle.fill
@@ -131,6 +124,7 @@ class ScoreBarPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final palette = const Palette();
+    canvas.drawColor(Colors.black38, BlendMode.srcOver);
     if (orientation == Orientation.portrait) {
       paintScoreBar(
         canvas: canvas,
@@ -178,6 +172,76 @@ class ScoreBarPainter extends CustomPainter {
   }
 }
 
+enum PlayWinner {
+  blue,
+  yellow,
+}
+
+class WinEffectPainter extends CustomPainter {
+  final Animation<double> length, waveAnimation, opacity;
+  final PlayWinner winner;
+  final Orientation orientation;
+
+  WinEffectPainter({
+    required this.length,
+    required this.waveAnimation,
+    required this.opacity,
+    required this.winner,
+    required this.orientation,
+  }):
+    super(repaint: Listenable.merge([
+      length,
+      waveAnimation,
+      opacity,
+    ]))
+  ;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    late AxisDirection direction;
+    late Color color;
+    switch (winner) {
+      case PlayWinner.blue:
+        color = const Palette().tileBlue;
+        switch (orientation) {
+          case Orientation.portrait:
+            direction = AxisDirection.left;
+            break;
+          case Orientation.landscape:
+            direction = AxisDirection.down;
+            break;
+        }
+        break;
+      case PlayWinner.yellow:
+        color = const Palette().tileYellow;
+        switch (orientation) {
+          case Orientation.portrait:
+            direction = AxisDirection.right;
+            break;
+          case Orientation.landscape:
+            direction = AxisDirection.up;
+            break;
+        }
+        break;
+    }
+    paintScoreBar(
+      canvas: canvas,
+      size: size,
+      length: length,
+      waveAnimation: waveAnimation,
+      opacity: opacity,
+      direction: direction,
+      color: color,
+    );
+  }
+
+  @override
+  bool shouldRepaint(WinEffectPainter other) {
+    return winner != other.winner || orientation != other.orientation;
+  }
+
+}
+
 class PlaySessionEnd extends StatefulWidget {
   final TableturfBattle battle;
 
@@ -197,6 +261,7 @@ class _PlaySessionEndState extends State<PlaySessionEnd>
   late final AnimationController _scoreBarAnimator, _scoreSplashAnimator, _scoreCountersAnimator, _scoreWaveAnimator;
   late final Animation<double> yellowScoreAnimation, blueScoreAnimation;
   late final Animation<double> winScoreMoveAnimation, winScoreFadeAnimation;
+  late final PlayWinner winner;
 
   late final List<Animation<Offset>> winScoreDropletMoveAnimations;
   late final Animation<double> scoreFade, scoreSize;
@@ -213,9 +278,10 @@ class _PlaySessionEndState extends State<PlaySessionEnd>
       vsync: this
     );
     _scoreSplashAnimator = AnimationController(
-      duration: const Duration(milliseconds: 400),
+      duration: const Duration(milliseconds: 500),
       vsync: this
     );
+    _scoreSplashAnimator.value = 1.0;
     _scoreWaveAnimator = AnimationController(
       duration: const Duration(milliseconds: 1000),
       vsync: this
@@ -275,7 +341,7 @@ class _PlaySessionEndState extends State<PlaySessionEnd>
         tween: Tween(
           begin: initialBarSize,
           end: 1 - yellowScoreRatio,
-        ).chain(CurveTween(curve: Curves.easeInToLinear)),
+        ).chain(CurveTween(curve: Curves.easeIn)),
         weight: 3
       ),
     ]).animate(_scoreBarAnimator);
@@ -285,32 +351,39 @@ class _PlaySessionEndState extends State<PlaySessionEnd>
     late final List<Animation<Offset>> winScoreDropletMoveAnimations;
     */
 
+    const winScoreStartOpacity = 0.80;
     winScoreFadeAnimation = TweenSequence([
       TweenSequenceItem(
-        tween: ConstantTween(1.0),
-        weight: 50,
+        tween: Tween(
+          begin: winScoreStartOpacity,
+          end: 0.0
+        ).chain(CurveTween(curve: Curves.easeIn)),
+        weight: 95
       ),
       TweenSequenceItem(
-        tween: Tween(
-          begin: 1.0,
-          end: 0.0
-        ).chain(CurveTween(curve: Curves.easeOut)),
-        weight: 50
-      )
+        tween: ConstantTween(0.0),
+        weight: 5,
+      ),
     ]).animate(_scoreSplashAnimator);
 
-    const winSplashExtendDist = 0.2;
+    const winSplashExtendDist = 5.0;
     if (yellowScoreRatio > 0.5) {
+      winner = PlayWinner.yellow;
       winScoreMoveAnimation = Tween(
         begin: yellowScoreRatio,
         end: yellowScoreRatio + winSplashExtendDist,
-      ).animate(_scoreSplashAnimator);
+      )
+          //.chain(CurveTween(curve: Curves.decelerate))
+          .animate(_scoreSplashAnimator);
       winScoreDropletMoveAnimations = [];
     } else {
+      winner = PlayWinner.blue;
       winScoreMoveAnimation = Tween(
         begin: 1 - yellowScoreRatio,
-        end: 1 - yellowScoreRatio - winSplashExtendDist,
-      ).animate(_scoreSplashAnimator);
+        end: (1 - yellowScoreRatio) + winSplashExtendDist,
+      )
+          //.chain(CurveTween(curve: Curves.decelerate))
+          .animate(_scoreSplashAnimator);
       winScoreDropletMoveAnimations = [];
     }
 
@@ -323,7 +396,7 @@ class _PlaySessionEndState extends State<PlaySessionEnd>
     await Future<void>.delayed(const Duration(milliseconds: 1300));
     audioController.playSfx(SfxType.scoreBarFill);
     await _scoreBarAnimator.forward();
-    _scoreSplashAnimator.forward();
+    _scoreSplashAnimator.forward(from: 0.0);
     audioController.playSfx(SfxType.scoreBarImpact);
     await Future<void>.delayed(const Duration(milliseconds: 300));
     await _scoreCountersAnimator.forward();
@@ -373,35 +446,40 @@ class _PlaySessionEndState extends State<PlaySessionEnd>
             ),
             Expanded(
                 flex: 1,
-                child: AnimatedBuilder(
-                    animation: _scoreCountersAnimator,
-                    builder: (_, __) {
-                      return Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                          children: [
-                            Transform.scale(
-                              scale: scoreSize.value,
-                              child: Opacity(
-                                opacity: scoreFade.value,
-                                child: ScoreCounter(
-                                    scoreNotifier: widget.battle.blueCountNotifier,
-                                    traits: const BlueTraits()
+                child: FractionallySizedBox(
+                  heightFactor: 0.8,
+                  child: AnimatedBuilder(
+                      animation: _scoreCountersAnimator,
+                      builder: (_, __) {
+                        return Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                            children: [
+                              Transform.scale(
+                                scale: scoreSize.value,
+                                child: Opacity(
+                                  opacity: scoreFade.value,
+                                  child: ScoreCounter(
+                                      scoreNotifier: widget.battle.blueCountNotifier,
+                                      newScoreNotifier: ValueNotifier(null),
+                                      traits: const BlueTraits()
+                                  ),
                                 ),
                               ),
-                            ),
-                            Transform.scale(
-                              scale: scoreSize.value,
-                              child: Opacity(
-                                opacity: scoreFade.value,
-                                child: ScoreCounter(
-                                    scoreNotifier: widget.battle.yellowCountNotifier,
-                                    traits: const YellowTraits()
+                              Transform.scale(
+                                scale: scoreSize.value,
+                                child: Opacity(
+                                  opacity: scoreFade.value,
+                                  child: ScoreCounter(
+                                      scoreNotifier: widget.battle.yellowCountNotifier,
+                                      newScoreNotifier: ValueNotifier(null),
+                                      traits: const YellowTraits()
+                                  ),
                                 ),
                               ),
-                            ),
-                          ]
-                      );
-                    }
+                            ]
+                        );
+                      }
+                  ),
                 )
             ),
             Expanded(
@@ -421,6 +499,13 @@ class _PlaySessionEndState extends State<PlaySessionEnd>
                       child: FractionallySizedBox(
                         widthFactor: 0.8,
                         heightFactor: 0.5,
+                      ),
+                      foregroundPainter: WinEffectPainter(
+                        length: winScoreMoveAnimation,
+                        opacity: winScoreFadeAnimation,
+                        winner: winner,
+                        waveAnimation: _scoreWaveAnimator,
+                        orientation: mediaQuery.orientation,
                       ),
                       willChange: true,
                     ),
@@ -459,6 +544,7 @@ class _PlaySessionEndState extends State<PlaySessionEnd>
                                 opacity: scoreFade.value,
                                 child: ScoreCounter(
                                     scoreNotifier: widget.battle.blueCountNotifier,
+                                    newScoreNotifier: ValueNotifier(null),
                                     traits: const BlueTraits()
                                 ),
                               ),
@@ -469,6 +555,7 @@ class _PlaySessionEndState extends State<PlaySessionEnd>
                                 opacity: scoreFade.value,
                                 child: ScoreCounter(
                                     scoreNotifier: widget.battle.yellowCountNotifier,
+                                    newScoreNotifier: ValueNotifier(null),
                                     traits: const YellowTraits()
                                 ),
                               ),
@@ -495,6 +582,13 @@ class _PlaySessionEndState extends State<PlaySessionEnd>
                       child: FractionallySizedBox(
                         heightFactor: 0.8,
                         widthFactor: 0.8,
+                      ),
+                      foregroundPainter: WinEffectPainter(
+                        length: winScoreMoveAnimation,
+                        opacity: winScoreFadeAnimation,
+                        winner: winner,
+                        waveAnimation: _scoreWaveAnimator,
+                        orientation: mediaQuery.orientation,
                       ),
                       willChange: true,
                     ),

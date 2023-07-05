@@ -4,6 +4,7 @@
 
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:tableturf_mobile/src/level_selection/free_play_screen.dart';
 
 import '../level_selection/level_selection_screen.dart';
 import '../card_manager/card_list_screen.dart';
@@ -57,7 +58,7 @@ class MainMenuScreen extends StatelessWidget {
               onPressed: () {
                 //audioController.playSfx(SfxType.buttonTap);
                 Navigator.of(context).push(buildMyTransition<void>(
-                  child: const LevelSelectionScreen(),
+                  child: const FreePlayScreen(),
                   color: palette.backgroundLevelSelection,
                 ));
               },
@@ -97,8 +98,6 @@ class MainMenuScreen extends StatelessWidget {
                 },
               ),
             ),
-            _gap,
-            const Text('Music by Mr Smith'),
             _gap,
           ],
         ),

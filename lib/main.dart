@@ -7,8 +7,6 @@
 // import 'package:firebase_core/firebase_core.dart';
 // import 'firebase_options.dart';
 
-import 'dart:convert';
-
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -53,19 +51,11 @@ Future<void> guardedMain() async {
   );
 
   final SharedPreferences prefs = await SharedPreferences.getInstance();
-  if (!prefs.containsKey("tableturf-deck_nextID")) {
+  if (prefs.containsKey("tableturf-deck_nextID")) {
     print("Initialising deck data");
-    await prefs.setInt("tableturf-deck_nextID", 1);
-    await prefs.setString("tableturf-deck_list", "[0]");
-    await prefs.setString("tableturf-deck_deck-0", '''{
-      "name": "Deck 1",
-      "cardSleeve": "default",
-      "deckID": 0,
-      "cards": ${jsonEncode([
-        for (final cardID in [5, 12, 21, 27, 33, 39, 44, 51, 54, 55, 91, 102, 136, 140, 158])
-          cards[cardID].toJson()
-      ])}
-    }''');
+    await prefs.remove("tableturf-deck_nextID");
+    await prefs.remove("tableturf-deck_list");
+    await prefs.remove("tableturf-deck_deck-0");
   }
 
   runApp(

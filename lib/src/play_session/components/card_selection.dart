@@ -441,16 +441,21 @@ class _CardSelectionWidgetState extends State<CardSelectionWidget>
       builder: (context, constraints) {
         final palette = context.watch<Palette>();
         final cornerRadius = CardWidget.CORNER_RADIUS * (constraints.maxHeight/CardWidget.CARD_HEIGHT);
-        return DecoratedBox(
-          decoration: BoxDecoration(
-            color: Color.fromRGBO(32, 32, 32, 0.8),
-            border: Border.all(
-              width: 1.0,
-              color: palette.cardEdge,
+        return Center(
+          child: AspectRatio(
+            aspectRatio: CardWidget.CARD_RATIO,
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                color: Color.fromRGBO(32, 32, 32, 0.8),
+                border: Border.all(
+                  width: 1.0,
+                  color: palette.cardEdge,
+                ),
+                borderRadius: BorderRadius.circular(cornerRadius),
+              ),
+              child: Center(child: SpinnerWidget(loop: widget.loopAnimation)),
             ),
-            borderRadius: BorderRadius.circular(cornerRadius),
           ),
-          child: Center(child: SpinnerWidget(loop: widget.loopAnimation)),
         );
       }
     );

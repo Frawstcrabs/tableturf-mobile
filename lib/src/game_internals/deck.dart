@@ -20,4 +20,7 @@ class TableturfDeck {
 
   factory TableturfDeck.fromJson(Map<String, dynamic> json) => _$TableturfDeckFromJson(json);
   Map<String, dynamic> toJson() => _$TableturfDeckToJson(this);
+
+  bool operator==(Object other) => other is TableturfDeck && deckID == other.deckID;
+  int get hashCode => deckID.hashCode;
 }

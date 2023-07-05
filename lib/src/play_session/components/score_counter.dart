@@ -1,14 +1,18 @@
 import 'package:flutter/material.dart';
 import 'package:tableturf_mobile/src/game_internals/player.dart';
 
+import '../../game_internals/battle.dart';
+
 
 class ScoreCounter extends StatefulWidget {
   final ValueNotifier<int> scoreNotifier;
+  final ValueNotifier<int?> newScoreNotifier;
   final PlayerTraits traits;
 
   const ScoreCounter({
     super.key,
     required this.scoreNotifier,
+    required this.newScoreNotifier,
     required this.traits,
   });
 
@@ -148,107 +152,146 @@ class _ScoreCounterState extends State<ScoreCounter>
 
   @override
   Widget build(BuildContext buildContext) {
-    final mediaQuery = MediaQuery.of(context);
-    final diameter = mediaQuery.orientation == Orientation.landscape
-        ? mediaQuery.size.width * 0.06
-        : mediaQuery.size.height * 0.06;
-    final scoreDiffDisplay = Container(
-      width: diameter/2,
-      height: diameter/2,
-      decoration: BoxDecoration(
-        shape: BoxShape.circle,
-        color: _scoreDiff > 0 ? widget.traits.scoreCountShadow : Colors.grey,
-      ),
-      child: Center(
-        child: FractionallySizedBox(
-          heightFactor: 0.9,
-          widthFactor: 0.9,
-          child: FittedBox(
-            fit: BoxFit.fitHeight,
-            child: Text(
-              (_scoreDiff > 0 ? "+" : "") + _scoreDiff.toString(),
-                style: TextStyle(
-                  fontFamily: "Splatfont1",
-                  fontStyle: FontStyle.italic,
-                  color: _scoreDiff > 0 ? Colors.white : Colors.grey[800],
-                  letterSpacing: 0.3,
-                  shadows: [
-                    Shadow(
-                      color: Colors.grey[600]!,
-                      offset: Offset(1, 1),
-                    )
-                  ]
-                )
-            ),
+    final scoreDiffDisplay = FractionallySizedBox(
+      heightFactor: 0.5,
+      widthFactor: 0.5,
+      child: AspectRatio(
+        aspectRatio: 1.0,
+        child: DecoratedBox(
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            color: _scoreDiff > 0 ? widget.traits.scoreCountShadow : Colors.grey,
           ),
-        )
-      )
-    );
-    return Stack(
-      children: [
-        AnimatedBuilder(
-          animation: showSumController,
-          child: Scaffold(
-            backgroundColor: Colors.transparent,
-            body: Transform.translate(
-              offset: Offset(-1, -0.5),
-              child: Center(
+          child: Center(
                 child: FractionallySizedBox(
                   heightFactor: 0.9,
                   widthFactor: 0.9,
                   child: FittedBox(
                     fit: BoxFit.fitHeight,
                     child: Text(
-                      _prevScore.toString(),
-                      style: TextStyle(
-                        fontFamily: "Splatfont1",
-                        fontStyle: FontStyle.italic,
-                        color: widget.traits.scoreCountText,
-                        letterSpacing: 0.6,
-                        shadows: [
-                          Shadow(
-                            color: widget.traits.scoreCountShadow,
-                            offset: Offset(1, 1),
-                          )
-                        ]
-                      )
+                        (_scoreDiff > 0 ? "+" : "") + _scoreDiff.toString(),
+                        style: TextStyle(
+                            fontFamily: "Splatfont1",
+                            fontStyle: FontStyle.italic,
+                            color: _scoreDiff > 0 ? Colors.white : Colors.grey[800],
+                            letterSpacing: 0.3,
+                            shadows: [
+                              Shadow(
+                                color: Colors.grey[600]!,
+                                offset: Offset(1, 1),
+                              )
+                            ]
+                        )
                     ),
+                  ),
+                )
+            )
+        ),
+      ),
+    );
+    final textStyle = TextStyle(
+        fontFamily: "Splatfont1",
+        fontStyle: FontStyle.italic,
+        color: widget.traits.scoreCountText,
+        letterSpacing: 0.6,
+        shadows: [
+          Shadow(
+            color: widget.traits.scoreCountShadow,
+            offset: Offset(1, 1),
+          )
+        ]
+    );
+    return Center(
+      child: AspectRatio(
+        aspectRatio: 1.0,
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            final diameter = constraints.maxHeight;
+            return Stack(
+              children: [
+                AnimatedBuilder(
+                  animation: showSumController,
+                  child: Scaffold(
+                    backgroundColor: Colors.transparent,
+                    body: Transform.translate(
+                      offset: Offset(-1, -0.5),
+                      child: Center(
+                        child: FractionallySizedBox(
+                          heightFactor: 0.9,
+                          widthFactor: 0.9,
+                          child: FittedBox(
+                            fit: BoxFit.fitHeight,
+                            child: Text(
+                              _prevScore.toString(),
+                              style: textStyle,
+                            ),
+                          )
+                        )
+                      ),
+                    ),
+                  ),
+                  builder: (_, child) => AspectRatio(
+                    aspectRatio: 1.0,
+                    child: DecoratedBox(
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: widget.traits.scoreCountBackground
+                      ),
+                      child: Transform.scale(
+                        scale: showSumScale.value,
+                        child: child
+                      )
+                    )
+                  )
+                ),
+                AnimatedBuilder(
+                  animation: showDiffController,
+                  builder: (_, sdd) => Transform.translate(
+                    offset: Offset(
+                      diameter * (0.75 + showDiffEndMoveX.value),
+                      diameter * (-0.1 + showDiffEndMoveY.value)
+                    ),
+                    child: Opacity(
+                      opacity: showDiffEndFade.value,
+                      child: Transform.scale(
+                        scale: showDiffScale.value,
+                        child: sdd,
+                      ),
+                    ),
+                  ),
+                  child: scoreDiffDisplay,
+                ),
+                Transform.translate(
+                  offset: Offset(diameter * 0.15, diameter * 0.6),
+                  child: ValueListenableBuilder(
+                    valueListenable: widget.newScoreNotifier,
+                    builder: (_, int? newScore, __) {
+                      if (newScore == null || newScore == _prevScore) {
+                        return Container();
+                      }
+                      return Row(
+                        mainAxisAlignment: MainAxisAlignment.start,
+                        children: [
+                          Icon(
+                            Icons.subdirectory_arrow_right,
+                            size: diameter * 0.3,
+                            color: textStyle.color,
+                            shadows: textStyle.shadows,
+                          ),
+                          Text(
+                            newScore.toString(),
+                            style: textStyle.copyWith(fontSize: diameter * 0.35),
+                          )
+                        ],
+                      );
+                    }
                   )
                 )
-              ),
-            ),
-          ),
-          builder: (_, child) => Container(
-            width: diameter,
-            height: diameter,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              color: widget.traits.scoreCountBackground
-            ),
-            child: Transform.scale(
-              scale: showSumScale.value,
-              child: child
-            )
-          )
+              ]
+            );
+          }
         ),
-        AnimatedBuilder(
-          animation: showDiffController,
-          builder: (_, sdd) => Transform.translate(
-            offset: Offset(
-              diameter * (0.75 + showDiffEndMoveX.value),
-              diameter * (-0.1 + showDiffEndMoveY.value)
-            ),
-            child: Opacity(
-              opacity: showDiffEndFade.value,
-              child: Transform.scale(
-                scale: showDiffScale.value,
-                child: sdd,
-              ),
-            ),
-          ),
-          child: scoreDiffDisplay,
-        )
-      ]
+      ),
     );
   }
 }
