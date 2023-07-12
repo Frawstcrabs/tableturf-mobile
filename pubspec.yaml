@@ -18,15 +18,16 @@ dependencies:
   cupertino_icons: ^1.0.2
   logging: ^1.1.0
   provider: ^6.0.2
-  shared_preferences: ^2.0.13
+  shared_preferences: ^2.2.0
   json_annotation: ^4.7.0
   dropdown_button2: ^2.1.4
+  collection: ^1.17.1
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
 
-  flutter_launcher_icons: ^0.10.0
+  flutter_launcher_icons: ^0.13.1
   flutter_lints: ^2.0.1
   test: ^1.19.0
   build_runner: ^2.3.0
@@ -44,6 +45,10 @@ flutter:
     - assets/sfx/
     - assets/cards.json
     - assets/maps.json
+
+  shaders:
+    - assets/shaders/dashed_line.frag
+    - assets/shaders/special_fire.frag
 
   fonts:
     - family: Permanent Marker

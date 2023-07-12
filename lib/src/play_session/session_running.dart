@@ -20,13 +20,11 @@ import 'package:tableturf_mobile/src/settings/settings.dart';
 import 'package:tableturf_mobile/src/style/palette.dart';
 import 'package:tableturf_mobile/src/style/my_transition.dart';
 
-import 'components/selection_button.dart';
 import 'session_end.dart';
 import 'components/arc_tween.dart';
 import 'components/build_board_widget.dart';
 import 'components/special_meter.dart';
 import 'components/turn_counter.dart';
-import 'components/board_widget.dart';
 import 'components/card_widget.dart';
 import 'components/card_selection.dart';
 import 'components/score_counter.dart';
@@ -175,10 +173,12 @@ class _CardDeckSlice extends StatelessWidget {
 
 
 class PlaySessionScreen extends StatefulWidget {
+  final String boardHeroTag;
   final TableturfBattle battle;
 
   const PlaySessionScreen({
     super.key,
+    required this.boardHeroTag,
     required this.battle,
   });
 
@@ -191,17 +191,14 @@ class _PlaySessionScreenState extends State<PlaySessionScreen>
   static final _log = Logger('PlaySessionScreenState');
 
   final GlobalKey _boardTileKey = GlobalKey(debugLabel: "InputArea");
-  final GlobalKey _bluebattleKey = GlobalKey(debugLabel: "BluebattleWidget");
-  final GlobalKey _yellowbattleKey = GlobalKey(debugLabel: "YellowbattleWidget");
+  final GlobalKey _blueSelectionKey = GlobalKey(debugLabel: "BlueSelectionWidget");
+  final GlobalKey _yellowSelectionKey = GlobalKey(debugLabel: "YellowSelectionWidget");
   final GlobalKey _blueScoreKey = GlobalKey(debugLabel: "BlueScoreWidget");
   final GlobalKey _yellowScoreKey = GlobalKey(debugLabel: "YellowScoreWidget");
   double tileSize = 22.0;
   Offset? piecePosition;
-  bool _tapTimeExceeded = true,
-      _noPointerMovement = true,
-      _buttonPressed = false,
-      _lockInputs = true;
-  Timer? tapTimer;
+  PointerDeviceKind? pointerKind;
+  bool _lockInputs = true;
 
   final ValueNotifier<int?> newYellowScoreNotifier = ValueNotifier(null);
   final ValueNotifier<int?> newBlueScoreNotifier = ValueNotifier(null);
@@ -464,6 +461,17 @@ class _PlaySessionScreenState extends State<PlaySessionScreen>
     await Future<void>.delayed(const Duration(milliseconds: 600));
     final audioController = AudioController();
 
+    // handle blue since it doesnt matter anyway
+    final battle = widget.battle;
+    final blue = battle.blue;
+    for (var i = 0; i < 4; i++) {
+      final newCard = blue.deck.where((card) => !card.isHeld && !card.hasBeenPlayed).toList().random();
+      newCard.isHeld = true;
+      newCard.isPlayable = getMoves(battle.board, newCard).isNotEmpty;
+      newCard.isPlayableSpecial = false;
+      blue.hand[i].value = newCard;
+    }
+
     await _deckScaleController.forward(from: 0.0);
     await _dealHand();
 
@@ -479,7 +487,7 @@ class _PlaySessionScreenState extends State<PlaySessionScreen>
       );
     }
     if (redrawChoice == 1) {
-      for (final card in widget.battle.yellow.hand) {
+      for (final card in battle.yellow.hand) {
         final heldCard = card.value;
         if (heldCard != null) {
           heldCard.isHeld = false;
@@ -838,7 +846,8 @@ class _PlaySessionScreenState extends State<PlaySessionScreen>
       pageBuilder: (context, animation, secondaryAnimation) {
         return PlaySessionEnd(
           key: const Key('play session end'),
-          battle: widget.battle
+          battle: widget.battle,
+          boardHeroTag: widget.boardHeroTag,
         );
       },
       transitionsBuilder: (context, animation, secondaryAnimation, child) {
@@ -910,14 +919,14 @@ class _PlaySessionScreenState extends State<PlaySessionScreen>
     newBlueScoreNotifier.value = newBlueScore;
   }
 
-  void _updateLocation(PointerEvent details, BuildContext rootContext) {
+  void _updateLocation(Offset delta, PointerDeviceKind? pointerKind, BuildContext rootContext) {
     final battle = widget.battle;
     if (battle.yellowMoveNotifier.value != null && battle.moveCardNotifier.value != null) {
       return;
     }
     final board = battle.board;
     if (piecePosition != null) {
-      piecePosition = piecePosition! + details.localDelta;
+      piecePosition = piecePosition! + delta;
     }
 
     final boardContext = _boardTileKey.currentContext!;
@@ -938,11 +947,10 @@ class _PlaySessionScreenState extends State<PlaySessionScreen>
         newY >= board.length ||
         newX < 0 ||
         newX >= board[0].length
-    ) && details.kind == PointerDeviceKind.mouse) {
+    ) && pointerKind == PointerDeviceKind.mouse) {
       battle.moveLocationNotifier.value = null;
       // if pointer is touch, let the position remain
     } else if (battle.moveLocationNotifier.value != newCoords) {
-      _noPointerMovement = false;
       final audioController = AudioController();
       if (battle.moveCardNotifier.value != null && !battle.movePassNotifier.value) {
         audioController.playSfx(SfxType.cursorMove);
@@ -972,55 +980,36 @@ class _PlaySessionScreenState extends State<PlaySessionScreen>
     );
   }
 
-  void _onPointerHover(PointerEvent details, BuildContext context) {
+  void _onHover(PointerHoverEvent details) {
     if (_lockInputs) return;
 
     if (details.kind == PointerDeviceKind.mouse) {
       piecePosition = details.localPosition;
-      _updateLocation(details, context);
+      pointerKind = details.kind;
+      _updateLocation(details.delta, details.kind, context);
     }
   }
 
-  void _onPointerMove(PointerEvent details, BuildContext context) {
+  void _onDragUpdate(DragUpdateDetails details, BuildContext context) {
     if (_lockInputs) return;
-
-    if (_buttonPressed) return;
-    _updateLocation(details, context);
+    _updateLocation(details.delta, pointerKind, context);
   }
 
-  void _onPointerDown(PointerEvent details, BuildContext context) {
+  void _onDragStart(DragStartDetails details, BuildContext context) {
     if (_lockInputs) return;
 
+    _resetPiecePosition(context);
+    pointerKind = details.kind;
+    _updateLocation(Offset.zero, pointerKind, context);
+  }
+
+  void _onTap() {
     final battle = widget.battle;
-    if (_buttonPressed) return;
-    if (details.kind == PointerDeviceKind.mouse) {
-      if (battle.playerControlLock.value) {
+    if (battle.playerControlLock.value) {
+      if (pointerKind == PointerDeviceKind.mouse) {
         battle.confirmMove();
-      }
-    } else {
-      _resetPiecePosition(context);
-      _tapTimeExceeded = false;
-      _noPointerMovement = true;
-      tapTimer = Timer(const Duration(milliseconds: 300), () {
-        _tapTimeExceeded = true;
-      });
-      _updateLocation(details, context);
-    }
-  }
-
-  void _onPointerUp(PointerEvent details, BuildContext context) {
-    if (_lockInputs) return;
-
-    final battle = widget.battle;
-    if (_buttonPressed) {
-      _buttonPressed = false;
-    } else {
-      if (details.kind == PointerDeviceKind.touch) {
-        tapTimer?.cancel();
-        tapTimer = null;
-        if (!_tapTimeExceeded && _noPointerMovement && battle.playerControlLock.value) {
-          battle.rotateRight();
-        }
+      } else {
+        battle.rotateRight();
       }
     }
   }
@@ -1062,6 +1051,7 @@ class _PlaySessionScreenState extends State<PlaySessionScreen>
       key: _boardTileKey,
       onTileSize: (ts) => tileSize = ts,
       loopAnimation: settings.continuousAnimation.value,
+      boardHeroTag: widget.boardHeroTag,
     );
 
     final turnCounter = RepaintBoundary(
@@ -1191,19 +1181,6 @@ class _PlaySessionScreenState extends State<PlaySessionScreen>
       )
     );
 
-    Widget blockCursorMovement({Widget? child}) {
-      return IgnorePointer(
-        ignoring: _lockInputs,
-        child: Listener(
-          onPointerDown: (details) {
-            _buttonPressed = true;
-          },
-          onPointerUp: (details) {},
-          child: child,
-        )
-      );
-    }
-
     Widget fadeOnControlLock({Widget? child}) {
       return AnimatedBuilder(
         animation: battle.playerControlLock,
@@ -1252,8 +1229,8 @@ class _PlaySessionScreenState extends State<PlaySessionScreen>
       )
     );
 
-    final blueCardbattle = CardSelectionWidget(
-      key: _bluebattleKey,
+    final blueCardSelection = CardSelectionWidget(
+      key: _blueSelectionKey,
       battle: battle,
       player: battle.blue,
       moveNotifier: battle.blueMoveNotifier,
@@ -1261,14 +1238,14 @@ class _PlaySessionScreenState extends State<PlaySessionScreen>
       tileSpecialColour: palette.tileBlueSpecial,
       loopAnimation: settings.continuousAnimation.value,
     );
-    final yellowCardbattle = CardSelectionConfirmButton(
-      key: _yellowbattleKey,
+    final yellowCardSelection = CardSelectionConfirmButton(
+      key: _yellowSelectionKey,
       battle: battle,
       loopAnimation: settings.continuousAnimation.value,
     );
 
-    final cardbattleScaleDown = mediaQuery.orientation == Orientation.landscape ? 0.7 : 0.9;
-    final cardbattles = RepaintBoundary(
+    final cardSelectionScaleDown = mediaQuery.orientation == Orientation.landscape ? 0.7 : 0.9;
+    final cardSelections = RepaintBoundary(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.center,
         mainAxisAlignment: MainAxisAlignment.spaceEvenly,
@@ -1278,10 +1255,10 @@ class _PlaySessionScreenState extends State<PlaySessionScreen>
             child: AspectRatio(
               aspectRatio: CardWidget.CARD_WIDTH/CardWidget.CARD_HEIGHT,
               child: FractionallySizedBox(
-                heightFactor: cardbattleScaleDown,
-                widthFactor: cardbattleScaleDown,
+                heightFactor: cardSelectionScaleDown,
+                widthFactor: cardSelectionScaleDown,
                 child: Center(
-                  child: blueCardbattle,
+                  child: blueCardSelection,
                 ),
               ),
             ),
@@ -1291,10 +1268,10 @@ class _PlaySessionScreenState extends State<PlaySessionScreen>
             child: AspectRatio(
               aspectRatio: CardWidget.CARD_WIDTH/CardWidget.CARD_HEIGHT,
               child: FractionallySizedBox(
-                heightFactor: cardbattleScaleDown,
-                widthFactor: cardbattleScaleDown,
+                heightFactor: cardSelectionScaleDown,
+                widthFactor: cardSelectionScaleDown,
                 child: Center(
-                  child: yellowCardbattle,
+                  child: yellowCardSelection,
                 ),
               ),
             ),
@@ -1473,39 +1450,37 @@ class _PlaySessionScreenState extends State<PlaySessionScreen>
             ),
             Expanded(
               flex: 18,
-              child: blockCursorMovement(
-                child: RepaintBoundary(
-                  child: Container(
-                    padding: EdgeInsets.all(10),
-                    child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                        children: [
-                          Expanded(
-                            flex: 3,
-                            child: fadeOnControlLock(
-                                child: Row(
-                                  children: [
-                                    Expanded(
-                                      flex: 2,
-                                      child: handWidget,
+              child: RepaintBoundary(
+                child: Container(
+                  padding: EdgeInsets.all(10),
+                  child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                      children: [
+                        Expanded(
+                          flex: 3,
+                          child: fadeOnControlLock(
+                              child: Row(
+                                children: [
+                                  Expanded(
+                                    flex: 2,
+                                    child: handWidget,
+                                  ),
+                                  Expanded(
+                                    flex: 1,
+                                    child: Column(
+                                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                                      children: [Expanded(child: passButton), Expanded(child: specialButton)],
                                     ),
-                                    Expanded(
-                                      flex: 1,
-                                      child: Column(
-                                        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                                        children: [Expanded(child: passButton), Expanded(child: specialButton)],
-                                      ),
-                                    ),
-                                  ],
-                                )
-                            ),
+                                  ),
+                                ],
+                              )
                           ),
-                          Expanded(
-                            flex: 1,
-                            child: cardbattles,
-                          )
-                        ]
-                    ),
+                        ),
+                        Expanded(
+                          flex: 1,
+                          child: cardSelections,
+                        )
+                      ]
                   ),
                 ),
               ),
@@ -1537,32 +1512,30 @@ class _PlaySessionScreenState extends State<PlaySessionScreen>
                     ),
                     Expanded(
                       flex: 5,
-                      child: blockCursorMovement(
-                        child: fadeOnControlLock(
-                          child: Column(
-                            children: [
-                              Expanded(
-                                  child: handWidget
-                              ),
-                              Row(
-                                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                                children: [
-                                  Expanded(
+                      child: fadeOnControlLock(
+                        child: Column(
+                          children: [
+                            Expanded(
+                                child: handWidget
+                            ),
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                              children: [
+                                Expanded(
+                                  child: FractionallySizedBox(
+                                    widthFactor: 0.9,
+                                    child: passButton,
+                                  )
+                                ),
+                                Expanded(
                                     child: FractionallySizedBox(
                                       widthFactor: 0.9,
-                                      child: passButton,
+                                      child: specialButton,
                                     )
-                                  ),
-                                  Expanded(
-                                      child: FractionallySizedBox(
-                                        widthFactor: 0.9,
-                                        child: specialButton,
-                                      )
-                                  )
-                                ],
-                              )
-                            ]
-                          ),
+                                )
+                              ],
+                            )
+                          ]
                         ),
                       ),
                     ),
@@ -1618,9 +1591,7 @@ class _PlaySessionScreenState extends State<PlaySessionScreen>
             ),
             Expanded(
               flex: 2,
-              child: blockCursorMovement(
-                child: cardbattles,
-              )
+              child: cardSelections,
             )
           ]
         ),
@@ -1648,15 +1619,32 @@ class _PlaySessionScreenState extends State<PlaySessionScreen>
       child: Focus(
         autofocus: true,
         onKey: _handleKeyPress,
-        child: Listener(
-          behavior: HitTestBehavior.translucent,
-          onPointerDown: (details) => _onPointerDown(details, context),
-          onPointerMove: (details) => _onPointerMove(details, context),
-          onPointerHover: (details) => _onPointerHover(details, context),
-          onPointerUp: (details) => _onPointerUp(details, context),
-          child: WillPopScope(
-            onWillPop: () async => !_lockInputs,
-            child: screen
+        child: MouseRegion(
+          onHover: _onHover,
+          child: GestureDetector(
+            behavior: HitTestBehavior.translucent,
+            onTap: _onTap,
+            onPanStart: (details) => _onDragStart(details, context),
+            onPanUpdate: (details) => _onDragUpdate(details, context),
+            //onPointerHover: (details) => _onPointerHover(details, context),
+            child: WillPopScope(
+              onWillPop: () async {
+                if (_lockInputs) {
+                  return false;
+                }
+                var choice = await showMultiChoicePrompt(
+                  context,
+                  title: "Give up?",
+                  options: ["Yeah", "Nah"]
+                );
+                if (choice == 0) {
+                  battle.stopAllProgress = true;
+                  return true;
+                }
+                return false;
+              },
+              child: screen
+            ),
           ),
         ),
       ),

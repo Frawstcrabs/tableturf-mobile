@@ -1,9 +1,11 @@
+import 'dart:math';
+
 import 'package:flutter/material.dart';
 
 import 'package:tableturf_mobile/src/game_internals/player.dart';
 import 'package:tableturf_mobile/src/game_internals/card.dart';
+import 'package:tableturf_mobile/src/game_internals/map.dart';
 import 'package:tableturf_mobile/src/game_internals/tile.dart';
-import 'package:tableturf_mobile/src/level_selection/levels.dart';
 import 'package:tableturf_mobile/src/style/my_transition.dart';
 import 'package:tableturf_mobile/src/style/palette.dart';
 
@@ -14,7 +16,7 @@ import 'session_intro.dart';
 
 PageRouteBuilder<T> buildGameSessionPage<T>({
   required BuildContext context,
-  required String stage,
+  required TableturfMap map,
   required TableturfDeck yellowDeck,
   required TableturfDeck blueDeck,
   String yellowName = "You",
@@ -25,8 +27,6 @@ PageRouteBuilder<T> buildGameSessionPage<T>({
 }) {
   final settings = SettingsController();
 
-  final board = settings.getMap(stage);
-
   final yellowDeckCards = yellowDeck.cards
       .map((ident) => TableturfCard(settings.identToCard(ident)))
       .toList();
@@ -34,10 +34,6 @@ PageRouteBuilder<T> buildGameSessionPage<T>({
   final blueDeckCards = blueDeck.cards
       .map((ident) => TableturfCard(settings.identToCard(ident)))
       .toList();
-  final blueHand = blueDeckCards.randomSample(4);
-  for (final card in blueHand) {
-    card.isHeld = true;
-  }
 
   final yellowPlayer = TableturfPlayer(
     name: yellowName,
@@ -50,7 +46,7 @@ PageRouteBuilder<T> buildGameSessionPage<T>({
   final bluePlayer = TableturfPlayer(
     name: blueName,
     deck: blueDeckCards,
-    hand: blueHand.map((c) => ValueNotifier(c)).toList(),
+    hand: Iterable.generate(4, (c) => ValueNotifier<TableturfCard?>(null)).toList(),
     traits: const BlueTraits(),
     cardSleeve: "assets/images/card_sleeves/sleeve_${blueDeck.cardSleeve}.png",
     special: 0,
@@ -60,10 +56,10 @@ PageRouteBuilder<T> buildGameSessionPage<T>({
     child: PlaySessionIntro(
       yellow: yellowPlayer,
       blue: bluePlayer,
-      board: board,
+      board: map.board.copy(),
+      boardHeroTag: "boardView-${Random().nextInt(2^31).toString()}",
       aiLevel: aiLevel,
       playerAI: playerAI,
-      key: const Key('play session intro'),
     ),
     color: palette.backgroundPlaySession,
   );

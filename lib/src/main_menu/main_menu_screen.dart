@@ -5,6 +5,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:tableturf_mobile/src/level_selection/free_play_screen.dart';
+import 'package:tableturf_mobile/src/map_manager/map_list_screen.dart';
 
 import '../level_selection/level_selection_screen.dart';
 import '../card_manager/card_list_screen.dart';
@@ -73,6 +74,16 @@ class MainMenuScreen extends StatelessWidget {
                 ));
               },
               child: const Text("Manage Cards")
+            ),
+            _gap,
+            ElevatedButton(
+              onPressed: () {
+                Navigator.of(context).push(buildMyTransition<void>(
+                  child: const MapListScreen(),
+                  color: palette.backgroundCardList,
+                ));
+              },
+              child: const Text("Manage Maps")
             ),
             _gap,
             ElevatedButton(

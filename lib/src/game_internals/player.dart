@@ -52,6 +52,19 @@ class TableturfPlayer {
       }
     }
   }
+
+  void reset() {
+    for (final card in deck) {
+      card.isHeld = false;
+      card.hasBeenPlayed = false;
+      card.isPlayable = false;
+      card.isPlayableSpecial = false;
+    }
+    for (final card in hand) {
+      card.value = null;
+    }
+    special.value = 0;
+  }
 }
 
 abstract class PlayerTraits {

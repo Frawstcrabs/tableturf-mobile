@@ -1,11 +1,13 @@
 import 'dart:async';
 import 'dart:math';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:tableturf_mobile/src/game_internals/player.dart';
 import 'package:tableturf_mobile/src/play_session/components/card_selection.dart';
 import 'package:tableturf_mobile/src/play_session/components/selection_button.dart';
+import 'package:tableturf_mobile/src/settings/settings.dart';
 
 import '../game_internals/card.dart';
 import '../play_session/components/card_widget.dart';
@@ -112,6 +114,135 @@ class _CardRarityDisplayState extends State<CardRarityDisplay>
   }
 }
 
+class CardPopup extends StatelessWidget {
+  final TableturfCardData card;
+  const CardPopup({super.key, required this.card});
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(
+        builder: (context, constraints) {
+          const headerFlex = 6.0;
+          const gapFlex = 0.5;
+          const cardFlex = 32.0;
+          const flexSum = headerFlex + gapFlex + cardFlex;
+          const boxLayoutRatio = CardWidget.CARD_WIDTH / (CardWidget.CARD_HEIGHT * (((flexSum*2) - cardFlex) / flexSum));
+          final realLayoutRatio = constraints.maxWidth / constraints.maxHeight;
+          final columnWidth = boxLayoutRatio > realLayoutRatio
+              ? constraints.maxWidth
+              : constraints.maxWidth * (boxLayoutRatio / realLayoutRatio);
+          return Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                SizedBox(
+                  width: columnWidth,
+                  child: AspectRatio(
+                    aspectRatio: flexSum/headerFlex,
+                    child: Row(
+                        children: [
+                          Expanded(
+                              child: FittedBox(
+                                  fit: BoxFit.fitHeight,
+                                  alignment: Alignment.centerLeft,
+                                  child: Text(
+                                      "No. ${card.num}",
+                                      style: TextStyle(
+                                        fontFamily: "Splatfont1",
+                                        color: const Color.fromRGBO(
+                                            192, 192, 192, 1.0),
+                                        fontSize: 36,
+                                      )
+                                  )
+                              )
+                          ),
+                          Expanded(
+                              child: Align(
+                                alignment: Alignment.centerRight,
+                                child: Transform.rotate(
+                                  angle: 0.05 * pi,
+                                  child: FractionallySizedBox(
+                                      heightFactor: 0.7,
+                                      child: AspectRatio(
+                                        aspectRatio: 3.0,
+                                        child: RepaintBoundary(
+                                            child: CardRarityDisplay(rarity: card.rarity)
+                                        ),
+                                      )
+                                  ),
+                                ),
+                              )
+                          )
+                        ]
+                    ),
+                  ),
+                ),
+                SizedBox(
+                    width: columnWidth,
+                    child: AspectRatio(aspectRatio: flexSum/gapFlex)
+                ),
+                SizedBox(
+                  width: columnWidth,
+                  child: CardFrontWidget(
+                    card: card,
+                    traits: const YellowTraits(),
+                    isHidden: false,
+                  ),
+                )
+              ]
+          );
+        }
+    );
+  }
+}
+
+class CardListItem extends StatefulWidget {
+  final TableturfCardIdentifier ident;
+  final ValueListenable<TableturfCardIdentifier?> cardScrollNotifier;
+  final bool isHidden;
+
+  const CardListItem({
+    required this.ident,
+    required this.cardScrollNotifier,
+    this.isHidden = false,
+    super.key
+  });
+
+  @override
+  State<CardListItem> createState() => _CardListItemState();
+}
+
+class _CardListItemState extends State<CardListItem> {
+  @override
+  void initState() {
+    super.initState();
+    widget.cardScrollNotifier.addListener(_checkScrollToItem);
+  }
+
+  @override
+  void dispose() {
+    widget.cardScrollNotifier.removeListener(_checkScrollToItem);
+    super.dispose();
+  }
+
+  void _checkScrollToItem() {
+    if (widget.cardScrollNotifier.value == widget.ident) {
+      Scrollable.ensureVisible(
+        context,
+        alignment: 0.5,
+      );
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final settings = SettingsController();
+    return CardFrontWidget(
+      card: settings.identToCard(widget.ident),
+      traits: const YellowTraits(),
+      isHidden: false,
+    );
+  }
+}
 
 
 class CardListScreen extends StatefulWidget {
@@ -128,6 +259,7 @@ class _CardListScreenState extends State<CardListScreen>
   bool _popupIsActive = false;
   bool _lockButtons = false;
   final ChangeNotifier _popupExit = ChangeNotifier();
+  final ValueNotifier<TableturfCardIdentifier?> _cardScrollNotifier = ValueNotifier(null);
 
   @override
   void initState() {
@@ -162,7 +294,7 @@ class _CardListScreenState extends State<CardListScreen>
     super.dispose();
   }
 
-  Future<void> _showCardPopup(BuildContext context, TableturfCardData card) async {
+  Future<void> _showOfficialCardPopup(BuildContext context, int cardIndex) async {
     final overlayState = Overlay.of(context);
     late final OverlayEntry overlayEntry;
     late final void Function() onPopupExit;
@@ -172,6 +304,7 @@ class _CardListScreenState extends State<CardListScreen>
       _popupIsActive = false;
       _popupExit.removeListener(onPopupExit);
     };
+    final PageController _pageController = PageController(initialPage: cardIndex);
     overlayEntry = OverlayEntry(builder: (_) {
       return DefaultTextStyle(
         style: TextStyle(
@@ -188,97 +321,39 @@ class _CardListScreenState extends State<CardListScreen>
         ),
         child: AnimatedBuilder(
             animation: _cardPopupController,
-            child: RepaintBoundary(
-              child: Center(
-                child: FractionallySizedBox(
-                  heightFactor: 0.8,
-                  widthFactor: 0.8,
-                  child: LayoutBuilder(
-                      builder: (context, constraints) {
-                        const headerFlex = 6.0;
-                        const gapFlex = 0.5;
-                        const cardFlex = 32.0;
-                        const flexSum = headerFlex + gapFlex + cardFlex;
-                        const boxLayoutRatio = CardWidget.CARD_WIDTH / (CardWidget.CARD_HEIGHT * (((flexSum*2) - cardFlex) / flexSum));
-                        final realLayoutRatio = constraints.maxWidth / constraints.maxHeight;
-                        final columnWidth = boxLayoutRatio > realLayoutRatio
-                          ? constraints.maxWidth
-                          : constraints.maxWidth * (boxLayoutRatio / realLayoutRatio);
-                        return Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              SizedBox(
-                                width: columnWidth,
-                                child: AspectRatio(
-                                  aspectRatio: flexSum/headerFlex,
-                                  child: Row(
-                                      children: [
-                                        Expanded(
-                                            child: FittedBox(
-                                                fit: BoxFit.fitHeight,
-                                                alignment: Alignment.centerLeft,
-                                                child: Text(
-                                                    "No. ${card.num}",
-                                                    style: TextStyle(
-                                                      fontFamily: "Splatfont1",
-                                                      color: const Color.fromRGBO(
-                                                          192, 192, 192, 1.0),
-                                                      fontSize: 36,
-                                                    )
-                                                )
-                                            )
-                                        ),
-                                        Expanded(
-                                            child: Align(
-                                              alignment: Alignment.centerRight,
-                                              child: Transform.rotate(
-                                                angle: 0.05 * pi,
-                                                child: FractionallySizedBox(
-                                                    heightFactor: 0.7,
-                                                    child: AspectRatio(
-                                                      aspectRatio: 3.0,
-                                                      child: RepaintBoundary(
-                                                          child: CardRarityDisplay(rarity: card.rarity)
-                                                      ),
-                                                    )
-                                                ),
-                                              ),
-                                            )
-                                        )
-                                      ]
-                                  ),
-                                ),
-                              ),
-                              SizedBox(
-                                width: columnWidth,
-                                child: AspectRatio(aspectRatio: flexSum/gapFlex)
-                              ),
-                              SizedBox(
-                                width: columnWidth,
-                                child: CardFrontWidget(
-                                  card: card,
-                                  traits: const YellowTraits(),
-                                  isHidden: false,
-                                ),
-                              )
-                            ]
-                        );
-                      }
-                  ),
-                ),
-              ),
+            child: PageView.builder(
+              controller: _pageController,
+              itemCount: officialCards.length,
+              itemBuilder: (context, index) {
+                return Stack(
+                  children: [
+                    GestureDetector(
+                      onTap: onPopupExit,
+                    ),
+                    Center(
+                      child: FractionallySizedBox(
+                        heightFactor: 0.8,
+                        widthFactor: 0.8,
+                        child: CardPopup(
+                          card: officialCards[index]
+                        )
+                      )
+                    ),
+                  ],
+                );
+              },
+              onPageChanged: (newIndex) {
+                _cardScrollNotifier.value = officialCards[newIndex].ident;
+              },
             ),
             builder: (_, child) {
               return Stack(
                   children: [
-                    GestureDetector(
-                        onTap: onPopupExit,
-                        child: DecoratedBox(
-                          decoration: BoxDecoration(
-                              color: Color.fromRGBO(0, 0, 0, _cardPopupController.value * 0.7)
-                          ),
-                          child: Container(),
-                        )
+                    DecoratedBox(
+                      decoration: BoxDecoration(
+                          color: Color.fromRGBO(0, 0, 0, _cardPopupController.value * 0.7)
+                      ),
+                      child: Container(),
                     ),
                     Opacity(
                         opacity: _cardOpacity.value,
@@ -324,28 +399,31 @@ class _CardListScreenState extends State<CardListScreen>
               )
           ),
           Expanded(
-              flex: 9,
-              child: GridView.count(
-                crossAxisCount: mediaQuery.orientation == Orientation.portrait ? 3 : 7,
+            flex: 9,
+            child: GridView.builder(
+              gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
                 mainAxisSpacing: 5,
                 crossAxisSpacing: 5,
-                padding: EdgeInsets.all(10), //EdgeInsets.fromLTRB(10, 5, 10, 5),
-                childAspectRatio: CardWidget.CARD_WIDTH / CardWidget.CARD_HEIGHT,
-                children: [
-                  for (int i = 0; i < cards.length; i++)
-                    GestureDetector(
-                      onTap: () {
-                        if (_lockButtons) return;
-                        _showCardPopup(context, cards[i]);
-                      },
-                      child: CardFrontWidget(
-                        card: cards[i],
-                        traits: const YellowTraits(),
-                        isHidden: false,
-                      ),
-                    )
-                ],
-              )
+                crossAxisCount: mediaQuery.orientation == Orientation.portrait ? 3 : 7,
+                childAspectRatio: CardWidget.CARD_RATIO
+              ),
+              padding: EdgeInsets.all(10),
+              itemCount: officialCards.length,
+              itemBuilder: (context, index) {
+                return GestureDetector(
+                  onTap: () {
+                    if (_lockButtons) return;
+                    _cardScrollNotifier.value = officialCards[index].ident;
+                    _showOfficialCardPopup(context, index);
+                  },
+                  child: CardListItem(
+                    ident: officialCards[index].ident,
+                    cardScrollNotifier: _cardScrollNotifier,
+                    isHidden: false,
+                  ),
+                );
+              },
+            )
           ),
           Expanded(
               flex: 1,

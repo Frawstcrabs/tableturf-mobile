@@ -4,12 +4,12 @@ import '../game_internals/deck.dart';
 
 class TableturfOpponent {
   final String name;
-  final String map;
+  final int mapID;
   final TableturfDeck deck;
 
   const TableturfOpponent({
     required this.name,
-    required this.map,
+    required this.mapID,
     required this.deck,
   });
 }
@@ -17,7 +17,7 @@ class TableturfOpponent {
 const List<TableturfOpponent> opponents = [
   TableturfOpponent(
       name: "Baby Jelly",
-      map: "main_street",
+      mapID: -1,
       deck: TableturfDeck(
         deckID: -1,
         name: "Baby Jelly",
@@ -27,7 +27,7 @@ const List<TableturfOpponent> opponents = [
   ),
   TableturfOpponent(
       name: "Cool Jelly",
-      map: "main_street",
+      mapID: -1,
       deck: TableturfDeck(
         deckID: -2,
         name: "Cool Jelly",
@@ -37,7 +37,7 @@ const List<TableturfOpponent> opponents = [
   ),
   TableturfOpponent(
       name: "Aggro Jelly",
-      map: "thunder_point",
+      mapID: -8,
       deck: TableturfDeck(
         deckID: -3,
         name: "Aggro Jelly",
@@ -47,7 +47,7 @@ const List<TableturfOpponent> opponents = [
   ),
   TableturfOpponent(
       name: "Sheldon",
-      map: "x_marks_the_garden",
+      mapID: -3,
       deck: TableturfDeck(
         deckID: -4,
         name: "Sheldon",
@@ -57,7 +57,7 @@ const List<TableturfOpponent> opponents = [
   ),
   TableturfOpponent(
       name: "Gnarly Eddy",
-      map: "thunder_point",
+      mapID: -8,
       deck: TableturfDeck(
         deckID: -5,
         name: "Gnarly Eddy",
@@ -67,7 +67,7 @@ const List<TableturfOpponent> opponents = [
   ),
   TableturfOpponent(
       name: "Jel La Fleur",
-      map: "square_squared",
+      mapID: -7,
       deck: TableturfDeck(
         deckID: -6,
         name: "Jel La Fleur",
@@ -77,7 +77,7 @@ const List<TableturfOpponent> opponents = [
   ),
   TableturfOpponent(
       name: "Mr. Coco",
-      map: "square_squared",
+      mapID: -7,
       deck: TableturfDeck(
         deckID: -7,
         name: "Mr. Coco",
@@ -87,7 +87,7 @@ const List<TableturfOpponent> opponents = [
   ),
   TableturfOpponent(
       name: "Harmony",
-      map: "lakefront_property",
+      mapID: -4,
       deck: TableturfDeck(
         deckID: -8,
         name: "Harmony",
@@ -97,7 +97,7 @@ const List<TableturfOpponent> opponents = [
   ),
   TableturfOpponent(
       name: "Judd",
-      map: "x_marks_the_garden",
+      mapID: -3,
       deck: TableturfDeck(
         deckID: -9,
         name: "Judd",
@@ -107,7 +107,7 @@ const List<TableturfOpponent> opponents = [
   ),
   TableturfOpponent(
       name: "Li'l Judd",
-      map: "double_gemini",
+      mapID: -2,
       deck: TableturfDeck(
         deckID: -10,
         name: "Li'l Judd",
@@ -117,7 +117,7 @@ const List<TableturfOpponent> opponents = [
   ),
   TableturfOpponent(
       name: "Murch",
-      map: "lakefront_property",
+      mapID: -4,
       deck: TableturfDeck(
         deckID: -11,
         name: "Murch",
@@ -127,7 +127,7 @@ const List<TableturfOpponent> opponents = [
   ),
   TableturfOpponent(
       name: "Shiver",
-      map: "river_drift",
+      mapID: -6,
       deck: TableturfDeck(
         deckID: -12,
         name: "Shiver",
@@ -137,7 +137,7 @@ const List<TableturfOpponent> opponents = [
   ),
   TableturfOpponent(
       name: "Frye",
-      map: "main_street",
+      mapID: -1,
       deck: TableturfDeck(
         deckID: -13,
         name: "Frye",
@@ -147,7 +147,7 @@ const List<TableturfOpponent> opponents = [
   ),
   TableturfOpponent(
       name: "Big Man",
-      map: "thunder_point",
+      mapID: -8,
       deck: TableturfDeck(
         deckID: -14,
         name: "Big Man",
@@ -157,7 +157,7 @@ const List<TableturfOpponent> opponents = [
   ),
   TableturfOpponent(
       name: "Staff",
-      map: "box_seats",
+      mapID: -5,
       deck: TableturfDeck(
         deckID: -15,
         name: "Staff",
@@ -167,7 +167,7 @@ const List<TableturfOpponent> opponents = [
   ),
   TableturfOpponent(
       name: "Cuttlefish",
-      map: "x_marks_the_garden",
+      mapID: -3,
       deck: TableturfDeck(
         deckID: -16,
         name: "Cuttlefish",
@@ -177,7 +177,7 @@ const List<TableturfOpponent> opponents = [
   ),
   TableturfOpponent(
       name: "Agent 1",
-      map: "square_squared",
+      mapID: -7,
       deck: TableturfDeck(
         deckID: -17,
         name: "Agent 1",
@@ -187,7 +187,7 @@ const List<TableturfOpponent> opponents = [
   ),
   TableturfOpponent(
       name: "Agent 2",
-      map: "river_drift",
+      mapID: -6,
       deck: TableturfDeck(
         deckID: -18,
         name: "Agent 2",

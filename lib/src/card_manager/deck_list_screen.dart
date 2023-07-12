@@ -55,9 +55,9 @@ class _DeckListScreenState extends State<DeckListScreen> {
                       if (_lockButtons) return;
                       _lockButtons = true;
                       final bool changesMade = await Navigator.of(context).push(
-                          MaterialPageRoute(builder: (_) {
-                            return DeckEditorScreen(deckNotifier.value);
-                          })
+                        MaterialPageRoute(builder: (_) {
+                          return DeckEditorScreen(deckNotifier.value);
+                        })
                       );
                       if (changesMade) {
                         setState(() {});

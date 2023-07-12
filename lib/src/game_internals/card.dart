@@ -257,15 +257,17 @@ class Coords {
   String toString() {
     return "Coords($x, $y)";
   }
+
+  static const zero = Coords(0, 0);
 }
 
 bool cardsLoaded = false;
-late final List<TableturfCardData> cards;
+late final List<TableturfCardData> officialCards;
 
 Future<void> loadCards() async {
   if (!cardsLoaded) {
     final List<dynamic> jsonData = jsonDecode(await rootBundle.loadString("assets/cards.json"));
-    cards = jsonData.map((e) => TableturfCardData.fromJson(e as Map<String, dynamic>)).toList(growable: false);
+    officialCards = jsonData.map((e) => TableturfCardData.fromJson(e as Map<String, dynamic>)).toList(growable: false);
     cardsLoaded = true;
   }
 }
@@ -284,4 +286,6 @@ class TableturfCard {
   int get count => data.count;
   Coords get selectPoint => data.selectPoint;
   String get designSprite => data.designSprite;
+  TableturfCardIdentifier get ident => data.ident;
+  TableturfCardType get type => data.type;
 }

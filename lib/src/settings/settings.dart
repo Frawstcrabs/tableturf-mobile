@@ -9,15 +9,14 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../game_internals/card.dart';
 import '../game_internals/deck.dart';
+import '../game_internals/map.dart';
 import '../game_internals/tile.dart';
-import '../level_selection/levels.dart';
-import '../level_selection/opponents.dart';
 
 /// An class that holds settings like [playerName] or [musicOn],
 /// and saves them to an injected persistence store.
 class SettingsController {
   late final SharedPreferences _prefs;
-  static const commitChanges = false;
+  static const commitChanges = true;
 
   static final SettingsController _controller = SettingsController._internal();
 
@@ -33,8 +32,10 @@ class SettingsController {
   ValueNotifier<bool> _musicOn = ValueNotifier(false);
   ValueNotifier<bool> _continuousAnimation = ValueNotifier(false);
   ValueNotifier<String> _playerName = ValueNotifier('Player');
-  late List<ValueNotifier<TableturfDeck>> _decks;
   late int _nextDeckID;
+  late List<ValueNotifier<TableturfDeck>> _decks;
+  late int _nextMapID;
+  late List<ValueNotifier<TableturfMap>> _maps;
   final Map<TableturfCardIdentifier, TableturfCardData> _tempCards = {};
 
   ValueListenable<bool> get muted => _muted;
@@ -43,6 +44,7 @@ class SettingsController {
   ValueListenable<bool> get continuousAnimation => _continuousAnimation;
   ValueListenable<String> get playerName => _playerName;
   List<ValueNotifier<TableturfDeck>> get decks => List.unmodifiable(_decks);
+  List<ValueNotifier<TableturfMap>> get maps => List.unmodifiable(_maps);
 
   /// Asynchronously loads values from the injected persistence store.
   Future<void> loadStateFromPersistence(SharedPreferences prefs) async {
@@ -56,12 +58,12 @@ class SettingsController {
     final List<dynamic> deckIDs = jsonDecode(_prefs.getString("tableturf-deck_list") ?? "[0]");
     _decks = deckIDs.map((deckID) {
       final deckDefault = '''{
-        "name": "Deck 1",
+        "name": "Deck ${deckID+1}",
         "cardSleeve": "default",
-        "deckID": 0,
+        "deckID": ${deckID},
         "cards": ${jsonEncode([
-          for (final cardID in [5, 12, 21, 27, 33, 39, 44, 51, 54, 55, 91, 102, 136, 140, 158])
-            cards[cardID].ident.toJson()
+          for (final cardID in [0, 12, 21, 27, 97, 98, 44, 51, 54, 55, 91, 102, 136, 140, 158])
+            officialCards[cardID].ident.toJson()
         ])}
       }''';
       print(deckDefault);
@@ -78,16 +80,13 @@ class SettingsController {
         cardSleeve: deck["cardSleeve"],
       ));
     }).toList();
-    /*
-    _nextDeckID = opponents.length - 1;
-    _decks = opponents.sublist(0, opponents.length - 1).map((opponent) {
-      return ValueNotifier(opponent.deck);
-    }).toList();
-     */
-  }
 
-  Iterable<int> get items sync* {
-    yield 1;
+    _nextMapID = _prefs.getInt("tableturf-map_nextID") ?? 1;
+    final List<dynamic> mapIDs = jsonDecode(_prefs.getString("tableturf-map_list") ?? "[]");
+    _maps = mapIDs.map((mapID) {
+      final Map<String, dynamic> map = jsonDecode(_prefs.getString("tableturf-map_map-${mapID}")!);
+      return ValueNotifier(TableturfMap.fromJson(map));
+    }).toList();
   }
 
   void setPlayerName(String name) {
@@ -155,8 +154,8 @@ class SettingsController {
 
   void updateDeck({
     required int deckID,
-    List<TableturfCardIdentifier>? cards,
     String? name,
+    List<TableturfCardIdentifier>? cards,
     String? cardSleeve,
   }) {
     final oldDeckIndex = _decks.indexWhere((deck) => deck.value.deckID == deckID);
@@ -172,8 +171,8 @@ class SettingsController {
   }
 
   TableturfDeck createDeck({
-    required List<TableturfCardIdentifier> cards,
     required String name,
+    required List<TableturfCardIdentifier> cards,
     required String cardSleeve,
   }) {
     final deck = TableturfDeck(
@@ -192,6 +191,65 @@ class SettingsController {
     return deck;
   }
 
+  Future<void> _writeNextMapID() async {
+    if (commitChanges) {
+      await _prefs.setInt("tableturf-map_nextID", _nextMapID);
+    }
+  }
+
+  Future<void> _writeMap(TableturfMap map) async {
+    if (commitChanges) {
+      await _prefs.setString(
+        "tableturf-map_map-${map.mapID}",
+        jsonEncode(map.toJson()),
+      );
+    }
+  }
+
+  Future<void> _writeMapIndexes() async {
+    if (commitChanges) {
+      await _prefs.setString(
+        "tableturf-map_list",
+        jsonEncode([for (final map in _maps) map.value.mapID]),
+      );
+    }
+  }
+
+  void updateMap({
+    required int mapID,
+    String? name,
+    TileGrid? board,
+  }) {
+    final oldMapIndex = _maps.indexWhere((map) => map.value.mapID == mapID);
+    final oldMap = _maps[oldMapIndex].value;
+    final newMap = TableturfMap(
+      mapID: mapID,
+      name: name ?? oldMap.name,
+      board: board?.copy() ?? oldMap.board,
+    );
+    _maps[oldMapIndex].value = newMap;
+    _writeMap(newMap);
+  }
+
+  TableturfMap createMap({
+    required String name,
+    required TileGrid board,
+  }) {
+    final map = TableturfMap(
+      mapID: _nextMapID,
+      name: name,
+      board: board.copy(),
+    );
+    _maps.add(ValueNotifier(map));
+    _nextMapID += 1;
+    () async {
+      await _writeNextMapID();
+      await _writeMap(map);
+      await _writeMapIndexes();
+    }();
+    return map;
+  }
+
   void registerTempCard(TableturfCardData card) {
     _tempCards[card.ident] = card;
   }
@@ -203,7 +261,7 @@ class SettingsController {
   TableturfCardData identToCard(TableturfCardIdentifier ident) {
     switch (ident.type) {
       case TableturfCardType.official:
-        return cards[ident.num - 1];
+        return officialCards[ident.num - 1];
       case TableturfCardType.custom:
         throw Exception("custom ident passed");
       case TableturfCardType.randomiser:
@@ -211,10 +269,12 @@ class SettingsController {
     }
   }
 
-  TileGrid getMap(String stage) {
-    if (maps.containsKey(stage)) {
-      return maps[stage]!.copy();
-    }
-    throw Exception("unknown map name");
+  TableturfMap getMap(int mapID) {
+    return officialMaps.firstWhere(
+      (m) => m.mapID == mapID,
+      orElse: () => _maps.firstWhere(
+        (m) => m.value.mapID == mapID,
+      ).value
+    );
   }
 }

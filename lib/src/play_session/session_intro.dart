@@ -21,9 +21,11 @@ class PlaySessionIntro extends StatefulWidget {
   final TileGrid board;
   final AILevel aiLevel;
   final AILevel? playerAI;
+  final String boardHeroTag;
 
   const PlaySessionIntro({
     super.key,
+    required this.boardHeroTag,
     required this.yellow,
     required this.blue,
     required this.board,
@@ -86,7 +88,8 @@ class _PlaySessionIntroState extends State<PlaySessionIntro>
       pageBuilder: (context, animation, secondaryAnimation) {
         return PlaySessionScreen(
           key: const Key('play session screen'),
-          battle: battle
+          battle: battle,
+          boardHeroTag: widget.boardHeroTag,
         );
       },
       transitionsBuilder: (context, animation, secondaryAnimation, child) {
@@ -124,6 +127,7 @@ class _PlaySessionIntroState extends State<PlaySessionIntro>
         child: buildBoardWidget(
           battle: battle,
           loopAnimation: false,
+          boardHeroTag: widget.boardHeroTag,
         ),
       ),
     );

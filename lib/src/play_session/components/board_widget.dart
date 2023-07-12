@@ -1,5 +1,10 @@
+import 'dart:math';
+import 'dart:ui' as ui;
+
+import 'package:collection/collection.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:tableturf_mobile/src/style/shaders.dart';
 
 import '../../game_internals/card.dart';
 import '../../style/palette.dart';
@@ -11,16 +16,16 @@ class BoardPainter extends CustomPainter {
   static const EDGE_WIDTH = 0.5;
 
   final TileGrid board;
-  final Set<Coords> activatedSpecials;
-  final double tileSideLength;
-  final ValueListenable<bool> specialButtonOn;
+  final Listenable? repaintNotifier;
+  final double? tileSideLength;
+  final ValueListenable<bool>? specialButtonOn;
 
   BoardPainter({
     required this.board,
-    required this.activatedSpecials,
-    required this.specialButtonOn,
-    required this.tileSideLength,
-  }): super(repaint: specialButtonOn);
+    this.repaintNotifier,
+    this.specialButtonOn,
+    this.tileSideLength,
+  }): super(repaint: Listenable.merge([specialButtonOn, repaintNotifier]));
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -34,6 +39,11 @@ class BoardPainter extends CustomPainter {
       ..strokeWidth = EDGE_WIDTH
       ..color = palette.tileEdge;
     // draw
+
+    final tileSideLength = this.tileSideLength ?? min(
+      size.height / board.length,
+      size.width / board[0].length,
+    );
     for (var y = 0; y < board.length; y++) {
       for (var x = 0; x < board[0].length; x++) {
         final state = board[y][x];
@@ -46,7 +56,7 @@ class BoardPainter extends CustomPainter {
             : state == TileState.blue ? palette.tileBlue
             : state == TileState.blueSpecial ? palette.tileBlueSpecial
             : Color.fromRGBO(0, 0, 0, 0);
-        if (specialButtonOn.value && !state.isSpecial && state != TileState.empty) {
+        if ((specialButtonOn?.value ?? false) && !state.isSpecial && state != TileState.empty) {
           bodyPaint.color = Color.alphaBlend(
             const Color.fromRGBO(0, 0, 0, 0.4),
             bodyPaint.color,
@@ -60,19 +70,6 @@ class BoardPainter extends CustomPainter {
         );
         canvas.drawRect(tileRect, bodyPaint);
         canvas.drawRect(tileRect, edgePaint);
-        if (activatedSpecials.contains(Coords(x, y))) {
-          bodyPaint.color = state == TileState.yellowSpecial ? Color.fromRGBO(225, 255, 17, 1)
-              : state == TileState.blueSpecial ? Color.fromRGBO(240, 255, 255, 1)
-              : throw Exception("Invalid tile colour given for special: ${state}");
-          canvas.drawCircle(
-            Offset(
-              (x + 0.5) * tileSideLength,
-              (y + 0.5) * tileSideLength,
-            ),
-            tileSideLength / 3,
-            bodyPaint
-          );
-        }
       }
     }
   }
@@ -82,7 +79,8 @@ class BoardPainter extends CustomPainter {
     return (
       this.board != oldDelegate.board
         || this.tileSideLength != oldDelegate.tileSideLength
-        || this.activatedSpecials != oldDelegate.activatedSpecials
+        || this.specialButtonOn != oldDelegate.specialButtonOn
+        || this.repaintNotifier != oldDelegate.repaintNotifier
     );
   }
 }
@@ -124,6 +122,93 @@ class BoardFlashPainter extends CustomPainter {
   }
 }
 
+class BoardSpecialPainter extends CustomPainter {
+  final TileGrid board;
+  final double? tileSideLength;
+  final ValueListenable<Set<Coords>>? activatedSpecialsNotifier;
+  final Animation<double>? flameAnimation;
+  final ui.Image? fireMask, fireEffect;
+
+  BoardSpecialPainter({
+    required this.board,
+    this.tileSideLength,
+    this.fireMask,
+    this.fireEffect,
+    this.activatedSpecialsNotifier,
+    this.flameAnimation,
+  }): super(repaint: Listenable.merge([flameAnimation, activatedSpecialsNotifier]));
+
+  @override
+  void paint(ui.Canvas canvas, ui.Size size) {
+    final activatedSpecials = activatedSpecialsNotifier?.value;
+    if (fireMask == null || fireEffect == null || activatedSpecials == null) {
+      return;
+    }
+
+    final palette = const Palette();
+    final bodyPaint = Paint()
+      ..style = PaintingStyle.fill
+      ..strokeJoin = StrokeJoin.miter;
+    final tileSideLength = this.tileSideLength ?? min(
+      size.height / board.length,
+      size.width / board[0].length,
+    );
+
+    final shader = Shaders.specialFire.fragmentShader();
+    for (final coords in activatedSpecials!) {
+      final x = coords.x;
+      final y = coords.y;
+      final state = board[y][x];
+      bodyPaint.color = state == TileState.yellowSpecial ? palette.tileYellowSpecialCenter
+          : state == TileState.blueSpecial ? palette.tileBlueSpecialCenter
+          : throw Exception("Invalid tile colour given for special: ${state.name}");
+      canvas.drawCircle(
+          Offset(
+            (x + 0.5) * tileSideLength,
+            (y + 0.5) * tileSideLength,
+          ),
+          tileSideLength / 3,
+          bodyPaint
+      );
+      final flameRect = Rect.fromLTWH(
+          (x - 0.5) * tileSideLength,
+          (y - 1.0) * tileSideLength,
+          tileSideLength * 2,
+          tileSideLength * 2
+      );
+      final flameColor = state == TileState.yellowSpecial ? palette.tileYellowSpecialFlame
+          : state == TileState.blueSpecial ? palette.tileBlueSpecialFlame
+          : Color.fromRGBO(0, 0, 0, 1);
+      shader.setImageSampler(0, fireMask!);
+      shader.setImageSampler(1, fireEffect!);
+      shader.setFloat(0, flameRect.width);
+      shader.setFloat(1, flameRect.height);
+      shader.setFloat(2, flameRect.left);
+      shader.setFloat(3, flameRect.top);
+      shader.setFloat(4, flameAnimation?.value ?? 0.0);
+      shader.setFloat(5, (flameColor.red / 255.0) * flameColor.opacity);
+      shader.setFloat(6, (flameColor.green / 255.0) * flameColor.opacity);
+      shader.setFloat(7, (flameColor.blue / 255.0) * flameColor.opacity);
+      shader.setFloat(8, flameColor.opacity);
+      canvas.drawRect(flameRect, Paint()
+        ..style = PaintingStyle.fill
+        ..shader = shader);
+    }
+  }
+
+  @override
+  bool shouldRepaint(BoardSpecialPainter other) {
+    return (
+        this.board != other.board
+        || this.tileSideLength != other.tileSideLength
+        || this.flameAnimation != other.flameAnimation
+        || this.activatedSpecialsNotifier != other.activatedSpecialsNotifier
+        || this.fireEffect != other.fireEffect
+        || this.fireMask != other.fireMask
+    );
+  }
+}
+
 class BoardWidget extends StatefulWidget {
   final TableturfBattle battle;
   final double tileSize;
@@ -138,16 +223,80 @@ class BoardWidget extends StatefulWidget {
 }
 
 class _BoardWidgetState extends State<BoardWidget>
-    with SingleTickerProviderStateMixin {
+    with TickerProviderStateMixin {
   late final AnimationController _flashController;
+  late final AnimationController _flameController;
   late final Animation<double> flashOpacity;
   final ValueNotifier<bool> showSpecialDarken = ValueNotifier(false);
+  late AssetImage _maskImage, _effectImage;
+  ImageStream? _maskStream, _effectStream;
+  ImageInfo? _maskInfo, _effectInfo;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    print("code ran");
+    _maskImage = AssetImage("assets/images/fire_mask3.png");
+    _effectImage = AssetImage("assets/images/fire_noise.jpg");
+    // We call _getImage here because createLocalImageConfiguration() needs to
+    // be called again if the dependencies changed, in case the changes relate
+    // to the DefaultAssetBundle, MediaQuery, etc, which that method uses.
+    _getImage();
+  }
+
+  @override
+  void didUpdateWidget(BoardWidget oldWidget) {
+    super.didUpdateWidget(oldWidget);
+  }
+
+  void _getImage() {
+    final ImageStream? oldMaskStream = _maskStream;
+    _maskStream = _maskImage.resolve(createLocalImageConfiguration(context));
+    if (_maskStream!.key != oldMaskStream?.key) {
+      // If the keys are the same, then we got the same image back, and so we don't
+      // need to update the listeners. If the key changed, though, we must make sure
+      // to switch our listeners to the new image stream.
+      final ImageStreamListener listener = ImageStreamListener(_updateMaskImage);
+      oldMaskStream?.removeListener(listener);
+      _maskStream!.addListener(listener);
+    }
+    final ImageStream? oldEffectStream = _effectStream;
+    _effectStream = _effectImage.resolve(createLocalImageConfiguration(context));
+    if (_effectStream!.key != oldEffectStream?.key) {
+      // If the keys are the same, then we got the same image back, and so we don't
+      // need to update the listeners. If the key changed, though, we must make sure
+      // to switch our listeners to the new image stream.
+      final ImageStreamListener listener = ImageStreamListener(_updateEffectImage);
+      oldEffectStream?.removeListener(listener);
+      _effectStream!.addListener(listener);
+    }
+  }
+
+  void _updateMaskImage(ImageInfo imageInfo, bool synchronousCall) {
+    setState(() {
+      // Trigger a build whenever the image changes.
+      _maskInfo?.dispose();
+      _maskInfo = imageInfo;
+    });
+  }
+
+  void _updateEffectImage(ImageInfo imageInfo, bool synchronousCall) {
+    setState(() {
+      // Trigger a build whenever the image changes.
+      _effectInfo?.dispose();
+      _effectInfo = imageInfo;
+    });
+  }
 
   @override
   void initState() {
     _flashController = AnimationController(
-      duration: const Duration(milliseconds: 200),
-      vsync: this
+        duration: const Duration(milliseconds: 200),
+        vsync: this
+    );
+    _flameController = AnimationController(
+        duration: const Duration(milliseconds: 900),
+        vsync: this
     );
     _flashController.value = 1.0;
     flashOpacity = Tween(
@@ -156,13 +305,24 @@ class _BoardWidgetState extends State<BoardWidget>
     ).animate(_flashController);
 
     widget.battle.boardChangeNotifier.addListener(_runFlash);
+    widget.battle.activatedSpecialsNotifier.addListener(_runFlameAnimation);
     widget.battle.moveSpecialNotifier.addListener(_checkSpecialDarken);
     widget.battle.revealCardsNotifier.addListener(_clearSpecialDarken);
+    _runFlameAnimation();
     super.initState();
   }
 
   void _runFlash() {
     _flashController.forward(from: 0.0);
+  }
+
+  void _runFlameAnimation() {
+    if (widget.battle.activatedSpecialsNotifier.value.isNotEmpty) {
+      _flameController.repeat();
+    } else {
+      _flameController.stop();
+      _flameController.value = 0.0;
+    }
   }
 
   void _checkSpecialDarken() {
@@ -176,35 +336,37 @@ class _BoardWidgetState extends State<BoardWidget>
   @override
   void dispose() {
     widget.battle.boardChangeNotifier.removeListener(_runFlash);
+    widget.battle.activatedSpecialsNotifier.removeListener(_runFlameAnimation);
     _flashController.dispose();
+    _flameController.dispose();
+    _maskStream?.removeListener(ImageStreamListener(_updateMaskImage));
+    _maskInfo?.dispose();
+    _maskInfo = null;
+    _effectStream?.removeListener(ImageStreamListener(_updateEffectImage));
+    _effectInfo?.dispose();
+    _effectInfo = null;
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    return RepaintBoundary(
-      child: Stack(
-        fit: StackFit.expand,
-        children: [
-          AnimatedBuilder(
-            animation: Listenable.merge([
-              widget.battle.boardChangeNotifier,
-              widget.battle.activatedSpecialsNotifier,
-            ]),
-            builder: (context, child) {
-              return CustomPaint(
-                painter: BoardPainter(
-                  board: widget.battle.board,
-                  activatedSpecials: widget.battle.activatedSpecialsNotifier.value,
-                  tileSideLength: widget.tileSize,
-                  specialButtonOn: showSpecialDarken,
-                ),
-                child: Container(),
-                isComplex: true,
-              );
-            }
+    return Stack(
+      fit: StackFit.expand,
+      children: [
+        RepaintBoundary(
+          child: CustomPaint(
+            painter: BoardPainter(
+              board: widget.battle.board,
+              tileSideLength: widget.tileSize,
+              specialButtonOn: showSpecialDarken,
+              repaintNotifier: widget.battle.boardChangeNotifier,
+            ),
+            child: Container(),
+            isComplex: true,
           ),
-          AnimatedBuilder(
+        ),
+        RepaintBoundary(
+          child: AnimatedBuilder(
             animation: widget.battle.boardChangeNotifier,
             builder: (context, child) {
               return CustomPaint(
@@ -217,8 +379,26 @@ class _BoardWidgetState extends State<BoardWidget>
               );
             }
           ),
-        ],
-      )
+        ),
+        RepaintBoundary(
+          child: AnimatedBuilder(
+            animation: widget.battle.activatedSpecialsNotifier,
+            builder: (context, child) {
+              return CustomPaint(
+                painter: BoardSpecialPainter(
+                  board: widget.battle.board,
+                  tileSideLength: widget.tileSize,
+                  activatedSpecialsNotifier: widget.battle.activatedSpecialsNotifier,
+                  flameAnimation: _flameController,
+                  fireMask: _maskInfo?.image,
+                  fireEffect: _effectInfo?.image,
+                ),
+                child: Container(),
+              );
+            }
+          ),
+        )
+      ],
     );
   }
 }

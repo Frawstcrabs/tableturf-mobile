@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math';
 
 import 'package:flutter/material.dart';
 import 'package:just_audio/just_audio.dart';
@@ -10,9 +11,13 @@ import 'package:tableturf_mobile/src/audio/songs.dart';
 import 'package:tableturf_mobile/src/audio/sounds.dart';
 import 'package:tableturf_mobile/src/game_internals/battle.dart';
 import 'package:tableturf_mobile/src/game_internals/player.dart';
+import 'package:tableturf_mobile/src/play_session/session_intro.dart';
 import 'package:tableturf_mobile/src/style/palette.dart';
 
+import '../game_internals/card.dart';
+import '../style/my_transition.dart';
 import 'components/build_board_widget.dart';
+import 'components/multi_choice_prompt.dart';
 import 'components/score_counter.dart';
 
 void paintScoreBar({
@@ -243,10 +248,12 @@ class WinEffectPainter extends CustomPainter {
 }
 
 class PlaySessionEnd extends StatefulWidget {
+  final String boardHeroTag;
   final TableturfBattle battle;
 
   const PlaySessionEnd({
     super.key,
+    required this.boardHeroTag,
     required this.battle,
   });
 
@@ -262,6 +269,7 @@ class _PlaySessionEndState extends State<PlaySessionEnd>
   late final Animation<double> yellowScoreAnimation, blueScoreAnimation;
   late final Animation<double> winScoreMoveAnimation, winScoreFadeAnimation;
   late final PlayWinner winner;
+  bool initSequenceEnded = false;
 
   late final List<Animation<Offset>> winScoreDropletMoveAnimations;
   late final Animation<double> scoreFade, scoreSize;
@@ -401,6 +409,7 @@ class _PlaySessionEndState extends State<PlaySessionEnd>
     await Future<void>.delayed(const Duration(milliseconds: 300));
     await _scoreCountersAnimator.forward();
     await Future<void>.delayed(const Duration(milliseconds: 300));
+    initSequenceEnded = true;
 
     final yellowScore = widget.battle.yellowCountNotifier.value;
     final blueScore = widget.battle.blueCountNotifier.value;
@@ -422,6 +431,34 @@ class _PlaySessionEndState extends State<PlaySessionEnd>
     super.dispose();
   }
 
+  Future<void> _checkRematch() async {
+    if (!initSequenceEnded) return;
+    var choice = await showMultiChoicePrompt(
+      context,
+      title: "Rematch?",
+      options: ["Yeah!", "Nah"],
+      useWave: false,
+    );
+    if (choice == 0) {
+      final battle = widget.battle;
+      battle.yellow.reset();
+      battle.blue.reset();
+      Navigator.of(context).pushReplacement(buildMyTransition(
+        child: PlaySessionIntro(
+          yellow: battle.yellow,
+          blue: battle.blue,
+          board: battle.origBoard,
+          boardHeroTag: "boardView-${Random().nextInt(2^31).toString()}",
+          aiLevel: battle.aiLevel,
+          playerAI: battle.playerAI,
+        ),
+        color: const Palette().backgroundPlaySession,
+      ));
+      return;
+    }
+    Navigator.of(context).pop();
+  }
+
   @override
   Widget build(BuildContext context) {
     final palette = context.watch<Palette>();
@@ -430,6 +467,7 @@ class _PlaySessionEndState extends State<PlaySessionEnd>
     final boardWidget = buildBoardWidget(
       battle: widget.battle,
       loopAnimation: false,
+      boardHeroTag: widget.boardHeroTag,
     );
 
     late final Widget screen;
@@ -598,7 +636,10 @@ class _PlaySessionEndState extends State<PlaySessionEnd>
             ),
             Expanded(
               flex: 10,
-              child: boardWidget
+              child: FractionallySizedBox(
+                widthFactor: 0.8,
+                child: boardWidget
+              )
             ),
           ],
         ),
@@ -620,7 +661,16 @@ class _PlaySessionEndState extends State<PlaySessionEnd>
       ),
       child: Padding(
         padding: mediaQuery.padding,
-        child: screen,
+        child: GestureDetector(
+          onTap: _checkRematch,
+          child: WillPopScope(
+            onWillPop: () async {
+              _checkRematch();
+              return false;
+            },
+            child: screen
+          ),
+        ),
       )
     );
   }

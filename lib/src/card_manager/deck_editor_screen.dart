@@ -1,8 +1,9 @@
+// ignore_for_file: invalid_use_of_visible_for_testing_member
+
 import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:tableturf_mobile/src/game_internals/player.dart';
 import 'package:tableturf_mobile/src/play_session/components/selection_button.dart';
 
 import '../game_internals/card.dart';
@@ -16,175 +17,39 @@ class DeckCardWidget extends StatelessWidget {
   final TableturfCardData? card;
   const DeckCardWidget({super.key, required this.card});
 
-  @override
-  Widget _build(BuildContext context) {
+  Widget build(BuildContext context) {
     final palette = context.watch<Palette>();
     final card = this.card;
     if (card == null) {
       return LayoutBuilder(
-        builder: (context, constraints) {
-          final isLandscape = (constraints.maxWidth / constraints.maxHeight) > 1.0;
-          final cardAspectRatio = isLandscape
-              ? CardWidget.CARD_HEIGHT / CardWidget.CARD_WIDTH
-              : CardWidget.CARD_WIDTH / CardWidget.CARD_HEIGHT;
-          return AspectRatio(
-            aspectRatio: cardAspectRatio,
-            child: Container(
-              decoration: BoxDecoration(
-                color: palette.cardBackgroundSelectable,
-                border: Border.all(
-                  width: 1.0,
-                  color: palette.cardEdge,
-                ),
-              ),
-              child: Center(
-                child: Icon(
-                  Icons.add_circle_outline,
-                  color: const Color.fromRGBO(255, 255, 255, 0.2),
-                  size: constraints.maxHeight * (140 / CardWidget.CARD_HEIGHT),
-                )
-              ),
-            )
-          );
-        }
-      );
-    }
-    final pattern = card.pattern;
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final isLandscape = (constraints.maxWidth / constraints.maxHeight) > 1.0;
-        final cardAspectRatio = isLandscape
-            ? CardWidget.CARD_HEIGHT / CardWidget.CARD_WIDTH
-            : CardWidget.CARD_WIDTH / CardWidget.CARD_HEIGHT;
-
-        final countBox = AspectRatio(
-            aspectRatio: 1.0,
-            child: LayoutBuilder(
-                builder: (context, constraints) {
-                  return DecoratedBox(
-                    decoration: BoxDecoration(
-                      color: Colors.black,
-                      borderRadius: BorderRadius.all(Radius.circular(
-                          constraints.maxHeight * (80/CardWidget.CARD_HEIGHT)
-                      )),
-                    ),
-                    child: Center(
-                        child: FractionallySizedBox(
-                          heightFactor: 0.95,
-                          widthFactor: 0.95,
-                          child: FittedBox(
-                            fit: BoxFit.fitHeight,
-                            child: Text(
-                                "${card.count}",
-                                style: TextStyle(
-                                    fontFamily: "Splatfont1",
-                                    color: Colors.white,
-                                    //fontStyle: FontStyle.italic,
-                                    fontSize: 12,
-                                    letterSpacing: 3.5
-                                )
-                            ),
-                          ),
-                        )
-                    ),
-                  );
-                }
-            )
-        );
-        final specialCountGrid = FractionallySizedBox(
-          heightFactor: isLandscape ? 0.9 : 0.7,
-          widthFactor: isLandscape ? 0.7 : 0.9,
-          child: GridView.count(
-              crossAxisCount: isLandscape ? 2 : 5,
-              padding: EdgeInsets.zero,
-              //physics: const NeverScrollableScrollPhysics(),
-              children: Iterable.generate(card.special, (_) {
-                return AspectRatio(
-                  aspectRatio: 1.0,
-                  child: DecoratedBox(
-                    decoration: BoxDecoration(
-                      color: Palette().tileYellowSpecial,
-                      border: Border.all(
-                        width: CardPatternWidget.EDGE_WIDTH,
-                        color: Colors.black,
-                      ),
+          builder: (context, constraints) {
+            final isLandscape = (constraints.maxWidth / constraints.maxHeight) > 1.0;
+            final cardAspectRatio = isLandscape
+                ? CardWidget.CARD_HEIGHT / CardWidget.CARD_WIDTH
+                : CardWidget.CARD_WIDTH / CardWidget.CARD_HEIGHT;
+            return AspectRatio(
+                aspectRatio: cardAspectRatio,
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: palette.cardBackgroundSelectable,
+                    border: Border.all(
+                      width: 1.0,
+                      color: palette.cardEdge,
                     ),
                   ),
-                );
-              }).toList(growable: false)
-          ),
-        );
-        return AspectRatio(
-          aspectRatio: cardAspectRatio,
-          child: Stack(
-            fit: StackFit.expand,
-            children: [
-              DecoratedBox(
-                decoration: BoxDecoration(
-                  color: palette.cardBackgroundSelectable,
-                  border: Border.all(
-                    width: 1.0,
-                    color: Palette().cardEdge,
-                  ),
-                ),
-              ),
-              Image.asset(
-                card.designSprite,
-                opacity: const AlwaysStoppedAnimation(0.7),
-              ),
-              Flex(
-                direction: isLandscape ? Axis.horizontal : Axis.vertical,
-                children: [
-                  AspectRatio(
-                      aspectRatio: 1.0,
-                      child: Center(
-                          child: FractionallySizedBox(
-                              heightFactor: 0.9,
-                              widthFactor: 0.9,
-                              child: CardPatternWidget(pattern, const YellowTraits())
-                          )
+                  child: Center(
+                      child: Icon(
+                        Icons.add_circle_outline,
+                        color: const Color.fromRGBO(255, 255, 255, 0.2),
+                        size: constraints.maxHeight * (140 / CardWidget.CARD_HEIGHT),
                       )
                   ),
-                  Expanded(
-                    child: Align(
-                      alignment: isLandscape ? Alignment.centerLeft : Alignment.topCenter,
-                      child: FractionallySizedBox(
-                        heightFactor: isLandscape ? 0.8 : 0.9,
-                        widthFactor: isLandscape ? 0.9 : 0.9,
-                        child: Flex(
-                          direction: isLandscape ? Axis.vertical : Axis.horizontal,
-                          mainAxisAlignment: MainAxisAlignment.spaceAround,
-                          crossAxisAlignment: CrossAxisAlignment.center,
-                          children: isLandscape ? [
-                            Expanded(
-                              child: Center(
-                                child: specialCountGrid,
-                              ),
-                            ),
-                            countBox,
-                          ] : [
-                            countBox,
-                            Expanded(
-                              child: Center(
-                                child: specialCountGrid,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          ),
-        );
-      }
-    );
-  }
-
-  Widget build(BuildContext context) {
-    return HandCardWidget(card: card!, background: const Palette().cardBackgroundSelectable);
+                )
+            );
+          }
+      );
+    }
+    return HandCardWidget(card: card, background: palette.cardBackgroundSelectable);
   }
 }
 
@@ -398,20 +263,20 @@ class _DeckEditorScreenState extends State<DeckEditorScreen>
                                     crossAxisCount: 3,
                                     childAspectRatio: CardWidget.CARD_RATIO
                                 ),
-                                itemCount: cards.length,
+                                itemCount: officialCards.length,
                                 padding: const EdgeInsets.all(cardListPadding),
                                 itemBuilder: (_, i) => GestureDetector(
                                   onTap: () {
-                                    if (deckCards.any((c) => c.value == cards[i].ident)) {
+                                    if (deckCards.any((c) => c.value == officialCards[i].ident)) {
                                       return;
                                     }
-                                    onPopupExit(cards[i].ident);
+                                    onPopupExit(officialCards[i].ident);
                                   },
                                   child: Padding(
                                     padding: const EdgeInsets.all(0),
                                     child: HandCardWidget(
-                                      card: cards[i],
-                                      overlayColor: deckCards.any((c) => c.value == cards[i].ident)
+                                      card: officialCards[i],
+                                      overlayColor: deckCards.any((c) => c.value == officialCards[i].ident)
                                         ? const Color.fromRGBO(0, 0, 0, 0.4)
                                         : Colors.transparent
                                     ),

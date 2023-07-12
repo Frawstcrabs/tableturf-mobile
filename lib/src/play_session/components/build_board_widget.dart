@@ -16,6 +16,7 @@ Widget buildBoardWidget({
   Key? key,
   void Function(double)? onTileSize,
   required bool loopAnimation,
+  required String boardHeroTag,
 }) {
   final boardBuilder = LayoutBuilder(
     builder: (context, constraints) {
@@ -59,7 +60,7 @@ Widget buildBoardWidget({
     }
   );
   return Hero(
-    tag: "boardView",
+    tag: boardHeroTag,
     createRectTween: (begin, end) => RectTween(begin: begin, end: end),
     flightShuttleBuilder: (flightContext, animation, direction, srcContext, destContext) {
       // by default hero just uses the child in the destination context, but that means

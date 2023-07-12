@@ -193,96 +193,119 @@ class _MultiChoiceOverlayState extends State<_MultiChoiceOverlay>
   Widget build(BuildContext context) {
     final mediaQuery = MediaQuery.of(context);
     final isLandscape = mediaQuery.orientation == Orientation.landscape;
+
     return AnimatedBuilder(
       animation: _redrawSelectionController,
       builder: (_, __) {
-        return Opacity(
-          opacity: redrawSelectionOpacity.value,
-          child: CustomPaint(
-            painter: SelectionBackgroundPainter(
-              waveAnimation: _redrawSelectionWaveController,
-              orientation: mediaQuery.orientation,
-            ),
-            child: Align(
-              alignment: isLandscape ? Alignment(0.4, 0.0) : Alignment(0.0, -0.4),
-              child: FractionallySizedBox(
-                heightFactor: isLandscape ? 0.5 : null,
-                widthFactor: isLandscape ? null : 0.8,
-                child: AspectRatio(
-                  aspectRatio: 4/3,
-                  child: LayoutBuilder(
-                    builder: (context, constraints) {
-                      const designWidth = 646;
-                      final designRatio = constraints.maxWidth / designWidth;
-                      return DefaultTextStyle(
-                        style: TextStyle(
-                          fontFamily: "Splatfont2",
-                          color: Colors.white,
-                          fontSize: 25 * designRatio,
-                        ),
-                        child: Transform.translate(
-                          offset: redrawSelectionOffset.value * designRatio,
-                          child: Transform.scale(
-                            scale: redrawSelectionScale.value,
-                            child: Transform.rotate(
-                              angle: redrawSelectionRotate.value,
-                              child: DecoratedBox(
-                                decoration: BoxDecoration(
-                                  color: Colors.grey[850],
-                                  borderRadius: BorderRadius.circular(60 * designRatio),
-                                ),
-                                child: Column(
-                                  mainAxisAlignment: MainAxisAlignment.spaceAround,
-                                  children: [
-                                    Expanded(
+        final promptBox = FractionallySizedBox(
+          heightFactor: isLandscape ? 0.5 : null,
+          widthFactor: isLandscape ? null : 0.8,
+          child: AspectRatio(
+            aspectRatio: 4/3,
+            child: LayoutBuilder(
+                builder: (context, constraints) {
+                  const designWidth = 646;
+                  final designRatio = constraints.maxWidth / designWidth;
+                  return DefaultTextStyle(
+                    style: TextStyle(
+                      fontFamily: "Splatfont2",
+                      color: Colors.white,
+                      fontSize: 25 * designRatio,
+                    ),
+                    child: Transform.translate(
+                      offset: redrawSelectionOffset.value * designRatio,
+                      child: Transform.scale(
+                        scale: redrawSelectionScale.value,
+                        child: Transform.rotate(
+                          angle: redrawSelectionRotate.value,
+                          child: DecoratedBox(
+                            decoration: BoxDecoration(
+                              color: Colors.grey[850],
+                              borderRadius: BorderRadius.circular(60 * designRatio),
+                            ),
+                            child: Column(
+                                mainAxisAlignment: MainAxisAlignment.spaceAround,
+                                children: [
+                                  Expanded(
                                       flex: 2,
                                       child: Center(
-                                        child: Text(
-                                          widget.title,
-                                          style: TextStyle(
-                                            fontSize: 35 * designRatio,
-                                          ),
-                                        )
+                                          child: Text(
+                                            widget.title,
+                                            style: TextStyle(
+                                              fontSize: 35 * designRatio,
+                                            ),
+                                          )
                                       )
-                                    ),
-                                    Expanded(
+                                  ),
+                                  Expanded(
                                       flex: 1,
                                       child: FractionallySizedBox(
                                         heightFactor: 0.7,
                                         child: Row(
-                                          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                                          children: [
-                                            for (var i = 0; i < widget.options.length; i++)
-                                              Expanded(
-                                                child: Padding(
-                                                  padding: EdgeInsets.all(5 * designRatio),
-                                                  child: Center(
-                                                    child: SelectionButton(
-                                                      onPressEnd: _createTapCallback(i),
-                                                      designRatio: designRatio,
-                                                      child: Text(widget.options[i])
+                                            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                                            children: [
+                                              for (var i = 0; i < widget.options.length; i++)
+                                                Expanded(
+                                                  child: Padding(
+                                                    padding: EdgeInsets.all(5 * designRatio),
+                                                    child: Center(
+                                                      child: SelectionButton(
+                                                          onPressEnd: _createTapCallback(i),
+                                                          designRatio: designRatio,
+                                                          child: Text(widget.options[i])
+                                                      ),
                                                     ),
                                                   ),
-                                                ),
-                                              )
-                                          ]
+                                                )
+                                            ]
                                         ),
                                       )
-                                    )
-                                  ]
-                                ),
-                              ),
+                                  )
+                                ]
                             ),
                           ),
                         ),
-                      );
-                    }
-                  ),
-                ),
+                      ),
+                    ),
+                  );
+                }
+            ),
+          ),
+        );
+        if (widget.useWave) {
+          return Opacity(
+            opacity: redrawSelectionOpacity.value,
+            child: CustomPaint(
+              painter: SelectionBackgroundPainter(
+                waveAnimation: _redrawSelectionWaveController,
+                orientation: mediaQuery.orientation,
+              ),
+              child: Align(
+                alignment: isLandscape ? Alignment(0.4, 0.0) : Alignment(0.0, -0.4),
+                child: promptBox,
               )
             )
-          )
-        );
+          );
+        } else {
+          return Opacity(
+            opacity: redrawSelectionOpacity.value,
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                gradient: RadialGradient(
+                  colors: [
+                    Colors.black38,
+                    Colors.black54,
+                  ],
+                  radius: 1.3,
+                )
+              ),
+              child: Align(
+                alignment: Alignment.center,
+                child: promptBox,
+              )
+            )
+          );
+        }
       }
     );
   }

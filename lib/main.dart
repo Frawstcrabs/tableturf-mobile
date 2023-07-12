@@ -14,10 +14,11 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:tableturf_mobile/src/game_internals/card.dart';
 import 'package:logging/logging.dart';
 import 'package:provider/provider.dart';
+import 'package:tableturf_mobile/src/game_internals/map.dart';
+import 'package:tableturf_mobile/src/style/shaders.dart';
 
 import 'src/app_lifecycle/app_lifecycle.dart';
 import 'src/audio/audio_controller.dart';
-import 'src/level_selection/levels.dart';
 import 'src/main_menu/main_menu_screen.dart';
 import 'src/player_progress/persistence/local_storage_player_progress_persistence.dart';
 import 'src/player_progress/persistence/player_progress_persistence.dart';
@@ -30,6 +31,7 @@ Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await loadCards();
   await loadMaps();
+  await Shaders.loadPrograms();
   await guardedMain();
 }
 

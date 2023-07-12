@@ -33,8 +33,7 @@ TableturfCardData _$TableturfCardDataFromJson(Map<String, dynamic> json) =>
       json['rarity'] as String,
       json['special'] as int,
       (json['pattern'] as List<dynamic>)
-          .map((e) =>
-              (e as List<dynamic>).map((e) => TileState.fromJson(e)).toList())
+          .map((e) => (e as List<dynamic>).map(TileState.fromJson).toList())
           .toList(),
       json['displayName'] as String?,
       $enumDecode(_$TableturfCardTypeEnumMap, json['type']),

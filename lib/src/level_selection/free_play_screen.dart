@@ -2,8 +2,6 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE file.
 
-import 'dart:math';
-
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:dropdown_button2/dropdown_button2.dart';
@@ -15,11 +13,10 @@ import 'package:tableturf_mobile/src/settings/settings.dart';
 
 import '../game_internals/card.dart';
 import '../game_internals/deck.dart';
-import '../game_internals/tile.dart';
+import '../game_internals/map.dart';
 import '../play_session/build_game_session_page.dart';
 import '../style/palette.dart';
 import '../style/responsive_screen.dart';
-import 'levels.dart';
 
 class FreePlayScreen extends StatefulWidget {
   const FreePlayScreen({Key? key}) : super(key: key);
@@ -31,7 +28,7 @@ class FreePlayScreen extends StatefulWidget {
 class _FreePlayScreenState extends State<FreePlayScreen> {
   TableturfDeck? opponentDeck = null;
   TableturfDeck? playerDeck = null;
-  String? map = null;
+  TableturfMap? map = null;
   AILevel? difficulty = null;
   AILevel? playerAI = null;
 
@@ -40,19 +37,39 @@ class _FreePlayScreenState extends State<FreePlayScreen> {
     final palette = context.watch<Palette>();
     final settings = SettingsController();
     //final playerProgress = context.watch<PlayerProgress>();
-    final officialRandomiser = TableturfDeck(
+    const officialRandomiser = TableturfDeck(
       deckID: -1000,
       cardSleeve: "default",
       name: "Randomiser",
       cards: [],
     );
-    final pureRandomiser = TableturfDeck(
+    const pureRandomiser = TableturfDeck(
       deckID: -1001,
       cardSleeve: "default",
       name: "Randomiser",
       cards: [],
     );
 
+    var deckList = [
+      for (final deck in settings.decks)
+        DropdownMenuItem(
+          value: deck.value,
+          child: Text(deck.value.name),
+        ),
+      DropdownMenuItem(
+        value: officialRandomiser,
+        child: Text("Official Randomiser"),
+      ),
+      DropdownMenuItem(
+        value: pureRandomiser,
+        child: Text("Pure Randomiser"),
+      ),
+      for (final opponent in opponents)
+        DropdownMenuItem(
+          value: opponent.deck,
+          child: Text(opponent.name),
+        ),
+    ];
     return Scaffold(
       backgroundColor: palette.backgroundLevelSelection,
       body: ResponsiveScreen(
@@ -77,26 +94,7 @@ class _FreePlayScreenState extends State<FreePlayScreen> {
                   opponentDeck = newDeck;
                 });
               },
-              items: [
-                for (final opponent in opponents)
-                  DropdownMenuItem(
-                    value: opponent.deck,
-                    child: Text(opponent.name),
-                  ),
-                DropdownMenuItem(
-                  value: officialRandomiser,
-                  child: Text("Official Randomiser"),
-                ),
-                DropdownMenuItem(
-                  value: pureRandomiser,
-                  child: Text("Pure Randomiser"),
-                ),
-                for (final deck in settings.decks)
-                  DropdownMenuItem(
-                    value: deck.value,
-                    child: Text(deck.value.name),
-                  ),
-              ],
+              items: deckList,
             ),
             DropdownButton2<TableturfDeck?>(
               isExpanded: true,
@@ -107,46 +105,22 @@ class _FreePlayScreenState extends State<FreePlayScreen> {
                   playerDeck = newDeck;
                 });
               },
-              items: [
-                for (final deck in settings.decks)
-                  DropdownMenuItem(
-                    value: deck.value,
-                    child: Text(deck.value.name),
-                  ),
-                DropdownMenuItem(
-                  value: officialRandomiser,
-                  child: Text("Official Randomiser"),
-                ),
-                DropdownMenuItem(
-                  value: pureRandomiser,
-                  child: Text("Pure Randomiser"),
-                ),
-                for (final opponent in opponents)
-                  DropdownMenuItem(
-                    value: opponent.deck,
-                    child: Text(opponent.name),
-                  ),
-              ],
+              items: deckList,
             ),
-            DropdownButton2<String>(
+            DropdownButton2<TableturfMap?>(
               isExpanded: true,
               hint: Text("Select map"),
               value: map,
-              onChanged: (String? newMap) {
+              onChanged: (TableturfMap? newMap) {
                 setState(() {
                   map = newMap;
                 });
               },
               items: [
-                for (final map in maps.keys)
+                for (final map in officialMaps + settings.maps.map((m) => m.value).toList())
                   DropdownMenuItem(
                     value: map,
-                    child: Text(
-                      map.splitMapJoin("_",
-                        onMatch: (s) => " ",
-                        onNonMatch: (s) => "${s[0].toUpperCase()}${s.substring(1).toLowerCase()}"
-                      )
-                    )
+                    child: Text(map.name)
                   )
               ],
             ),
@@ -195,13 +169,14 @@ class _FreePlayScreenState extends State<FreePlayScreen> {
                 }
                 List<TableturfCardData>? blueRandomiser = null;
                 List<TableturfCardData>? yellowRandomiser = null;
+                TableturfDeck tempPlayerDeck, tempOpponentDeck;
                 if (playerDeck!.deckID == -1000) {
                   // official randomiser
-                  playerDeck = TableturfDeck(
+                  tempPlayerDeck = TableturfDeck(
                     deckID: -1000,
                     cardSleeve: "default",
                     name: "Randomiser",
-                    cards: cards.randomSample(15).map((c) => c.ident).toList(),
+                    cards: officialCards.randomSample(15).map((c) => c.ident).toList(),
                   );
                 } else if (playerDeck!.deckID == -1001) {
                   // pure randomiser
@@ -209,20 +184,22 @@ class _FreePlayScreenState extends State<FreePlayScreen> {
                   for (final card in yellowRandomiser) {
                     settings.registerTempCard(card);
                   }
-                  playerDeck = TableturfDeck(
+                  tempPlayerDeck = TableturfDeck(
                     deckID: -1001,
                     cardSleeve: "randomiser",
                     name: "Randomiser",
                     cards: yellowRandomiser.map((c) => c.ident).toList(),
                   );
+                } else {
+                  tempPlayerDeck = playerDeck!;
                 }
                 if (opponentDeck!.deckID == -1000) {
                   // official randomiser
-                  opponentDeck = TableturfDeck(
+                  tempOpponentDeck = TableturfDeck(
                     deckID: -1000,
                     cardSleeve: "default",
                     name: "Randomiser",
-                    cards: cards.randomSample(15).map((c) => c.ident).toList(),
+                    cards: officialCards.randomSample(15).map((c) => c.ident).toList(),
                   );
                 } else if (opponentDeck!.deckID == -1001) {
                   // pure randomiser
@@ -230,18 +207,20 @@ class _FreePlayScreenState extends State<FreePlayScreen> {
                   for (final card in blueRandomiser) {
                     settings.registerTempCard(card);
                   }
-                  opponentDeck = TableturfDeck(
+                  tempOpponentDeck = TableturfDeck(
                     deckID: -1001,
                     cardSleeve: "randomiser",
                     name: "Randomiser",
                     cards: blueRandomiser.map((c) => c.ident).toList(),
                   );
+                } else {
+                  tempOpponentDeck = opponentDeck!;
                 }
                 await Navigator.of(context).push(buildGameSessionPage(
                   context: context,
-                  stage: map!,
-                  yellowDeck: playerDeck!,
-                  blueDeck: opponentDeck!,
+                  map: map!,
+                  yellowDeck: tempPlayerDeck,
+                  blueDeck: tempOpponentDeck,
                   blueName: "Them",
                   playerAI: playerAI,
                   aiLevel: difficulty!,

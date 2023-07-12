@@ -13,11 +13,11 @@ import 'package:tableturf_mobile/src/settings/settings.dart';
 
 import '../game_internals/card.dart';
 import '../game_internals/deck.dart';
+import '../game_internals/map.dart';
 import '../game_internals/tile.dart';
 import '../play_session/build_game_session_page.dart';
 import '../style/palette.dart';
 import '../style/responsive_screen.dart';
-import 'levels.dart';
 
 const cardNameCharacters = [
   'A', 'B', 'C', 'D', 'E', 'F',
@@ -171,7 +171,7 @@ class LevelSelectionScreen extends StatelessWidget {
                         final yellowDeck = settings.decks[0].value;
                         Navigator.of(context).push(buildGameSessionPage(
                           context: context,
-                          stage: opponent.map,
+                          map: settings.getMap(opponent.mapID),
                           yellowDeck: yellowDeck,
                           blueDeck: opponent.deck,
                           blueName: opponent.name,
@@ -188,7 +188,7 @@ class LevelSelectionScreen extends StatelessWidget {
                       final yellowDeck = settings.decks[0].value;
                       Navigator.of(context).push(buildGameSessionPage(
                         context: context,
-                        stage: "main_street",
+                        map: settings.getMap(-1),
                         yellowDeck: yellowDeck,
                         blueDeck: yellowDeck,
                         blueName: "Clone Jelly",
@@ -207,20 +207,20 @@ class LevelSelectionScreen extends StatelessWidget {
                         settings.registerTempCard(card);
                       }
                       final yellowDeck = TableturfDeck(
-                          deckID: -1,
-                          name: "Randomiser",
-                          cardSleeve: "randomiser",
-                          cards: [for (final card in randomCards.sublist(0, 15)) card.ident]
+                        deckID: -1,
+                        name: "Randomiser",
+                        cardSleeve: "randomiser",
+                        cards: [for (final card in randomCards.sublist(0, 15)) card.ident]
                       );
                       final blueDeck = TableturfDeck(
-                          deckID: -1,
-                          name: "Randomiser",
-                          cardSleeve: "randomiser",
-                          cards: [for (final card in randomCards.sublist(15, 30)) card.ident]
+                        deckID: -1,
+                        name: "Randomiser",
+                        cardSleeve: "randomiser",
+                        cards: [for (final card in randomCards.sublist(15, 30)) card.ident]
                       );
                       await Navigator.of(context).push(buildGameSessionPage(
                         context: context,
-                        stage: maps.keys.toList().random(),
+                        map: officialMaps.random(),
                         yellowDeck: yellowDeck,
                         blueDeck: blueDeck,
                         blueName: "Randomiser",

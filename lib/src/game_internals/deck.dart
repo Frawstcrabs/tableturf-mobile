@@ -1,3 +1,4 @@
+import 'package:collection/collection.dart';
 import 'package:json_annotation/json_annotation.dart';
 
 import 'card.dart';
@@ -21,6 +22,12 @@ class TableturfDeck {
   factory TableturfDeck.fromJson(Map<String, dynamic> json) => _$TableturfDeckFromJson(json);
   Map<String, dynamic> toJson() => _$TableturfDeckToJson(this);
 
-  bool operator==(Object other) => other is TableturfDeck && deckID == other.deckID;
-  int get hashCode => deckID.hashCode;
+  bool operator==(Object other) => (
+    other is TableturfDeck
+      && deckID == other.deckID
+      && name == other.name
+      && cardSleeve == other.cardSleeve
+      && const ListEquality().equals(cards, other.cards)
+  );
+  int get hashCode => identityHashCode(this);
 }

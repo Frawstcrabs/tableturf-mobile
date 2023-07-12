@@ -77,6 +77,7 @@ class TableturfBattle {
   final ValueNotifier<Set<Coords>> activatedSpecialsNotifier = ValueNotifier(Set());
   final ChangeNotifier endOfGameNotifier = ChangeNotifier();
   final ChangeNotifier specialMoveNotifier = ChangeNotifier();
+  bool stopAllProgress = false;
 
   final ValueNotifier<TableturfMove?> blueMoveNotifier = ValueNotifier(null);
   final ValueNotifier<TableturfMove?> yellowMoveNotifier = ValueNotifier(null);
@@ -91,7 +92,7 @@ class TableturfBattle {
   final AILevel aiLevel;
   final AILevel? playerAI;
 
-  final TileGrid board;
+  final TileGrid board, origBoard;
 
   TableturfBattle({
     required this.yellow,
@@ -99,7 +100,7 @@ class TableturfBattle {
     required this.board,
     required this.aiLevel,
     this.playerAI,
-  }) {
+  }): origBoard = board.copy() {
     moveCardNotifier.addListener(_updateMoveHighlight);
     moveLocationNotifier.addListener(_updateMoveHighlight);
     moveRotationNotifier.addListener(_updateMoveHighlight);
@@ -243,6 +244,7 @@ class TableturfBattle {
 
   Future<void> runTurn() async {
     _log.info("turn triggered");
+    if (stopAllProgress) return;
     final yellowMove = yellowMoveNotifier.value!;
     final blueMove = blueMoveNotifier.value!;
     final audioController = AudioController();
@@ -252,6 +254,7 @@ class TableturfBattle {
       specialMoveNotifier.notifyListeners();
       await Future<void>.delayed(const Duration(milliseconds: 1600));
     }
+    if (stopAllProgress) return;
     await audioController.playSfx(SfxType.cardFlip);
     revealCardsNotifier.value = true;
     yellowMove.card.hasBeenPlayed = true;
@@ -262,6 +265,7 @@ class TableturfBattle {
     const cardRevealTime = const Duration(milliseconds: 1000);
     print(events);
 
+    if (stopAllProgress) return;
     if (turnCountNotifier.value == 4) {
       () async {
         const endTurnWaitTime = const Duration(milliseconds: 500);
@@ -281,6 +285,7 @@ class TableturfBattle {
 
     await Future<void>.delayed(cardRevealTime);
     for (final event in events) {
+      if (stopAllProgress) return;
       if (event is BoardUpdate) {
         for (final entry in event.updates.entries) {
           board[entry.key.y][entry.key.x] = entry.value;
@@ -309,6 +314,7 @@ class TableturfBattle {
       await Future<void>.delayed(event.duration);
     }
 
+    if (stopAllProgress) return;
     moveLocationNotifier.value = null;
     moveCardNotifier.value = null;
     moveRotationNotifier.value = 0;
@@ -325,6 +331,7 @@ class TableturfBattle {
     await Future<void>.delayed(const Duration(milliseconds: 200));
     turnCountNotifier.value -= 1;
     await Future<void>.delayed(const Duration(milliseconds: 1000));
+    if (stopAllProgress) return;
 
     for (final cardNotifier in yellow.hand) {
       final card = cardNotifier.value!;
@@ -332,6 +339,7 @@ class TableturfBattle {
       card.isPlayableSpecial = card.special <= yellow.special.value && getMoves(board, card, special: true).isNotEmpty;
     }
     playerControlLock.value = true;
+    if (stopAllProgress) return;
     runBlueAI();
     if (playerAI != null) {
       runYellowAI();

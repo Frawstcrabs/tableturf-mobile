@@ -34,6 +34,10 @@ class Palette {
   Color get backgroundCardList => const Color.fromRGBO(208, 220, 220, 1.0);
   Color get backgroundDeckList => const Color.fromRGBO(213, 225, 213, 1.0);
   Color get backgroundDeckEditor => const Color.fromRGBO(229, 224, 239, 1.0);
+  Color get backgroundMapList => const Color.fromRGBO(43, 43, 73, 1.0);
+  Color get backgroundMapEditor => const Color.fromRGBO(40, 40, 44, 1.0);
+  Color get mapThumbnailBorder => const Color.fromRGBO(62, 66, 168, 1.0);
+  Color get mapThumbnailBackground => const Color.fromRGBO(139, 146, 243, 1.0);
   Color get backgroundPlaySession => const Color(0xff3f2f93);
   Color get background4 => const Color(0xffffd7ff);
   Color get backgroundSettings => const Color(0xffbfc8e3);
@@ -43,9 +47,13 @@ class Palette {
   Color get tileEdge => const Color.fromRGBO(80, 80, 80, 1);
   Color get tileWall => const Color.fromRGBO(160, 160, 160, 1);
   Color get tileYellow => const Color.fromRGBO(255, 255, 17, 1);
-  Color get tileYellowSpecial => const Color.fromRGBO(255, 159, 4, 1);
+  Color get tileYellowSpecial => const Color.fromRGBO(245, 127, 11, 1.0);
+  Color get tileYellowSpecialCenter => const Color.fromRGBO(225, 255, 17, 1);
+  Color get tileYellowSpecialFlame => const Color.fromRGBO(255, 159, 4, 1);
   Color get tileBlue => const Color.fromRGBO(71, 92, 255, 1);
-  Color get tileBlueSpecial => const Color.fromRGBO(10, 255, 255, 1);
+  Color get tileBlueSpecial => const Color.fromRGBO(21, 234, 234, 1.0);
+  Color get tileBlueSpecialCenter => const Color.fromRGBO(240, 255, 255, 1);
+  Color get tileBlueSpecialFlame => const Color.fromRGBO(152, 255, 255, 1.0);
 
   Color get cardBackgroundUnselectable => const Color.fromRGBO(40, 40, 40, 1);
   Color get cardBackgroundSelectable => const Color.fromRGBO(64, 64, 64, 1);
