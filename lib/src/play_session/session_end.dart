@@ -12,6 +12,7 @@ import 'package:tableturf_mobile/src/audio/sounds.dart';
 import 'package:tableturf_mobile/src/game_internals/battle.dart';
 import 'package:tableturf_mobile/src/game_internals/player.dart';
 import 'package:tableturf_mobile/src/play_session/session_intro.dart';
+import 'package:tableturf_mobile/src/settings/settings.dart';
 import 'package:tableturf_mobile/src/style/palette.dart';
 
 import '../game_internals/card.dart';
@@ -294,7 +295,6 @@ class _PlaySessionEndState extends State<PlaySessionEnd>
       duration: const Duration(milliseconds: 1000),
       vsync: this
     );
-    _scoreWaveAnimator.repeat();
 
     scoreFade = Tween(
       begin: 0.0,
@@ -401,6 +401,10 @@ class _PlaySessionEndState extends State<PlaySessionEnd>
   FutureOr<void> _playInitSequence() async {
     _log.info("outro sequence started");
     final audioController = AudioController();
+    final settings = SettingsController();
+    if (settings.continuousAnimation.value) {
+      _scoreWaveAnimator.repeat();
+    }
     await Future<void>.delayed(const Duration(milliseconds: 1300));
     audioController.playSfx(SfxType.scoreBarFill);
     await _scoreBarAnimator.forward();

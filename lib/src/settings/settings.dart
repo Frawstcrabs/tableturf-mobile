@@ -152,6 +152,12 @@ class SettingsController {
     }
   }
 
+  Future<void> _deleteDeck(int deckID) async {
+    if (commitChanges) {
+      await _prefs.remove("tableturf-deck_deck-$deckID");
+    }
+  }
+
   void updateDeck({
     required int deckID,
     String? name,
@@ -191,6 +197,14 @@ class SettingsController {
     return deck;
   }
 
+  void deleteDeck(int deckID) {
+    _decks.removeWhere((deck) => deck.value.deckID == deckID);
+    () async {
+      await _deleteDeck(deckID);
+      await _writeDeckIndexes();
+    }();
+  }
+
   Future<void> _writeNextMapID() async {
     if (commitChanges) {
       await _prefs.setInt("tableturf-map_nextID", _nextMapID);
@@ -213,6 +227,21 @@ class SettingsController {
         jsonEncode([for (final map in _maps) map.value.mapID]),
       );
     }
+  }
+
+  Future<void> _deleteMap(int mapID) async {
+    if (commitChanges) {
+      await _prefs.remove("tableturf-map_map-$mapID");
+    }
+  }
+
+  void swapMaps(int map1, int map2) {
+    final map1Index = _maps.indexWhere((map) => map.value.mapID == map1);
+    final map2Index = _maps.indexWhere((map) => map.value.mapID == map2);
+    final temp = maps[map1Index].value;
+    maps[map1Index].value = maps[map2Index].value;
+    maps[map2Index].value = temp;
+    _writeMapIndexes();
   }
 
   void updateMap({
@@ -248,6 +277,14 @@ class SettingsController {
       await _writeMapIndexes();
     }();
     return map;
+  }
+
+  void deleteMap(int mapID) {
+    _maps.removeWhere((map) => map.value.mapID == mapID);
+    () async {
+      await _deleteMap(mapID);
+      await _writeMapIndexes();
+    }();
   }
 
   void registerTempCard(TableturfCardData card) {

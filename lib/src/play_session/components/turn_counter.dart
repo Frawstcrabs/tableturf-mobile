@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:tableturf_mobile/src/audio/sounds.dart';
 import 'package:tableturf_mobile/src/game_internals/battle.dart';
@@ -125,6 +127,7 @@ class _TurnCounterState extends State<TurnCounter>
 
   Future<void> _onTurnCountChange() async {
     final newValue = widget.battle.turnCountNotifier.value;
+
     final audioController = AudioController();
     final overlayState = Overlay.of(context);
 
@@ -162,12 +165,13 @@ class _TurnCounterState extends State<TurnCounter>
 
     _tickController.value = 0.0;
     audioController.playSfx(newValue <= 3 ? SfxType.turnCountEnding : SfxType.turnCountNormal);
-    await _tickController.animateTo(360/duration.inMilliseconds);
-    setState(() {
-      turnCount = newValue;
+    Timer(const Duration(milliseconds: 360), () async {
+      setState(() {
+        turnCount = newValue;
+      });
+      animationLayer.markNeedsBuild();
     });
-    animationLayer.markNeedsBuild();
-    await _tickController.forward(from: 360/duration.inMilliseconds);
+    await _tickController.forward();
     animationLayer.remove();
     backgroundLayer.remove();
   }
@@ -176,11 +180,6 @@ class _TurnCounterState extends State<TurnCounter>
     required BuildContext context,
     Key? key,
   }) {
-    final mediaQuery = MediaQuery.of(context);
-    final diameter = mediaQuery.orientation == Orientation.landscape
-      ? mediaQuery.size.width * 0.08
-      : mediaQuery.size.height * 0.06;
-
     final turnText = DefaultTextStyle(
       style: TextStyle(
         fontFamily: "Splatfont1",
@@ -214,8 +213,8 @@ class _TurnCounterState extends State<TurnCounter>
                 color: Color.fromRGBO(128, 128, 128, 1)
               ),
               child: Center(
-                child: Transform.translate(
-                  offset: Offset(0, diameter * _counterMove.value),
+                child: FractionalTranslation(
+                  translation: Offset(0, _counterMove.value),
                   child: FractionallySizedBox(
                     heightFactor: 0.9,
                     widthFactor: 0.9,

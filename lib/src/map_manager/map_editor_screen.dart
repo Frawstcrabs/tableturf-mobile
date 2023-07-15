@@ -83,11 +83,10 @@ class OffsetBoardPainter extends BoardPainter {
     required this.coords,
     required this.gridWidth,
     required this.gridHeight,
-  }): super(board: boardNotifier.value, repaintNotifier: boardNotifier);
+  }): super(board: boardNotifier.value, repaint: boardNotifier);
 
   @override
   void paint(Canvas canvas, Size size) {
-    print("offset board paint");
     final tileSideLength = min(
       size.height / gridHeight,
       size.width / gridWidth,
@@ -283,6 +282,7 @@ class _MapEditorScreenState extends State<MapEditorScreen> {
   ValueNotifier<Set<Coords>> opTouchedCoords = ValueNotifier(Set());
   final boardKey = GlobalKey();
 
+  late final TextEditingController _textEditingController;
   ValueNotifier<BoardOperationType?> operationNotifier = ValueNotifier(null);
   BoardState? prevState = null;
   ValueNotifier<EditMode> modeNotifier = ValueNotifier(EditMode.paint);
@@ -300,6 +300,8 @@ class _MapEditorScreenState extends State<MapEditorScreen> {
     );
     gridWidthNotifier = ValueNotifier(widget.map?.board[0].length ?? 10);
     gridHeightNotifier = ValueNotifier(widget.map?.board.length ?? 10);
+    final name = widget.map?.name ?? "New Map";
+    _textEditingController = TextEditingController(text: name);
     operationStack = [BoardState(
       board: boardNotifier.value.copy(),
       boardPosition: boardPositionNotifier.value,
@@ -676,10 +678,26 @@ class _MapEditorScreenState extends State<MapEditorScreen> {
         Expanded(
           flex: 1,
           child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Text(widget.map?.name ?? "New Map"),
-              SpinnerWidget()
+              const Spacer(flex: 2),
+              Expanded(
+                flex: 4,
+                child: TextField(
+                  controller: _textEditingController,
+                  style: TextStyle(
+                    fontFamily: "Splatfont1",
+                    color: Colors.white,
+                  ),
+                  textAlign: TextAlign.center,
+                  textCapitalization: TextCapitalization.words,
+                  decoration: InputDecoration(
+                    border: UnderlineInputBorder(),
+                    isDense: true,
+                    contentPadding: EdgeInsets.all(0),
+                  ),
+                ),
+              ),
+              const Spacer(flex: 2),
             ],
           ),
         ),
@@ -728,15 +746,15 @@ class _MapEditorScreenState extends State<MapEditorScreen> {
                             onPanStart: _onPanStart,
                             onPanUpdate: _onPanUpdate,
                             onPanEnd: _onPanEnd,
-                            child: ListenableBuilder(
-                              key: boardKey,
-                              listenable: Listenable.merge([gridHeightNotifier, gridWidthNotifier]),
-                              builder: (_, __) {
-                                print("rebuild grid, ${gridHeightNotifier.value}, ${gridWidthNotifier.value}");
-                                return Stack(
-                                  children: [
-                                    RepaintBoundary(
-                                      child: CustomPaint(
+                            child: RepaintBoundary(
+                              child: ListenableBuilder(
+                                key: boardKey,
+                                listenable: Listenable.merge([gridHeightNotifier, gridWidthNotifier]),
+                                builder: (_, __) {
+                                  print("rebuild grid, ${gridHeightNotifier.value}, ${gridWidthNotifier.value}");
+                                  return Stack(
+                                    children: [
+                                      CustomPaint(
                                         painter: GridPainter(
                                           height: gridHeightNotifier.value,
                                           width: gridWidthNotifier.value,
@@ -746,72 +764,69 @@ class _MapEditorScreenState extends State<MapEditorScreen> {
                                         ),
                                         isComplex: true,
                                       ),
-                                    ),
-                                    RepaintBoundary(
-                                      child: ListenableBuilder(
-                                        listenable: Listenable.merge([boardNotifier, gridWidthNotifier, gridHeightNotifier, boardPositionNotifier]),
-                                        builder: (_, __) {
-                                          print("drawing board");
-                                          final board = boardNotifier.value;
-                                          final width = gridWidthNotifier.value;
-                                          final height = gridHeightNotifier.value;
-                                          final coords = boardPositionNotifier.value;
-                                          print(board);
-                                          return CustomPaint(
-                                            painter: OffsetBoardPainter(
-                                              boardNotifier: boardNotifier,
-                                              coords: coords,
-                                              gridHeight: height,
-                                              gridWidth: width,
-                                            ),
-                                            child: AspectRatio(
-                                              aspectRatio: gridWidthNotifier.value / gridHeightNotifier.value,
-                                            ),
-                                            isComplex: true,
-                                          );
-                                        }
-                                      ),
-                                    ),
-                                    RepaintBoundary(
-                                      child: ListenableBuilder(
-                                        listenable: operationNotifier,
-                                        builder: (_, __) {
-                                          var sizedChild = AspectRatio(
-                                            aspectRatio: gridWidthNotifier.value / gridHeightNotifier.value,
-                                          );
-                                          switch (operationNotifier.value) {
-                                            case BoardOperationType.drawBlock:
-                                              return CustomPaint(
-                                                painter: BlockOperationPainter(
-                                                  startCoords: opStartCoords,
-                                                  endCoords: opEndCoords,
-                                                  tileNotifier: tileNotifier,
-                                                  gridHeight: gridHeightNotifier.value,
-                                                  gridWidth: gridWidthNotifier.value,
-                                                ),
-                                                child: sizedChild,
-                                                willChange: false,
-                                              );
-                                            case BoardOperationType.drawPaint:
-                                              return CustomPaint(
-                                                painter: PaintOperationPainter(
-                                                  touchedCoords: opTouchedCoords,
-                                                  tileNotifier: tileNotifier,
-                                                  gridHeight: gridHeightNotifier.value,
-                                                  gridWidth: gridWidthNotifier.value,
-                                                ),
-                                                child: sizedChild,
-                                                willChange: false,
-                                              );
-                                            default:
-                                              return sizedChild;
+                                      RepaintBoundary(
+                                        child: ListenableBuilder(
+                                          listenable: Listenable.merge([boardNotifier, boardPositionNotifier]),
+                                          builder: (_, __) {
+                                            final width = gridWidthNotifier.value;
+                                            final height = gridHeightNotifier.value;
+                                            final coords = boardPositionNotifier.value;
+                                            return CustomPaint(
+                                              painter: OffsetBoardPainter(
+                                                boardNotifier: boardNotifier,
+                                                coords: coords,
+                                                gridHeight: height,
+                                                gridWidth: width,
+                                              ),
+                                              child: AspectRatio(
+                                                aspectRatio: gridWidthNotifier.value / gridHeightNotifier.value,
+                                              ),
+                                              isComplex: true,
+                                            );
                                           }
-                                        }
+                                        ),
+                                      ),
+                                      RepaintBoundary(
+                                        child: ListenableBuilder(
+                                          listenable: operationNotifier,
+                                          builder: (_, __) {
+                                            var sizedChild = AspectRatio(
+                                              aspectRatio: gridWidthNotifier.value / gridHeightNotifier.value,
+                                            );
+                                            switch (operationNotifier.value) {
+                                              case BoardOperationType.drawBlock:
+                                                return CustomPaint(
+                                                  painter: BlockOperationPainter(
+                                                    startCoords: opStartCoords,
+                                                    endCoords: opEndCoords,
+                                                    tileNotifier: tileNotifier,
+                                                    gridHeight: gridHeightNotifier.value,
+                                                    gridWidth: gridWidthNotifier.value,
+                                                  ),
+                                                  child: sizedChild,
+                                                  willChange: false,
+                                                );
+                                              case BoardOperationType.drawPaint:
+                                                return CustomPaint(
+                                                  painter: PaintOperationPainter(
+                                                    touchedCoords: opTouchedCoords,
+                                                    tileNotifier: tileNotifier,
+                                                    gridHeight: gridHeightNotifier.value,
+                                                    gridWidth: gridWidthNotifier.value,
+                                                  ),
+                                                  child: sizedChild,
+                                                  willChange: false,
+                                                );
+                                              default:
+                                                return sizedChild;
+                                            }
+                                          }
+                                        )
                                       )
-                                    )
-                                  ],
-                                );
-                              }
+                                    ],
+                                  );
+                                }
+                              ),
                             ),
                           )
                         ),
@@ -1091,14 +1106,13 @@ class _MapEditorScreenState extends State<MapEditorScreen> {
                   onPressEnd: () async {
                     if (widget.map == null) {
                       settings.createMap(
-                        name: "New Map",
+                        name: _textEditingController.text,
                         board: boardNotifier.value.copy(),
                       );
                     } else {
                       settings.updateMap(
                         mapID: widget.map!.mapID,
-                        // TODO: make maps renameable
-                        name: widget.map!.name,
+                        name: _textEditingController.text,
                         board: boardNotifier.value.copy(),
                       );
                     }
@@ -1113,26 +1127,29 @@ class _MapEditorScreenState extends State<MapEditorScreen> {
       ],
     );
 
-    return Scaffold(
-      backgroundColor: palette.backgroundMapEditor,
-      body: DefaultTextStyle(
-        style: TextStyle(
-          fontFamily: "Splatfont2",
-          color: Colors.white,
-          fontSize: 18,
-          letterSpacing: 0.6,
-          shadows: [
-            Shadow(
-              color: const Color.fromRGBO(256, 256, 256, 0.4),
-              offset: Offset(1, 1),
-            )
-          ]
-        ),
-        child: Padding(
-          padding: mediaQuery.padding,
-          child: screen
-        ),
-      )
+    return WillPopScope(
+      onWillPop: () async => true,
+      child: Scaffold(
+        backgroundColor: palette.backgroundMapEditor,
+        body: DefaultTextStyle(
+          style: TextStyle(
+            fontFamily: "Splatfont2",
+            color: Colors.white,
+            fontSize: 18,
+            letterSpacing: 0.6,
+            shadows: [
+              Shadow(
+                color: const Color.fromRGBO(256, 256, 256, 0.4),
+                offset: Offset(1, 1),
+              )
+            ]
+          ),
+          child: Padding(
+            padding: mediaQuery.padding,
+            child: screen
+          ),
+        )
+      ),
     );
   }
 }

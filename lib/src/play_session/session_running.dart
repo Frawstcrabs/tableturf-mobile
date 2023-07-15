@@ -199,6 +199,7 @@ class _PlaySessionScreenState extends State<PlaySessionScreen>
   Offset? piecePosition;
   PointerDeviceKind? pointerKind;
   bool _lockInputs = true;
+  late final ValueNotifier<AppLifecycleState> lifecycleNotifier;
 
   final ValueNotifier<int?> newYellowScoreNotifier = ValueNotifier(null);
   final ValueNotifier<int?> newBlueScoreNotifier = ValueNotifier(null);
@@ -227,6 +228,8 @@ class _PlaySessionScreenState extends State<PlaySessionScreen>
   @override
   void initState() {
     super.initState();
+    lifecycleNotifier = Provider.of<ValueNotifier<AppLifecycleState>>(context, listen: false);
+    lifecycleNotifier.addListener(_setBackgroundFlag);
     widget.battle.endOfGameNotifier.addListener(_onGameEnd);
     widget.battle.specialMoveNotifier.addListener(_onSpecialMove);
 
@@ -537,6 +540,7 @@ class _PlaySessionScreenState extends State<PlaySessionScreen>
   void dispose() {
     AudioController().musicPlayer.stop();
     AudioController().musicPlayer.setAudioSource(ConcatenatingAudioSource(children: []));
+    lifecycleNotifier.removeListener(_setBackgroundFlag);
     widget.battle.endOfGameNotifier.removeListener(_onGameEnd);
     widget.battle.specialMoveNotifier.removeListener(_onSpecialMove);
     widget.battle.moveIsValidNotifier.removeListener(_calculateNewScores);
@@ -555,6 +559,18 @@ class _PlaySessionScreenState extends State<PlaySessionScreen>
     _deckShuffleController.dispose();
     _deckScaleController.dispose();
     super.dispose();
+  }
+
+  void _setBackgroundFlag() {
+    final appLifecycleState = lifecycleNotifier.value;
+    switch (appLifecycleState) {
+      case AppLifecycleState.paused:
+        widget.battle.backgroundEvent.flag = false;
+        break;
+      default:
+        widget.battle.backgroundEvent.flag = true;
+        break;
+    }
   }
 
   Future<void> _onSpecialMove() async {

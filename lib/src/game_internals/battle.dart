@@ -2,6 +2,7 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE file.
 
+import 'dart:async';
 import 'dart:math';
 import 'package:flutter/foundation.dart';
 import 'package:logging/logging.dart';
@@ -62,6 +63,25 @@ class NopEvent extends BattleEvent {
   const NopEvent();
 }
 
+class AsyncEvent {
+  Completer<void> _completer = Completer();
+  bool _flag = false;
+
+  AsyncEvent();
+
+  bool get flag => _flag;
+  set flag(bool newFlag) {
+    if (newFlag && !_flag) {
+      _completer.complete();
+    } else if (!newFlag && _flag) {
+      _completer = Completer();
+    }
+    _flag = newFlag;
+  }
+
+  Future<void> wait() => _completer.future;
+}
+
 class TableturfBattle {
   static final _log = Logger('TableturfBattle');
   final ValueNotifier<TableturfCard?> moveCardNotifier = ValueNotifier(null);
@@ -78,6 +98,7 @@ class TableturfBattle {
   final ChangeNotifier endOfGameNotifier = ChangeNotifier();
   final ChangeNotifier specialMoveNotifier = ChangeNotifier();
   bool stopAllProgress = false;
+  AsyncEvent backgroundEvent = AsyncEvent();
 
   final ValueNotifier<TableturfMove?> blueMoveNotifier = ValueNotifier(null);
   final ValueNotifier<TableturfMove?> yellowMoveNotifier = ValueNotifier(null);
@@ -101,6 +122,7 @@ class TableturfBattle {
     required this.aiLevel,
     this.playerAI,
   }): origBoard = board.copy() {
+    backgroundEvent.flag = true;
     moveCardNotifier.addListener(_updateMoveHighlight);
     moveLocationNotifier.addListener(_updateMoveHighlight);
     moveRotationNotifier.addListener(_updateMoveHighlight);
@@ -164,6 +186,9 @@ class TableturfBattle {
 
   Future<void> _checkMovesSet() async {
     if (yellowMoveNotifier.value != null && blueMoveNotifier.value != null) {
+      print("waiting on background lock");
+      await backgroundEvent.wait();
+      _log.info("turn triggered");
       await Future<void>.delayed(const Duration(milliseconds: 1000));
       await runTurn();
     }
@@ -243,7 +268,6 @@ class TableturfBattle {
   }
 
   Future<void> runTurn() async {
-    _log.info("turn triggered");
     if (stopAllProgress) return;
     final yellowMove = yellowMoveNotifier.value!;
     final blueMove = blueMoveNotifier.value!;

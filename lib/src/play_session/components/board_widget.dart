@@ -1,9 +1,9 @@
 import 'dart:math';
 import 'dart:ui' as ui;
 
-import 'package:collection/collection.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:tableturf_mobile/src/settings/settings.dart';
 import 'package:tableturf_mobile/src/style/shaders.dart';
 
 import '../../game_internals/card.dart';
@@ -16,16 +16,16 @@ class BoardPainter extends CustomPainter {
   static const EDGE_WIDTH = 0.5;
 
   final TileGrid board;
-  final Listenable? repaintNotifier;
+  final Listenable? repaint;
   final double? tileSideLength;
   final ValueListenable<bool>? specialButtonOn;
 
   BoardPainter({
     required this.board,
-    this.repaintNotifier,
+    this.repaint,
     this.specialButtonOn,
     this.tileSideLength,
-  }): super(repaint: Listenable.merge([specialButtonOn, repaintNotifier]));
+  }): super(repaint: Listenable.merge([specialButtonOn, repaint]));
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -80,23 +80,24 @@ class BoardPainter extends CustomPainter {
       this.board != oldDelegate.board
         || this.tileSideLength != oldDelegate.tileSideLength
         || this.specialButtonOn != oldDelegate.specialButtonOn
-        || this.repaintNotifier != oldDelegate.repaintNotifier
+        || this.repaint != oldDelegate.repaint
     );
   }
 }
 
 class BoardFlashPainter extends CustomPainter {
   final Animation<double> flashAnimation;
-  final Set<Coords> flashTiles;
+  final ValueListenable<Set<Coords>> flashTilesNotifier;
   final double tileSideLength;
 
-  BoardFlashPainter(this.flashAnimation, this.flashTiles, this.tileSideLength):
-    super(repaint: flashAnimation)
+  BoardFlashPainter(this.flashAnimation, this.flashTilesNotifier, this.tileSideLength):
+    super(repaint: Listenable.merge([flashAnimation, flashTilesNotifier]))
   ;
 
   @override
   void paint(Canvas canvas, Size size) {
     if (flashAnimation.value == 0.0) return;
+    final flashTiles = flashTilesNotifier.value;
 
     final paint = Paint()
       ..style = PaintingStyle.fill
@@ -117,7 +118,7 @@ class BoardFlashPainter extends CustomPainter {
   bool shouldRepaint(BoardFlashPainter oldDelegate) {
     return (
       this.tileSideLength != oldDelegate.tileSideLength
-        || this.flashTiles != oldDelegate.flashTiles
+        || this.flashTilesNotifier != oldDelegate.flashTilesNotifier
     );
   }
 }
@@ -125,25 +126,23 @@ class BoardFlashPainter extends CustomPainter {
 class BoardSpecialPainter extends CustomPainter {
   final TileGrid board;
   final double? tileSideLength;
-  final ValueListenable<Set<Coords>>? activatedSpecialsNotifier;
-  final Animation<double>? flameAnimation;
-  final ui.Image? fireMask, fireEffect;
+  final ValueListenable<Set<Coords>> activatedSpecialsNotifier;
+  final Animation<double> flameAnimation;
+  final ui.Image fireMask, fireEffect;
 
   BoardSpecialPainter({
     required this.board,
+    required this.fireMask,
+    required this.fireEffect,
+    required this.activatedSpecialsNotifier,
+    required this.flameAnimation,
     this.tileSideLength,
-    this.fireMask,
-    this.fireEffect,
-    this.activatedSpecialsNotifier,
-    this.flameAnimation,
   }): super(repaint: Listenable.merge([flameAnimation, activatedSpecialsNotifier]));
 
   @override
   void paint(ui.Canvas canvas, ui.Size size) {
-    final activatedSpecials = activatedSpecialsNotifier?.value;
-    if (fireMask == null || fireEffect == null || activatedSpecials == null) {
-      return;
-    }
+    final activatedSpecials = activatedSpecialsNotifier.value;
+    final settings = SettingsController();
 
     final palette = const Palette();
     final bodyPaint = Paint()
@@ -155,7 +154,7 @@ class BoardSpecialPainter extends CustomPainter {
     );
 
     final shader = Shaders.specialFire.fragmentShader();
-    for (final coords in activatedSpecials!) {
+    for (final coords in activatedSpecials) {
       final x = coords.x;
       final y = coords.y;
       final state = board[y][x];
@@ -170,29 +169,30 @@ class BoardSpecialPainter extends CustomPainter {
           tileSideLength / 3,
           bodyPaint
       );
-      final flameRect = Rect.fromLTWH(
-          (x - 0.5) * tileSideLength,
-          (y - 1.0) * tileSideLength,
-          tileSideLength * 2,
-          tileSideLength * 2
-      );
-      final flameColor = state == TileState.yellowSpecial ? palette.tileYellowSpecialFlame
-          : state == TileState.blueSpecial ? palette.tileBlueSpecialFlame
-          : Color.fromRGBO(0, 0, 0, 1);
-      shader.setImageSampler(0, fireMask!);
-      shader.setImageSampler(1, fireEffect!);
-      shader.setFloat(0, flameRect.width);
-      shader.setFloat(1, flameRect.height);
-      shader.setFloat(2, flameRect.left);
-      shader.setFloat(3, flameRect.top);
-      shader.setFloat(4, flameAnimation?.value ?? 0.0);
-      shader.setFloat(5, (flameColor.red / 255.0) * flameColor.opacity);
-      shader.setFloat(6, (flameColor.green / 255.0) * flameColor.opacity);
-      shader.setFloat(7, (flameColor.blue / 255.0) * flameColor.opacity);
-      shader.setFloat(8, flameColor.opacity);
-      canvas.drawRect(flameRect, Paint()
-        ..style = PaintingStyle.fill
-        ..shader = shader);
+      if (settings.continuousAnimation.value) {
+        final flameRect = Rect.fromLTWH(
+            (x - 0.5) * tileSideLength,
+            (y - 1.0) * tileSideLength,
+            tileSideLength * 2,
+            tileSideLength * 2
+        );
+        final flameColor = state == TileState.yellowSpecial ? palette
+            .tileYellowSpecialFlame
+            : state == TileState.blueSpecial ? palette.tileBlueSpecialFlame
+            : Color.fromRGBO(0, 0, 0, 1);
+        shader.setImageSampler(0, fireMask);
+        shader.setImageSampler(1, fireEffect);
+        shader.setFloat(0, flameRect.left);
+        shader.setFloat(1, flameRect.top);
+        shader.setFloat(2, flameRect.width);
+        shader.setFloat(3, flameRect.height);
+        shader.setFloat(4, (flameColor.red / 255.0) * flameColor.opacity);
+        shader.setFloat(5, (flameColor.green / 255.0) * flameColor.opacity);
+        shader.setFloat(6, (flameColor.blue / 255.0) * flameColor.opacity);
+        shader.setFloat(7, flameColor.opacity);
+        shader.setFloat(8, flameAnimation.value);
+        canvas.drawRect(flameRect, Paint()..shader = shader);
+      }
     }
   }
 
@@ -317,6 +317,10 @@ class _BoardWidgetState extends State<BoardWidget>
   }
 
   void _runFlameAnimation() {
+    final settings = SettingsController();
+    if (!settings.continuousAnimation.value) {
+      return;
+    }
     if (widget.battle.activatedSpecialsNotifier.value.isNotEmpty) {
       _flameController.repeat();
     } else {
@@ -359,7 +363,7 @@ class _BoardWidgetState extends State<BoardWidget>
               board: widget.battle.board,
               tileSideLength: widget.tileSize,
               specialButtonOn: showSpecialDarken,
-              repaintNotifier: widget.battle.boardChangeNotifier,
+              repaint: widget.battle.boardChangeNotifier,
             ),
             child: Container(),
             isComplex: true,
@@ -372,32 +376,30 @@ class _BoardWidgetState extends State<BoardWidget>
               return CustomPaint(
                 painter: BoardFlashPainter(
                   flashOpacity,
-                  widget.battle.boardChangeNotifier.value,
+                  widget.battle.boardChangeNotifier,
                   widget.tileSize
                 ),
                 child: Container(),
+                willChange: true,
               );
             }
           ),
         ),
-        RepaintBoundary(
-          child: AnimatedBuilder(
-            animation: widget.battle.activatedSpecialsNotifier,
-            builder: (context, child) {
-              return CustomPaint(
-                painter: BoardSpecialPainter(
-                  board: widget.battle.board,
-                  tileSideLength: widget.tileSize,
-                  activatedSpecialsNotifier: widget.battle.activatedSpecialsNotifier,
-                  flameAnimation: _flameController,
-                  fireMask: _maskInfo?.image,
-                  fireEffect: _effectInfo?.image,
-                ),
-                child: Container(),
-              );
-            }
-          ),
-        )
+        if (_maskInfo != null && _effectInfo != null)
+          RepaintBoundary(
+            child: CustomPaint(
+              painter: BoardSpecialPainter(
+                board: widget.battle.board,
+                tileSideLength: widget.tileSize,
+                activatedSpecialsNotifier: widget.battle.activatedSpecialsNotifier,
+                flameAnimation: _flameController,
+                fireMask: _maskInfo!.image,
+                fireEffect: _effectInfo!.image,
+              ),
+              child: Container(),
+              willChange: true,
+            ),
+          )
       ],
     );
   }
