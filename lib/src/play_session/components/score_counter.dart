@@ -25,10 +25,9 @@ class _ScoreCounterState extends State<ScoreCounter>
   late AnimationController showDiffController, showSumController;
   late Animation<double>
       showDiffScale,
-      showDiffEndMoveX,
-      showDiffEndMoveY,
       showDiffEndFade,
       showSumScale;
+  late final Animation<Offset> showDiffEndMove;
   late int _prevScore;
   int _scoreDiff = 0;
 
@@ -68,21 +67,9 @@ class _ScoreCounterState extends State<ScoreCounter>
         weight: 20.0
       ),
     ]).animate(showDiffController);
-    showDiffEndMoveX = Tween<double>(
-      begin: 0,
-      end: -0.375,
-    ).animate(
-      CurvedAnimation(
-        parent: showDiffController,
-        curve: Interval(
-          0.8, 1.0,
-          curve: Curves.easeInOut,
-        ),
-      ),
-    );
-    showDiffEndMoveY = Tween<double>(
-      begin: 0,
-      end: 0.25,
+    showDiffEndMove = Tween<Offset>(
+      begin: Offset(1.5, -0.2),
+      end: Offset(0.75, 0.3),
     ).animate(
       CurvedAnimation(
         parent: showDiffController,
@@ -209,57 +196,43 @@ class _ScoreCounterState extends State<ScoreCounter>
             final diameter = constraints.maxHeight;
             return Stack(
               children: [
-                AnimatedBuilder(
-                  animation: showSumController,
-                  child: Scaffold(
-                    backgroundColor: Colors.transparent,
-                    body: Transform.translate(
-                      offset: Offset(-1, -0.5),
-                      child: Center(
-                        child: FractionallySizedBox(
-                          heightFactor: 0.9,
-                          widthFactor: 0.9,
-                          child: FittedBox(
-                            fit: BoxFit.fitHeight,
-                            child: Text(
-                              _prevScore.toString(),
-                              style: textStyle,
-                            ),
-                          )
-                        )
-                      ),
-                    ),
+                DecoratedBox(
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: widget.traits.scoreCountBackground
                   ),
-                  builder: (_, child) => AspectRatio(
-                    aspectRatio: 1.0,
-                    child: DecoratedBox(
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        color: widget.traits.scoreCountBackground
+                  child: ScaleTransition(
+                    scale: showSumScale,
+                    child: Scaffold(
+                      backgroundColor: Colors.transparent,
+                      body: Transform.translate(
+                        offset: Offset(-1, -0.5),
+                        child: Center(
+                          child: FractionallySizedBox(
+                            heightFactor: 0.9,
+                            widthFactor: 0.9,
+                            child: FittedBox(
+                              fit: BoxFit.fitHeight,
+                              child: Text(
+                                _prevScore.toString(),
+                                style: textStyle,
+                              ),
+                            )
+                          )
+                        ),
                       ),
-                      child: Transform.scale(
-                        scale: showSumScale.value,
-                        child: child
-                      )
                     )
                   )
                 ),
-                AnimatedBuilder(
-                  animation: showDiffController,
-                  builder: (_, sdd) => Transform.translate(
-                    offset: Offset(
-                      diameter * (0.75 + showDiffEndMoveX.value),
-                      diameter * (-0.1 + showDiffEndMoveY.value)
-                    ),
-                    child: Opacity(
-                      opacity: showDiffEndFade.value,
-                      child: Transform.scale(
-                        scale: showDiffScale.value,
-                        child: sdd,
-                      ),
+                SlideTransition(
+                  position: showDiffEndMove,
+                  child: FadeTransition(
+                    opacity: showDiffEndFade,
+                    child: ScaleTransition(
+                      scale: showDiffScale,
+                      child: scoreDiffDisplay,
                     ),
                   ),
-                  child: scoreDiffDisplay,
                 ),
                 Transform.translate(
                   offset: Offset(diameter * 0.15, diameter * 0.6),

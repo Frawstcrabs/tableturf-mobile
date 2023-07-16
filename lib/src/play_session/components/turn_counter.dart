@@ -20,12 +20,13 @@ class _TurnCounterState extends State<TurnCounter>
   late int turnCount;
   late final AnimationController _tickController;
   late final Animation<Decoration> _backgroundDarken;
-  late final Animation<double> _counterScale, _counterMove;
+  late final Animation<double> _counterScale;
+  late final Animation<Alignment> _counterMove;
 
   static const duration = Duration(milliseconds: 1300);
   static const darkenAmount = 0.5;
   static const focusScale = 1.4;
-  static const counterBounceHeight = 0.11;
+  static const counterBounceHeight = 2.5;
 
   @override
   void initState() {
@@ -94,25 +95,25 @@ class _TurnCounterState extends State<TurnCounter>
     const bounceLength = 6.0;
     _counterMove = TweenSequence([
       TweenSequenceItem(
-        tween: ConstantTween(0.0),
+        tween: ConstantTween(Alignment.center),
         weight: 36.0,
       ),
       TweenSequenceItem(
         tween: Tween(
-          begin: 0.0,
-          end: -counterBounceHeight,
+          begin: Alignment.center,
+          end: const Alignment(0.0, -counterBounceHeight),
         ).chain(CurveTween(curve: Curves.decelerate)),
         weight: bounceLength,
       ),
       TweenSequenceItem(
         tween: Tween(
-          begin: -counterBounceHeight,
-          end: 0.0,
+          begin: const Alignment(0.0, -counterBounceHeight),
+          end: Alignment.center,
         ).chain(CurveTween(curve: Curves.bounceOut)),
         weight: bounceLength * bounceCurveRatio,
       ),
       TweenSequenceItem(
-        tween: ConstantTween(0.0),
+        tween: ConstantTween(Alignment.center),
         weight: 130.0 - 36.0 - (bounceLength * (bounceCurveRatio + 1.0))
       ),
     ]).animate(_tickController);
@@ -199,36 +200,31 @@ class _TurnCounterState extends State<TurnCounter>
       ),
     );
 
-    return AnimatedBuilder(
+    return ScaleTransition(
       key: key,
-      animation: _tickController,
-      builder: (_, __) => Transform.scale(
-        scale: _counterScale.value,
-        child: AspectRatio(
-          aspectRatio: 1,
-          child: SizedBox(
-            child: DecoratedBox(
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(999),
-                color: Color.fromRGBO(128, 128, 128, 1)
-              ),
-              child: Center(
-                child: FractionalTranslation(
-                  translation: Offset(0, _counterMove.value),
-                  child: FractionallySizedBox(
-                    heightFactor: 0.9,
-                    widthFactor: 0.9,
-                    child: FittedBox(
-                      fit: BoxFit.fitHeight,
-                      child: turnText,
-                    )
-                  ),
-                ),
-              )
+      scale: _counterScale,
+      child: AspectRatio(
+        aspectRatio: 1,
+        child: SizedBox(
+          child: DecoratedBox(
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: Color.fromRGBO(128, 128, 128, 1)
             ),
+            child: AlignTransition(
+              alignment: _counterMove,
+              child: FractionallySizedBox(
+                heightFactor: 0.9,
+                widthFactor: 0.9,
+                child: FittedBox(
+                  fit: BoxFit.fitHeight,
+                  child: turnText,
+                )
+              ),
+            )
           ),
         ),
-      )
+      ),
     );
   }
 

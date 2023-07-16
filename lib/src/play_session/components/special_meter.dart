@@ -46,28 +46,22 @@ class _SpecialTileState extends State<SpecialTile>
 
   @override
   Widget build(BuildContext context) {
-    return AnimatedBuilder(
-      animation: _introAnimation,
-      child: Container(
-        decoration: BoxDecoration(
-          color: widget.colour,
-          border: Border.all(
-            width: CardPatternWidget.EDGE_WIDTH,
-            color: Colors.black,
+    return ScaleTransition(
+      scale: introScale,
+      child: FadeTransition(
+        opacity: introFade,
+        child: Container(
+          decoration: BoxDecoration(
+            color: widget.colour,
+            border: Border.all(
+              width: CardPatternWidget.EDGE_WIDTH,
+              color: Colors.black,
+            ),
           ),
+          width: widget.tileSize,
+          height: widget.tileSize,
         ),
-        width: widget.tileSize,
-        height: widget.tileSize,
-      ),
-      builder: (context, child) {
-        return ScaleTransition(
-          scale: introScale,
-          child: FadeTransition(
-            opacity: introFade,
-            child: child,
-          )
-        );
-      }
+      )
     );
   }
 }
@@ -119,13 +113,13 @@ class SpecialMeter extends StatelessWidget {
                 child: LayoutBuilder(
                   builder: (_, constraints) {
                     final tileSize = constraints.maxHeight;
-                    return AnimatedBuilder(
-                        animation: player.special,
-                        builder: (_, __) {
+                    return ValueListenableBuilder(
+                        valueListenable: player.special,
+                        builder: (_, int specialCount, __) {
                           return Row(
                               children: [
                                 for (var i = 0; i <
-                                    max(player.special.value, 4); i++)
+                                    max(specialCount, 4); i++)
                                   Container(
                                     margin: const EdgeInsets.only(right: 4),
                                     child: Stack(
@@ -136,7 +130,7 @@ class SpecialMeter extends StatelessWidget {
                                             width: tileSize,
                                             height: tileSize,
                                           ),
-                                          if (i < player.special.value)
+                                          if (i < specialCount)
                                             SpecialTile(
                                               colour: player.traits
                                                   .specialColour,

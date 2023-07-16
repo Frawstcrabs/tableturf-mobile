@@ -220,8 +220,9 @@ class _FreePlayScreenState extends State<FreePlayScreen> {
                   context: context,
                   map: map!,
                   yellowDeck: tempPlayerDeck,
+                  yellowName: settings.playerName.value,
                   blueDeck: tempOpponentDeck,
-                  blueName: "Them",
+                  blueName: tempOpponentDeck.name,
                   playerAI: playerAI,
                   aiLevel: difficulty!,
                 ));

@@ -490,37 +490,32 @@ class _PlaySessionEndState extends State<PlaySessionEnd>
                 flex: 1,
                 child: FractionallySizedBox(
                   heightFactor: 0.8,
-                  child: AnimatedBuilder(
-                      animation: _scoreCountersAnimator,
-                      builder: (_, __) {
-                        return Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                            children: [
-                              Transform.scale(
-                                scale: scoreSize.value,
-                                child: Opacity(
-                                  opacity: scoreFade.value,
-                                  child: ScoreCounter(
-                                      scoreNotifier: widget.battle.blueCountNotifier,
-                                      newScoreNotifier: ValueNotifier(null),
-                                      traits: const BlueTraits()
-                                  ),
-                                ),
-                              ),
-                              Transform.scale(
-                                scale: scoreSize.value,
-                                child: Opacity(
-                                  opacity: scoreFade.value,
-                                  child: ScoreCounter(
-                                      scoreNotifier: widget.battle.yellowCountNotifier,
-                                      newScoreNotifier: ValueNotifier(null),
-                                      traits: const YellowTraits()
-                                  ),
-                                ),
-                              ),
-                            ]
-                        );
-                      }
+                  child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                      children: [
+                        ScaleTransition(
+                          scale: scoreSize,
+                          child: FadeTransition(
+                            opacity: scoreFade,
+                            child: ScoreCounter(
+                                scoreNotifier: widget.battle.blueCountNotifier,
+                                newScoreNotifier: ValueNotifier(null),
+                                traits: const BlueTraits()
+                            ),
+                          ),
+                        ),
+                        ScaleTransition(
+                          scale: scoreSize,
+                          child: FadeTransition(
+                            opacity: scoreFade,
+                            child: ScoreCounter(
+                                scoreNotifier: widget.battle.yellowCountNotifier,
+                                newScoreNotifier: ValueNotifier(null),
+                                traits: const YellowTraits()
+                            ),
+                          ),
+                        ),
+                      ]
                   ),
                 )
             ),

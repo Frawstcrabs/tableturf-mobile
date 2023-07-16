@@ -370,19 +370,14 @@ class _BoardWidgetState extends State<BoardWidget>
           ),
         ),
         RepaintBoundary(
-          child: AnimatedBuilder(
-            animation: widget.battle.boardChangeNotifier,
-            builder: (context, child) {
-              return CustomPaint(
-                painter: BoardFlashPainter(
-                  flashOpacity,
-                  widget.battle.boardChangeNotifier,
-                  widget.tileSize
-                ),
-                child: Container(),
-                willChange: true,
-              );
-            }
+          child: CustomPaint(
+            painter: BoardFlashPainter(
+              flashOpacity,
+              widget.battle.boardChangeNotifier,
+              widget.tileSize
+            ),
+            child: Container(),
+            willChange: true,
           ),
         ),
         if (_maskInfo != null && _effectInfo != null)

@@ -23,6 +23,7 @@ extension RandomChoice<T> on List<T> {
 
 class TableturfPlayer {
   final String name;
+  final String? icon;
   final List<TableturfCard> deck;
   final List<ValueNotifier<TableturfCard?>> hand;
   final ValueNotifier<int> special;
@@ -31,6 +32,7 @@ class TableturfPlayer {
 
   TableturfPlayer({
     required this.name,
+    this.icon,
     required this.deck,
     required this.hand,
     required this.traits,
