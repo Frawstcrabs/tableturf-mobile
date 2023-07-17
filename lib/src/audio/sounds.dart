@@ -13,7 +13,7 @@ List<String> soundTypeToFilename(SfxType type) {
         "rotate4.ogg",
       ];
     default:
-      return ["${type.toString().split('.').last}.ogg"];
+      return ["${type.name}.ogg"];
   }
 }
 
@@ -40,14 +40,18 @@ double soundTypeToVolume(SfxType type) {
 }
 
 enum SfxType {
+  menuButtonPress,
+
   dealHand,
   selectCardNormal,
   cardFlip,
   cardDiscard,
   confirmMoveSucceed,
   confirmMovePass,
+  confirmMoveSpecial,
   counterUpdate,
   gameIntro,
+  gameIntroExit,
   gameStart,
   gameEndWhistle,
   specialActivate,

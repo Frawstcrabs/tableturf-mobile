@@ -475,6 +475,7 @@ class _CardSelectionWidgetState extends State<CardSelectionWidget>
         final newFront = LayoutBuilder(
           builder: (context, constraints) {
             final cornerRadius = CardWidget.CORNER_RADIUS * (constraints.maxHeight/CardWidget.CARD_HEIGHT);
+            final textStyle = DefaultTextStyle.of(context).style;
             return Stack(
               fit: StackFit.expand,
               children: [
@@ -502,11 +503,17 @@ class _CardSelectionWidgetState extends State<CardSelectionWidget>
                 ),
                 if (move.pass) DecoratedBox(
                   decoration: BoxDecoration(
-                    color: Color.fromRGBO(0, 0, 0, 0.5),
+                    color: Color.fromRGBO(96, 96, 96, 0.5),
                     borderRadius: BorderRadius.circular(cornerRadius),
                   ),
                   child: Center(
-                    child: Text("Pass")
+                    child: Text(
+                      "Pass",
+                      style: TextStyle(
+                        fontSize: min(48.0, 80.0 * (constraints.maxHeight/CardWidget.CARD_HEIGHT)),
+                        shadows: textStyle.shadows?.map((s) => s.scale(4 * (constraints.maxHeight/CardWidget.CARD_HEIGHT))).toList()
+                      )
+                    )
                   )
                 )
               ]

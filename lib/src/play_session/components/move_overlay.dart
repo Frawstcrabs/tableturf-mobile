@@ -11,6 +11,7 @@ class MoveOverlayPainter extends CustomPainter {
   final Animation<double> animation;
   final double tileSideLength;
 
+  static const drawComplex = true;
   static const STRIPE_RATIO = 0.5;
 
   static const DOT_ANGLE = 0.35204;
@@ -222,7 +223,6 @@ class MoveOverlayPainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
-    const drawComplex = true;
     if (drawComplex) {
       _paintComplex(canvas);
     } else {

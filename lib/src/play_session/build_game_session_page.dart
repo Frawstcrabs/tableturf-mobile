@@ -20,7 +20,9 @@ PageRouteBuilder<T> buildGameSessionPage<T>({
   required TableturfDeck yellowDeck,
   required TableturfDeck blueDeck,
   String yellowName = "You",
-  required String blueName,
+  String blueName = "Them",
+  String? yellowIcon,
+  String? blueIcon,
   required AILevel aiLevel,
   AILevel? playerAI,
   Palette palette = const Palette(),
@@ -38,6 +40,7 @@ PageRouteBuilder<T> buildGameSessionPage<T>({
   final yellowPlayer = TableturfPlayer(
     name: yellowName,
     deck: yellowDeckCards,
+    icon: yellowIcon == null ? null : "assets/images/character_icons/$yellowIcon.png",
     hand: Iterable.generate(4, (c) => ValueNotifier<TableturfCard?>(null)).toList(),
     traits: const YellowTraits(),
     cardSleeve: "assets/images/card_sleeves/sleeve_${yellowDeck.cardSleeve}.png",
@@ -46,6 +49,7 @@ PageRouteBuilder<T> buildGameSessionPage<T>({
   final bluePlayer = TableturfPlayer(
     name: blueName,
     deck: blueDeckCards,
+    icon: blueIcon == null ? null : "assets/images/character_icons/$blueIcon.png",
     hand: Iterable.generate(4, (c) => ValueNotifier<TableturfCard?>(null)).toList(),
     traits: const BlueTraits(),
     cardSleeve: "assets/images/card_sleeves/sleeve_${blueDeck.cardSleeve}.png",
@@ -62,5 +66,7 @@ PageRouteBuilder<T> buildGameSessionPage<T>({
       playerAI: playerAI,
     ),
     color: palette.backgroundPlaySession,
+    transitionDuration: const Duration(milliseconds: 800),
+    reverseTransitionDuration: const Duration(milliseconds: 800),
   );
 }

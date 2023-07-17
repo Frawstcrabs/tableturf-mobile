@@ -650,20 +650,15 @@ class _PlaySessionScreenState extends State<PlaySessionScreen>
                           fit: StackFit.expand,
                           children: [
                             Center(
-                              child: AnimatedBuilder(
-                                  animation: specialMoveBluePulse,
-                                  builder: (_, __) {
-                                    return FractionallySizedBox(
-                                      heightFactor: isLandscape ? 1.0 : 1.0 * specialMoveScale.value,
-                                      widthFactor: isLandscape ? 1.0 * specialMoveScale.value : 1.0,
-                                      child: CustomPaint(
-                                          painter: SpecialBackgroundPainter(
-                                            isLandscape,
-                                            specialMoveBluePulse,
-                                          )
-                                      ),
-                                    );
-                                  }
+                              child: FractionallySizedBox(
+                                heightFactor: isLandscape ? 1.0 : 1.0 * specialMoveScale.value,
+                                widthFactor: isLandscape ? 1.0 * specialMoveScale.value : 1.0,
+                                child: CustomPaint(
+                                  painter: SpecialBackgroundPainter(
+                                    isLandscape,
+                                    specialMoveBluePulse,
+                                  )
+                                ),
                               ),
                             ),
                             Center(
@@ -1060,7 +1055,6 @@ class _PlaySessionScreenState extends State<PlaySessionScreen>
     final palette = context.watch<Palette>();
     final settings = context.watch<SettingsController>();
     final mediaQuery = MediaQuery.of(context);
-    print(mediaQuery.devicePixelRatio);
 
     final boardWidget = buildBoardWidget(
       battle: battle,
@@ -1302,7 +1296,6 @@ class _PlaySessionScreenState extends State<PlaySessionScreen>
         child: LayoutBuilder(
           builder: (context, constraints) {
             final width = constraints.maxWidth;
-            print(constraints);
             return Container(
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
@@ -1430,17 +1423,36 @@ class _PlaySessionScreenState extends State<PlaySessionScreen>
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Expanded(
-                      child: Row(
-                        children: [
-                          blueScore,
-                          Container(width: 20),
-                          Expanded(child: RepaintBoundary(child: SpecialMeter(player: battle.blue))),
-                        ],
-                      ),
+                      child: RepaintBoundary(
+                        child: SpecialMeter(
+                          player: battle.yellow,
+                          direction: TextDirection.ltr,
+                        )
+                      )
                     ),
-                    turnCounter,
+                    Expanded(
+                      child: RepaintBoundary(
+                        child: SpecialMeter(
+                          player: battle.blue,
+                          direction: TextDirection.rtl,
+                        )
+                      )
+                    ),
                   ]
                 ),
+              ),
+            ),
+            const Spacer(flex: 1),
+            Expanded(
+              flex: 3,
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                children: [
+                  cardDeck,
+                  yellowScore,
+                  blueScore,
+                  turnCounter,
+                ],
               ),
             ),
             Expanded(
@@ -1448,20 +1460,6 @@ class _PlaySessionScreenState extends State<PlaySessionScreen>
               child: FractionallySizedBox(
                 heightFactor: 0.9,
                 child: boardWidget
-              ),
-            ),
-            Expanded(
-              flex: 3,
-              child: FractionallySizedBox(
-                widthFactor: 0.95,
-                child: Row(
-                  children: [
-                    yellowScore,
-                    Container(width: 20),
-                    Expanded(child: RepaintBoundary(child: SpecialMeter(player: battle.yellow))),
-                    cardDeck,
-                  ],
-                ),
               ),
             ),
             Expanded(

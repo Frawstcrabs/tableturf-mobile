@@ -7,6 +7,8 @@
 // import 'package:firebase_core/firebase_core.dart';
 // import 'firebase_options.dart';
 
+import 'dart:convert';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -15,6 +17,7 @@ import 'package:tableturf_mobile/src/game_internals/card.dart';
 import 'package:logging/logging.dart';
 import 'package:provider/provider.dart';
 import 'package:tableturf_mobile/src/game_internals/map.dart';
+import 'package:tableturf_mobile/src/level_selection/opponents.dart';
 import 'package:tableturf_mobile/src/style/shaders.dart';
 
 import 'src/app_lifecycle/app_lifecycle.dart';
@@ -31,6 +34,7 @@ Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await loadCards();
   await loadMaps();
+  await loadOpponents();
   await Shaders.loadPrograms();
   await guardedMain();
 }
@@ -110,7 +114,7 @@ class MyApp extends StatelessWidget {
               audio.attachLifecycleNotifier(lifecycleNotifier);
               return audio;
             },
-            dispose: (context, audio) => audio.dispose(),
+            //dispose: (context, audio) => audio.dispose(),
           ),
           Provider(
             create: (context) => Palette(),

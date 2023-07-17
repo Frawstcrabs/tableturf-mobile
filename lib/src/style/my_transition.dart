@@ -8,8 +8,9 @@ PageRouteBuilder<T> buildMyTransition<T>({
   required Widget child,
   required Color color,
   String? name,
-  Object? arguments,
   String? restorationId,
+  Duration transitionDuration = const Duration(milliseconds: 400),
+  Duration reverseTransitionDuration = const Duration(milliseconds: 400),
   LocalKey? key,
 }) {
   return PageRouteBuilder<T>(
@@ -20,7 +21,8 @@ PageRouteBuilder<T> buildMyTransition<T>({
         child: child,
       );
     },
-    transitionDuration: const Duration(milliseconds: 400),
+    transitionDuration: transitionDuration,
+    reverseTransitionDuration: reverseTransitionDuration,
   );
 }
 
@@ -39,17 +41,19 @@ class FadeToBlackTransition extends StatefulWidget {
 }
 
 class _FadeToBlackTransitionState extends State<FadeToBlackTransition> {
+  static const _clearDecoration = BoxDecoration(color: Colors.transparent);
+  static const _opaqueDecoration = BoxDecoration(color: Colors.black);
   final blackScreenTween = TweenSequence([
     TweenSequenceItem(
-      tween: Tween(begin: 0.0, end: 1.0),
+      tween: DecorationTween(begin: _clearDecoration, end: _opaqueDecoration),
       weight: 20,
     ),
     TweenSequenceItem(
-      tween: ConstantTween(1.0),
+      tween: ConstantTween(_opaqueDecoration),
       weight: 60,
     ),
     TweenSequenceItem(
-      tween: Tween(begin: 1.0, end: 0.0),
+      tween: DecorationTween(begin: _opaqueDecoration, end: _clearDecoration),
       weight: 20,
     ),
   ]);
@@ -75,9 +79,9 @@ class _FadeToBlackTransitionState extends State<FadeToBlackTransition> {
           child: widget.child,
         ),
         IgnorePointer(
-          child: FadeTransition(
-            opacity: blackScreenTween.animate(widget.animation),
-            child: Container(color: Colors.black),
+          child: DecoratedBoxTransition(
+            decoration: blackScreenTween.animate(widget.animation),
+            child: SizedBox.expand(),
           ),
         ),
       ],

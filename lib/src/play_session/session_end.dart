@@ -20,6 +20,7 @@ import '../style/my_transition.dart';
 import 'components/build_board_widget.dart';
 import 'components/multi_choice_prompt.dart';
 import 'components/score_counter.dart';
+import 'components/splashtag.dart';
 
 void paintScoreBar({
   required Canvas canvas,
@@ -138,7 +139,7 @@ class ScoreBarPainter extends CustomPainter {
         length: blueLength,
         waveAnimation: waveAnimation,
         opacity: opacity,
-        direction: AxisDirection.left,
+        direction: AxisDirection.right,
         color: palette.tileBlue,
       );
       paintScoreBar(
@@ -147,7 +148,7 @@ class ScoreBarPainter extends CustomPainter {
         length: yellowLength,
         waveAnimation: waveAnimation,
         opacity: opacity,
-        direction: AxisDirection.right,
+        direction: AxisDirection.left,
         color: palette.tileYellow,
       );
     } else {
@@ -211,7 +212,7 @@ class WinEffectPainter extends CustomPainter {
         color = const Palette().tileBlue;
         switch (orientation) {
           case Orientation.portrait:
-            direction = AxisDirection.left;
+            direction = AxisDirection.right;
             break;
           case Orientation.landscape:
             direction = AxisDirection.down;
@@ -222,7 +223,7 @@ class WinEffectPainter extends CustomPainter {
         color = const Palette().tileYellow;
         switch (orientation) {
           case Orientation.portrait:
-            direction = AxisDirection.right;
+            direction = AxisDirection.left;
             break;
           case Orientation.landscape:
             direction = AxisDirection.up;
@@ -426,8 +427,6 @@ class _PlaySessionEndState extends State<PlaySessionEnd>
 
   @override
   void dispose() {
-    AudioController().musicPlayer.stop();
-    AudioController().musicPlayer.setAudioSource(ConcatenatingAudioSource(children: []));
     _scoreBarAnimator.dispose();
     _scoreCountersAnimator.dispose();
     _scoreSplashAnimator.dispose();
@@ -437,16 +436,18 @@ class _PlaySessionEndState extends State<PlaySessionEnd>
 
   Future<void> _checkRematch() async {
     if (!initSequenceEnded) return;
+    final audioController = AudioController();
     var choice = await showMultiChoicePrompt(
       context,
-      title: "Rematch?",
-      options: ["Yeah!", "Nah"],
+      title: "Keep playing?",
+      options: ["Nah", "Yes!"],
       useWave: false,
     );
-    if (choice == 0) {
+    if (choice == 1) {
       final battle = widget.battle;
       battle.yellow.reset();
       battle.blue.reset();
+      audioController.stopSong(fadeDuration: const Duration(milliseconds: 800));
       Navigator.of(context).pushReplacement(buildMyTransition(
         child: PlaySessionIntro(
           yellow: battle.yellow,
@@ -457,9 +458,15 @@ class _PlaySessionEndState extends State<PlaySessionEnd>
           playerAI: battle.playerAI,
         ),
         color: const Palette().backgroundPlaySession,
+        transitionDuration: const Duration(milliseconds: 800),
+        reverseTransitionDuration: const Duration(milliseconds: 800),
       ));
       return;
     }
+    () async {
+      await audioController.stopSong(fadeDuration: const Duration(milliseconds: 600));
+      await audioController.musicPlayer.setAudioSource(ConcatenatingAudioSource(children: []));
+    }();
     Navigator.of(context).pop();
   }
 
@@ -498,9 +505,9 @@ class _PlaySessionEndState extends State<PlaySessionEnd>
                           child: FadeTransition(
                             opacity: scoreFade,
                             child: ScoreCounter(
-                                scoreNotifier: widget.battle.blueCountNotifier,
+                                scoreNotifier: widget.battle.yellowCountNotifier,
                                 newScoreNotifier: ValueNotifier(null),
-                                traits: const BlueTraits()
+                                traits: const YellowTraits()
                             ),
                           ),
                         ),
@@ -509,9 +516,9 @@ class _PlaySessionEndState extends State<PlaySessionEnd>
                           child: FadeTransition(
                             opacity: scoreFade,
                             child: ScoreCounter(
-                                scoreNotifier: widget.battle.yellowCountNotifier,
+                                scoreNotifier: widget.battle.blueCountNotifier,
                                 newScoreNotifier: ValueNotifier(null),
-                                traits: const YellowTraits()
+                                traits: const BlueTraits()
                             ),
                           ),
                         ),
@@ -531,7 +538,7 @@ class _PlaySessionEndState extends State<PlaySessionEnd>
                         blueLength: blueScoreAnimation,
                         waveAnimation: _scoreWaveAnimator,
                         orientation: mediaQuery.orientation,
-                        opacity: AlwaysStoppedAnimation(1.0),
+                        opacity: const AlwaysStoppedAnimation(1.0),
                       ),
                       child: FractionallySizedBox(
                         widthFactor: 0.8,
@@ -544,13 +551,38 @@ class _PlaySessionEndState extends State<PlaySessionEnd>
                         waveAnimation: _scoreWaveAnimator,
                         orientation: mediaQuery.orientation,
                       ),
-                      willChange: true,
+                      willChange: SettingsController().continuousAnimation.value,
                     ),
                   ),
                 ),
               ),
             ),
-            const Spacer(flex: 1),
+            Expanded(
+              flex: 3,
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                children: [
+                  Expanded(
+                    child: FractionallySizedBox(
+                      widthFactor: 0.8,
+                      child: SplashTag(
+                        name: widget.battle.yellow.name,
+                        tagIcon: widget.battle.yellow.icon,
+                      ),
+                    ),
+                  ),
+                  Expanded(
+                    child: FractionallySizedBox(
+                      widthFactor: 0.8,
+                      child: SplashTag(
+                        name: widget.battle.blue.name,
+                        tagIcon: widget.battle.blue.icon,
+                      ),
+                    ),
+                  )
+                ]
+              )
+            )
           ],
         ),
       );

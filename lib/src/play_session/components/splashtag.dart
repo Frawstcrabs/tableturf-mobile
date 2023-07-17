@@ -19,21 +19,20 @@ class SplashTag extends StatelessWidget {
         aspectRatio: 700/200,
         child: LayoutBuilder(
           builder: (context, constraints) {
-            print("$name: $constraints");
             final designRatio = constraints.maxWidth / 700;
             return ClipRRect(
-              borderRadius: BorderRadius.circular(10.0 * designRatio),
+              borderRadius: BorderRadius.circular(15.0 * designRatio),
               child: Stack(
                 fit: StackFit.expand,
                 children: [
                   Image.asset(
                     tagBackground,
-                    color: const Color.fromRGBO(0, 0, 0, 0.7),
+                    color: const Color.fromRGBO(0, 0, 0, 0.6),
                     colorBlendMode: BlendMode.srcATop,
                   ),
                   if (tagIcon != null) Image.asset(
                     tagIcon!,
-                    color: const Color.fromRGBO(0, 0, 0, 0.7),
+                    color: const Color.fromRGBO(0, 0, 0, 0.6),
                     colorBlendMode: BlendMode.srcATop,
                     height: 200 * designRatio,
                     alignment: Alignment.centerRight,

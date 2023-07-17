@@ -47,6 +47,7 @@ flutter:
     - assets/sfx/
     - assets/cards.json
     - assets/maps.json
+    - assets/opponents.json
 
   shaders:
     - assets/shaders/dashed_line.frag

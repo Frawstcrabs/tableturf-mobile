@@ -9,7 +9,7 @@ class CircularArcOffsetTween extends Tween<Offset> {
 
   bool _dirty = true;
   Offset? _center;
-  double? _beginAngle;
+  double? _beginAngle, _endAngle;
   double? _radius;
 
   CircularArcOffsetTween({
@@ -22,8 +22,7 @@ class CircularArcOffsetTween extends Tween<Offset> {
   void _initialise() {
     assert(this.begin != null);
     assert(this.end != null);
-    assert(this._angle >= 0.0);
-    assert(this._angle <= (2*pi));
+    assert(this._angle >= 0.0 && this._angle <= (2*pi));
 
     final begin = this.begin!;
     final end = this.end!;
@@ -49,6 +48,7 @@ class CircularArcOffsetTween extends Tween<Offset> {
     ) * (effectiveClockwise ? 1 : -1);
     final newCenter = midpoint + toCenterOffset;
     _beginAngle = (begin - newCenter).direction;
+    _endAngle = _beginAngle! + _angle * (_clockwise ? 1 : -1);
     _center = newCenter;
     _radius = newRadius;
 
@@ -94,9 +94,7 @@ class CircularArcOffsetTween extends Tween<Offset> {
     if (_dirty) {
       _initialise();
     }
-    final beginAngle = _beginAngle!;
-    final endAngle = beginAngle + _angle * (_clockwise ? 1 : -1);
-    final curAngle = lerpDouble(beginAngle, endAngle, t)!;
+    final curAngle = lerpDouble(_beginAngle, _endAngle, t)!;
     final x = cos(curAngle) * _radius!;
     final y = sin(curAngle) * _radius!;
     return _center! + Offset(x, y);

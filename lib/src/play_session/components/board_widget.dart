@@ -235,7 +235,6 @@ class _BoardWidgetState extends State<BoardWidget>
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    print("code ran");
     _maskImage = AssetImage("assets/images/fire_mask3.png");
     _effectImage = AssetImage("assets/images/fire_noise.jpg");
     // We call _getImage here because createLocalImageConfiguration() needs to

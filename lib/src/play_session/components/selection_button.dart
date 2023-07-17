@@ -1,8 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:tableturf_mobile/src/audio/audio_controller.dart';
+
+import '../../audio/sounds.dart';
 
 class SelectionButton extends StatefulWidget {
   final Future<bool> Function()? onPressStart;
   final Future<void> Function()? onPressEnd;
+  final SfxType? sfx;
   final double designRatio;
   final Widget child;
   const SelectionButton({
@@ -10,6 +14,7 @@ class SelectionButton extends StatefulWidget {
     this.onPressStart,
     this.onPressEnd,
     this.designRatio = 1,
+    this.sfx,
     required this.child,
   });
 
@@ -31,7 +36,7 @@ class SelectionButtonState extends State<SelectionButton>
         duration: const Duration(milliseconds: 125),
         vsync: this
     );
-    const selectDownscale = 0.9;
+    const selectDownscale = 0.85;
     selectScale = TweenSequence([
       TweenSequenceItem(
           tween: Tween(begin: 1.0, end: selectDownscale)
@@ -39,7 +44,7 @@ class SelectionButtonState extends State<SelectionButton>
           weight: 50
       ),
       TweenSequenceItem(
-          tween: Tween(begin: selectDownscale, end: 1.025)
+          tween: Tween(begin: selectDownscale, end: 1.05)
               .chain(CurveTween(curve: Curves.decelerate.flipped)),
           weight: 50
       ),
@@ -69,6 +74,10 @@ class SelectionButtonState extends State<SelectionButton>
         final shouldPress = await widget.onPressStart?.call() ?? true;
         if (!shouldPress) {
           return;
+        }
+        final audioController = AudioController();
+        if (widget.sfx != null) {
+          audioController.playSfx(widget.sfx!);
         }
         await _selectController.forward(from: 0.0);
         await Future<void>.delayed(const Duration(milliseconds: 50));

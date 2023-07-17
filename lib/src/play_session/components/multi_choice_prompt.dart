@@ -3,6 +3,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:tableturf_mobile/src/audio/sounds.dart';
 import 'selection_button.dart';
 
 
@@ -197,72 +198,73 @@ class _MultiChoiceOverlayState extends State<_MultiChoiceOverlay>
       child: AspectRatio(
         aspectRatio: 4/3,
         child: LayoutBuilder(
-            builder: (context, constraints) {
-              const designWidth = 646;
-              final designRatio = constraints.maxWidth / designWidth;
-              return DefaultTextStyle(
-                style: TextStyle(
-                  fontFamily: "Splatfont2",
-                  color: Colors.white,
-                  fontSize: 25 * designRatio,
-                ),
-                child: SlideTransition(
-                  position: redrawSelectionOffset,
-                  child: ScaleTransition(
-                    scale: redrawSelectionScale,
-                    child: RotationTransition(
-                      turns: redrawSelectionRotate,
-                      child: DecoratedBox(
-                        decoration: BoxDecoration(
-                          color: Colors.grey[850],
-                          borderRadius: BorderRadius.circular(60 * designRatio),
-                        ),
-                        child: Column(
-                            mainAxisAlignment: MainAxisAlignment.spaceAround,
-                            children: [
-                              Expanded(
-                                  flex: 2,
-                                  child: Center(
-                                      child: Text(
-                                        widget.title,
-                                        style: TextStyle(
-                                          fontSize: 35 * designRatio,
-                                        ),
-                                      )
-                                  )
-                              ),
-                              Expanded(
-                                  flex: 1,
-                                  child: FractionallySizedBox(
-                                    heightFactor: 0.7,
-                                    child: Row(
-                                        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                                        children: [
-                                          for (var i = 0; i < widget.options.length; i++)
-                                            Expanded(
-                                              child: Padding(
-                                                padding: EdgeInsets.all(5 * designRatio),
-                                                child: Center(
-                                                  child: SelectionButton(
-                                                      onPressEnd: _createTapCallback(i),
-                                                      designRatio: designRatio,
-                                                      child: Text(widget.options[i])
-                                                  ),
-                                                ),
-                                              ),
-                                            )
-                                        ]
-                                    ),
-                                  )
+          builder: (context, constraints) {
+            const designWidth = 646;
+            final designRatio = constraints.maxWidth / designWidth;
+            return DefaultTextStyle(
+              style: TextStyle(
+                fontFamily: "Splatfont2",
+                color: Colors.white,
+                fontSize: 25 * designRatio,
+              ),
+              child: SlideTransition(
+                position: redrawSelectionOffset,
+                child: ScaleTransition(
+                  scale: redrawSelectionScale,
+                  child: RotationTransition(
+                    turns: redrawSelectionRotate,
+                    child: DecoratedBox(
+                      decoration: BoxDecoration(
+                        color: Colors.grey[850],
+                        borderRadius: BorderRadius.circular(60 * designRatio),
+                      ),
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.spaceAround,
+                        children: [
+                          Expanded(
+                            flex: 2,
+                            child: Center(
+                              child: Text(
+                                widget.title,
+                                style: TextStyle(
+                                  fontSize: 35 * designRatio,
+                                ),
                               )
-                            ]
-                        ),
+                            )
+                          ),
+                          Expanded(
+                            flex: 1,
+                            child: FractionallySizedBox(
+                              heightFactor: 0.7,
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                                children: [
+                                  for (var i = 0; i < widget.options.length; i++)
+                                    Expanded(
+                                      child: Padding(
+                                        padding: EdgeInsets.all(5 * designRatio),
+                                        child: Center(
+                                          child: SelectionButton(
+                                            onPressEnd: _createTapCallback(i),
+                                            designRatio: designRatio,
+                                            child: Text(widget.options[i]),
+                                            sfx: SfxType.menuButtonPress,
+                                          ),
+                                        ),
+                                      ),
+                                    )
+                                ]
+                              ),
+                            )
+                          )
+                        ]
                       ),
                     ),
                   ),
                 ),
-              );
-            }
+              ),
+            );
+          }
         ),
       ),
     );

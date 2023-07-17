@@ -68,20 +68,29 @@ class _SpecialTileState extends State<SpecialTile>
 
 class SpecialMeter extends StatelessWidget {
   final TableturfPlayer player;
-  const SpecialMeter({required this.player, super.key});
+  final TextDirection direction;
+  const SpecialMeter({
+    super.key,
+    required this.player,
+    this.direction = TextDirection.ltr,
+  });
 
   Widget build(BuildContext context) {
     return Row(
+      textDirection: direction,
       children: [
         Container(
           width: 5,
           color: player.traits.normalColour,
-          margin: const EdgeInsets.only(right: 6),
+          margin: direction == TextDirection.ltr
+            ? const EdgeInsets.only(right: 6)
+            : const EdgeInsets.only(left: 6)
         ),
         Expanded(
           child: Column(
             mainAxisAlignment: MainAxisAlignment.spaceEvenly,
             crossAxisAlignment: CrossAxisAlignment.start,
+            textDirection: direction,
             children: [
               Expanded(
                 flex: 5,
@@ -113,35 +122,36 @@ class SpecialMeter extends StatelessWidget {
                 child: LayoutBuilder(
                   builder: (_, constraints) {
                     final tileSize = constraints.maxHeight;
-                    return ValueListenableBuilder(
+                    return FittedBox(
+                      fit: BoxFit.fill,
+                      child: ValueListenableBuilder(
                         valueListenable: player.special,
                         builder: (_, int specialCount, __) {
                           return Row(
-                              children: [
-                                for (var i = 0; i <
-                                    max(specialCount, 4); i++)
-                                  Container(
-                                    margin: const EdgeInsets.only(right: 4),
-                                    child: Stack(
-                                        children: [
-                                          Container(
-                                            color: Color.fromRGBO(
-                                                0, 0, 0, max((4 - i) / 4, 0)),
-                                            width: tileSize,
-                                            height: tileSize,
-                                          ),
-                                          if (i < specialCount)
-                                            SpecialTile(
-                                              colour: player.traits
-                                                  .specialColour,
-                                              tileSize: tileSize,
-                                            )
-                                        ]
-                                    ),
-                                  )
-                              ]
+                            textDirection: direction,
+                            children: [
+                              for (var i = 0; i < max(specialCount, 4); i++)
+                                Container(
+                                  margin: const EdgeInsets.symmetric(horizontal: 2),
+                                  child: Stack(
+                                    children: [
+                                      Container(
+                                        color: Color.fromRGBO(0, 0, 0, max((4 - i) / 4, 0)),
+                                        width: tileSize,
+                                        height: tileSize,
+                                      ),
+                                      if (i < specialCount)
+                                        SpecialTile(
+                                          colour: player.traits.specialColour,
+                                          tileSize: tileSize,
+                                        )
+                                    ]
+                                  ),
+                                )
+                            ]
                           );
                         }
+                      ),
                     );
                   }
                 ),

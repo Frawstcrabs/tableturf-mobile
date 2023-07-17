@@ -338,14 +338,17 @@ class _PlaySessionIntroState extends State<PlaySessionIntro>
       );
     });
     overlayState.insert(animationLayer);
-    await Future<void>.delayed(const Duration(milliseconds: 600));
+    await Future<void>.delayed(const Duration(milliseconds: 800));
 
     final audioController = AudioController();
     _introAnimator.value = 0.0;
     audioController.playSfx(SfxType.gameIntro);
-    _introAnimator.forward();
-    await Future.delayed(const Duration(milliseconds: 2075));
-    await audioController.playSong(SongType.battle1);
+    Future.delayed(const Duration(milliseconds: 2075), () async {
+      await audioController.playSong(SongType.battle1);
+    });
+    Future.delayed(const Duration(milliseconds: 3500), () async {
+      audioController.playSfx(SfxType.gameIntroExit);
+    });
     await _introAnimator.forward();
 
     animationLayer.remove();

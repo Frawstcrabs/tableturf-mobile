@@ -176,6 +176,7 @@ class LevelSelectionScreen extends StatelessWidget {
                           yellowName: settings.playerName.value,
                           blueDeck: opponent.deck,
                           blueName: opponent.name,
+                          blueIcon: deckIcons[opponent.deck.deckID],
                           aiLevel: AILevel.level4,
                         ));
                       },
@@ -194,6 +195,7 @@ class LevelSelectionScreen extends StatelessWidget {
                         yellowName: settings.playerName.value,
                         blueDeck: yellowDeck,
                         blueName: "Clone Jelly",
+                        blueIcon: "clonejelly",
                         aiLevel: AILevel.level4,
                       ));
                     },
@@ -227,6 +229,7 @@ class LevelSelectionScreen extends StatelessWidget {
                         yellowName: settings.playerName.value,
                         blueDeck: blueDeck,
                         blueName: "Randomiser",
+                        blueIcon: "randomiser",
                         aiLevel: AILevel.level4,
                       ));
                       for (final card in randomCards) {

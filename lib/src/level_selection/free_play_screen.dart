@@ -216,13 +216,18 @@ class _FreePlayScreenState extends State<FreePlayScreen> {
                 } else {
                   tempOpponentDeck = opponentDeck!;
                 }
+
+                final playerName = playerAI != null ? tempPlayerDeck.name : settings.playerName.value;
+
                 await Navigator.of(context).push(buildGameSessionPage(
                   context: context,
                   map: map!,
                   yellowDeck: tempPlayerDeck,
-                  yellowName: settings.playerName.value,
+                  yellowName: playerName,
+                  yellowIcon: deckIcons[tempPlayerDeck.deckID],
                   blueDeck: tempOpponentDeck,
                   blueName: tempOpponentDeck.name,
+                  blueIcon: deckIcons[tempOpponentDeck.deckID],
                   playerAI: playerAI,
                   aiLevel: difficulty!,
                 ));

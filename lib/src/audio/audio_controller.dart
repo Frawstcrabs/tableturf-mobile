@@ -110,7 +110,7 @@ class AudioController {
     final options = _sfxSources[type]!;
     final index = _random.nextInt(options.length);
 
-    _sfxPlayer.play(options[index]);
+    await _sfxPlayer.play(options[index]);
   }
 
   Future<void> playSong(SongType type) async {
@@ -173,8 +173,7 @@ class AudioController {
       lastTick = now;
       vol -= tick;
 
-      vol = max(0.0, vol);
-      vol = min(1.0, vol);
+      vol = vol.clamp(0.0, 1.0);
 
       musicPlayer.setVolume(vol);
 
