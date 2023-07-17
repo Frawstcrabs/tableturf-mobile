@@ -6,14 +6,14 @@ import '../../game_internals/battle.dart';
 
 class ScoreCounter extends StatefulWidget {
   final ValueNotifier<int> scoreNotifier;
-  final ValueNotifier<int?> newScoreNotifier;
+  final ValueNotifier<int?>? newScoreNotifier;
   final PlayerTraits traits;
 
   const ScoreCounter({
     super.key,
     required this.scoreNotifier,
-    required this.newScoreNotifier,
     required this.traits,
+    this.newScoreNotifier,
   });
 
   @override
@@ -234,10 +234,10 @@ class _ScoreCounterState extends State<ScoreCounter>
                     ),
                   ),
                 ),
-                Transform.translate(
+                if (widget.newScoreNotifier != null) Transform.translate(
                   offset: Offset(diameter * 0.15, diameter * 0.6),
                   child: ValueListenableBuilder(
-                    valueListenable: widget.newScoreNotifier,
+                    valueListenable: widget.newScoreNotifier!,
                     builder: (_, int? newScore, __) {
                       if (newScore == null || newScore == _prevScore) {
                         return Container();

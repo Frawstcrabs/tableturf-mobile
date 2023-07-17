@@ -27,14 +27,14 @@ void paintScoreBar({
   required Size size,
   required Animation<double> length,
   required Animation<double> waveAnimation,
-  required Animation<double> opacity,
+  double opacity = 1.0,
   required AxisDirection direction,
   required Color color,
 }) {
   const WAVE_WIDTH = 0.3;
   const WAVE_HEIGHT = 0.4;
   const OVERPAINT = 5.0;
-  if (opacity.value == 0.0) return;
+  if (opacity == 0.0) return;
 
   final paint = Paint()
     ..style = PaintingStyle.fill
@@ -106,11 +106,11 @@ void paintScoreBar({
       break;
   }
   path.close();
-  canvas.drawPath(path, paint..color = color.withOpacity(opacity.value));
+  canvas.drawPath(path, paint..color = color.withOpacity(opacity));
 }
 
 class ScoreBarPainter extends CustomPainter {
-  final Animation<double> yellowLength, blueLength, waveAnimation, opacity;
+  final Animation<double> yellowLength, blueLength, waveAnimation;
   final Orientation orientation;
 
   ScoreBarPainter({
@@ -118,13 +118,11 @@ class ScoreBarPainter extends CustomPainter {
     required this.blueLength,
     required this.waveAnimation,
     required this.orientation,
-    required this.opacity,
   }):
         super(repaint: Listenable.merge([
         yellowLength,
         blueLength,
         waveAnimation,
-        opacity,
       ]))
   ;
 
@@ -138,7 +136,6 @@ class ScoreBarPainter extends CustomPainter {
         size: size,
         length: blueLength,
         waveAnimation: waveAnimation,
-        opacity: opacity,
         direction: AxisDirection.right,
         color: palette.tileBlue,
       );
@@ -147,7 +144,6 @@ class ScoreBarPainter extends CustomPainter {
         size: size,
         length: yellowLength,
         waveAnimation: waveAnimation,
-        opacity: opacity,
         direction: AxisDirection.left,
         color: palette.tileYellow,
       );
@@ -157,7 +153,6 @@ class ScoreBarPainter extends CustomPainter {
         size: size,
         length: blueLength,
         waveAnimation: waveAnimation,
-        opacity: opacity,
         direction: AxisDirection.down,
         color: palette.tileBlue,
       );
@@ -166,7 +161,6 @@ class ScoreBarPainter extends CustomPainter {
         size: size,
         length: yellowLength,
         waveAnimation: waveAnimation,
-        opacity: opacity,
         direction: AxisDirection.up,
         color: palette.tileYellow,
       );
@@ -236,7 +230,7 @@ class WinEffectPainter extends CustomPainter {
       size: size,
       length: length,
       waveAnimation: waveAnimation,
-      opacity: opacity,
+      opacity: opacity.value,
       direction: direction,
       color: color,
     );
@@ -505,9 +499,8 @@ class _PlaySessionEndState extends State<PlaySessionEnd>
                           child: FadeTransition(
                             opacity: scoreFade,
                             child: ScoreCounter(
-                                scoreNotifier: widget.battle.yellowCountNotifier,
-                                newScoreNotifier: ValueNotifier(null),
-                                traits: const YellowTraits()
+                              scoreNotifier: widget.battle.yellowCountNotifier,
+                              traits: const YellowTraits()
                             ),
                           ),
                         ),
@@ -516,9 +509,8 @@ class _PlaySessionEndState extends State<PlaySessionEnd>
                           child: FadeTransition(
                             opacity: scoreFade,
                             child: ScoreCounter(
-                                scoreNotifier: widget.battle.blueCountNotifier,
-                                newScoreNotifier: ValueNotifier(null),
-                                traits: const BlueTraits()
+                              scoreNotifier: widget.battle.blueCountNotifier,
+                              traits: const BlueTraits()
                             ),
                           ),
                         ),
@@ -538,7 +530,6 @@ class _PlaySessionEndState extends State<PlaySessionEnd>
                         blueLength: blueScoreAnimation,
                         waveAnimation: _scoreWaveAnimator,
                         orientation: mediaQuery.orientation,
-                        opacity: const AlwaysStoppedAnimation(1.0),
                       ),
                       child: FractionallySizedBox(
                         widthFactor: 0.8,
@@ -595,8 +586,28 @@ class _PlaySessionEndState extends State<PlaySessionEnd>
           children: [
             Expanded(
               flex: 8,
-              child: Center(
-                child: Text("some other fancy shit goes here")
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                children: [
+                  Expanded(
+                    child: FractionallySizedBox(
+                      widthFactor: 0.8,
+                      child: SplashTag(
+                        name: widget.battle.yellow.name,
+                        tagIcon: widget.battle.yellow.icon,
+                      ),
+                    ),
+                  ),
+                  Expanded(
+                    child: FractionallySizedBox(
+                      widthFactor: 0.8,
+                      child: SplashTag(
+                        name: widget.battle.blue.name,
+                        tagIcon: widget.battle.blue.icon,
+                      ),
+                    ),
+                  )
+                ]
               )
             ),
             Expanded(
@@ -607,25 +618,23 @@ class _PlaySessionEndState extends State<PlaySessionEnd>
                       return Column(
                           mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                           children: [
-                            Transform.scale(
-                              scale: scoreSize.value,
-                              child: Opacity(
-                                opacity: scoreFade.value,
+                            ScaleTransition(
+                              scale: scoreSize,
+                              child: FadeTransition(
+                                opacity: scoreFade,
                                 child: ScoreCounter(
-                                    scoreNotifier: widget.battle.blueCountNotifier,
-                                    newScoreNotifier: ValueNotifier(null),
-                                    traits: const BlueTraits()
+                                  scoreNotifier: widget.battle.blueCountNotifier,
+                                  traits: const BlueTraits()
                                 ),
                               ),
                             ),
-                            Transform.scale(
-                              scale: scoreSize.value,
-                              child: Opacity(
-                                opacity: scoreFade.value,
+                            ScaleTransition(
+                              scale: scoreSize,
+                              child: FadeTransition(
+                                opacity: scoreFade,
                                 child: ScoreCounter(
-                                    scoreNotifier: widget.battle.yellowCountNotifier,
-                                    newScoreNotifier: ValueNotifier(null),
-                                    traits: const YellowTraits()
+                                  scoreNotifier: widget.battle.yellowCountNotifier,
+                                  traits: const YellowTraits()
                                 ),
                               ),
                             ),
@@ -646,7 +655,6 @@ class _PlaySessionEndState extends State<PlaySessionEnd>
                         blueLength: blueScoreAnimation,
                         waveAnimation: _scoreWaveAnimator,
                         orientation: mediaQuery.orientation,
-                        opacity: AlwaysStoppedAnimation(1.0),
                       ),
                       child: FractionallySizedBox(
                         heightFactor: 0.8,
