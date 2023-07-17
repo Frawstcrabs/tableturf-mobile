@@ -576,6 +576,10 @@ class _PlaySessionScreenState extends State<PlaySessionScreen>
   Future<void> _onSpecialMove() async {
     _log.info("special move sequence started");
     final overlayState = Overlay.of(context);
+    if (lifecycleNotifier.value == AppLifecycleState.paused) {
+      // dont even bother rendering it
+      return;
+    }
     final animationLayer = OverlayEntry(builder: (_) {
       final mediaQuery = MediaQuery.of(context);
       final isLandscape = mediaQuery.orientation == Orientation.landscape;

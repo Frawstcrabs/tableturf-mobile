@@ -382,6 +382,11 @@ class _DeckEditorScreenState extends State<DeckEditorScreen>
       "cuttlefish",
       "callie",
       "marie",
+      "shelly",
+      "annie",
+      "jelonzo",
+      "fredcrumbs",
+      "spyke",
     ];
     overlayEntry = OverlayEntry(builder: (_) {
       const popupBorderWidth = 1.0;

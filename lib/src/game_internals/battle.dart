@@ -130,6 +130,7 @@ class TableturfBattle {
     moveSpecialNotifier.addListener(_updateMoveHighlight);
     yellowMoveNotifier.addListener(_checkMovesSet);
     blueMoveNotifier.addListener(_checkMovesSet);
+    updateScores();
   }
 
   void dispose() {
