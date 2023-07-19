@@ -6,14 +6,14 @@ List<String> soundTypeToFilename(SfxType type) {
   switch (type) {
     case SfxType.cursorRotate:
       return const [
-        "rotate0.ogg",
-        "rotate1.ogg",
-        "rotate2.ogg",
-        "rotate3.ogg",
-        "rotate4.ogg",
+        "rotate0.mp3",
+        "rotate1.mp3",
+        "rotate2.mp3",
+        "rotate3.mp3",
+        "rotate4.mp3",
       ];
     default:
-      return ["${type.name}.ogg"];
+      return ["${type.name}.mp3"];
   }
 }
 

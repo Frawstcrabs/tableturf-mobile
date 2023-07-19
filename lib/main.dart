@@ -7,8 +7,6 @@
 // import 'package:firebase_core/firebase_core.dart';
 // import 'firebase_options.dart';
 
-import 'dart:convert';
-
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -57,12 +55,14 @@ Future<void> guardedMain() async {
   );
 
   final SharedPreferences prefs = await SharedPreferences.getInstance();
+  /*
   if (prefs.containsKey("tableturf-deck_nextID")) {
     print("Initialising deck data");
     await prefs.remove("tableturf-deck_nextID");
     await prefs.remove("tableturf-deck_list");
     await prefs.remove("tableturf-deck_deck-0");
   }
+  */
 
   runApp(
     MyApp(

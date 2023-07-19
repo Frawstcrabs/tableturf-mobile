@@ -1054,11 +1054,11 @@ class _PlaySessionScreenState extends State<PlaySessionScreen>
 
   @override
   Widget build(BuildContext context) {
-    print("screen building");
     final battle = widget.battle;
     final palette = context.watch<Palette>();
     final settings = context.watch<SettingsController>();
     final mediaQuery = MediaQuery.of(context);
+    print("screen building: ${mediaQuery.size.width}/${mediaQuery.size.height}");
 
     final boardWidget = buildBoardWidget(
       battle: battle,
