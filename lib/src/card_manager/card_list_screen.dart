@@ -332,24 +332,14 @@ class _CardListScreenState extends State<CardListScreen>
                     GestureDetector(
                       onTap: onPopupExit,
                     ),
-                    Dismissible(
-                      direction: DismissDirection.up,
-                      behavior: HitTestBehavior.translucent,
-                      resizeDuration: Duration.zero,
-                      movementDuration: _cardPopupController.duration!,
-                      key: ValueKey(index),
-                      onUpdate: (details) async {
-                        print(details.progress);
-                      },
-                      child: Center(
-                        child: FractionallySizedBox(
-                          heightFactor: 0.8,
-                          widthFactor: 0.8,
-                          child: CardPopup(
-                            card: officialCards[index]
-                          )
+                    Center(
+                      child: FractionallySizedBox(
+                        heightFactor: 0.8,
+                        widthFactor: 0.8,
+                        child: CardPopup(
+                          card: officialCards[index]
                         )
-                      ),
+                      )
                     ),
                   ],
                 );
