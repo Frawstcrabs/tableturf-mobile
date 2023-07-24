@@ -14,17 +14,17 @@ import '../game_internals/tile.dart';
 
 /// An class that holds settings like [playerName] or [musicOn],
 /// and saves them to an injected persistence store.
-class SettingsController {
+class Settings {
   late final SharedPreferences _prefs;
-  static const commitChanges = true;
+  static const commitChanges = !kDebugMode;
 
-  static final SettingsController _controller = SettingsController._internal();
+  static final Settings _controller = Settings._internal();
 
-  factory SettingsController() {
+  factory Settings() {
     return _controller;
   }
 
-  SettingsController._internal() {}
+  Settings._internal() {}
 
   // Whether or not the sound is on at all. This overrides both music and sound.
   ValueNotifier<bool> _muted = ValueNotifier(false);
@@ -66,7 +66,6 @@ class SettingsController {
             officialCards[cardID].ident.toJson()
         ])}
       }''';
-      print(deckDefault);
       final Map<String, dynamic> deck = jsonDecode(
         _prefs.getString("tableturf-deck_deck-${deckID}") ?? deckDefault
       );

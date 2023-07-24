@@ -12,9 +12,9 @@ import 'package:tableturf_mobile/src/style/shaders.dart';
 import '../game_internals/card.dart';
 import '../game_internals/map.dart';
 import '../game_internals/tile.dart';
-import '../play_session/components/board_widget.dart';
-import '../play_session/components/selection_button.dart';
-import '../play_session/components/card_selection.dart';
+import '../components/board_widget.dart';
+import '../components/selection_button.dart';
+import '../components/card_selection.dart';
 import '../style/palette.dart';
 
 class GridPainter extends CustomPainter {
@@ -34,7 +34,7 @@ class GridPainter extends CustomPainter {
       ..color = lineColor
       ..strokeWidth = 0.0
       ..style = PaintingStyle.stroke;
-    // we assume the size already fits the aspect ratio of this
+    // we assume the size already fits the aspect ratio of the grid
     final tileLength = size.height / height;
     canvas.drawRect(Offset.zero & size, linePaint);
 
@@ -45,11 +45,10 @@ class GridPainter extends CustomPainter {
     shader.setFloat(3, (lineColor.green / 255.0) * lineColor.opacity);
     shader.setFloat(4, (lineColor.blue / 255.0) * lineColor.opacity);
     shader.setFloat(5, lineColor.opacity);
-    shader.setFloat(6, DASH_LENGTH);
-    shader.setFloat(7, DASH_RATIO);
+    shader.setFloat(6, DASH_RATIO);
 
+    shader.setFloat(7, DASH_LENGTH / height);
     shader.setFloat(8, 0.0);
-    shader.setFloat(9, height.toDouble());
     for (var i = 1; i < width; i++) {
       canvas.drawLine(
         Offset(i*tileLength, 0),
@@ -57,8 +56,8 @@ class GridPainter extends CustomPainter {
         Paint()..shader = shader
       );
     }
+    shader.setFloat(7, DASH_LENGTH / width);
     shader.setFloat(8, 1.0);
-    shader.setFloat(9, width.toDouble());
     for (var i = 1; i < height; i++) {
       canvas.drawLine(
           Offset(0, i*tileLength),
@@ -285,7 +284,7 @@ class _MapEditorScreenState extends State<MapEditorScreen> {
   late final TextEditingController _textEditingController;
   ValueNotifier<BoardOperationType?> operationNotifier = ValueNotifier(null);
   BoardState? prevState = null;
-  ValueNotifier<EditMode> modeNotifier = ValueNotifier(EditMode.paint);
+  ValueNotifier<EditMode> modeNotifier = ValueNotifier(EditMode.block);
   ValueNotifier<TileState> tileNotifier = ValueNotifier(TileState.unfilled);
   late List<BoardState> operationStack;
   int operationStackPtr = 0;
@@ -298,8 +297,8 @@ class _MapEditorScreenState extends State<MapEditorScreen> {
     boardNotifier = ValueNotifier(
       widget.map?.board.copy() ?? [[TileState.empty]]
     );
-    gridWidthNotifier = ValueNotifier(widget.map?.board[0].length ?? 10);
-    gridHeightNotifier = ValueNotifier(widget.map?.board.length ?? 10);
+    gridWidthNotifier = ValueNotifier(widget.map?.board[0].length ?? 15);
+    gridHeightNotifier = ValueNotifier(widget.map?.board.length ?? 15);
     final name = widget.map?.name ?? "New Map";
     _textEditingController = TextEditingController(text: name);
     operationStack = [BoardState(
@@ -336,13 +335,12 @@ class _MapEditorScreenState extends State<MapEditorScreen> {
         return;
       }
       if (operationStackPtr < operationStack.length - 1) {
-        // operations were undone, have to clear them to add this to the stack or the order will get fucked
+        // operations were undone, have to clear them to
+        // add this to the stack or the order will get fucked
         operationStack.removeRange(operationStackPtr + 1, operationStack.length);
       }
       operationStack.add(newState);
       operationStackPtr += 1;
-      print(operationStack);
-      print("stack pointer is $operationStackPtr");
     }
   }
 
@@ -377,7 +375,7 @@ class _MapEditorScreenState extends State<MapEditorScreen> {
   void _changeHeight(int height) {
     final board = boardNotifier.value;
     final op = operationNotifier.value;
-    if (op != null && op != BoardOperationType.changeHeight) {
+    if (op != BoardOperationType.changeHeight) {
       return;
     }
     final maxHeight = boardPositionNotifier.value.y + board.length;
@@ -390,7 +388,7 @@ class _MapEditorScreenState extends State<MapEditorScreen> {
   void _changeWidth(int width) {
     final board = boardNotifier.value;
     final op = operationNotifier.value;
-    if (op != null && op != BoardOperationType.changeWidth) {
+    if (op != BoardOperationType.changeWidth) {
       return;
     }
     final maxWidth = boardPositionNotifier.value.x + board[0].length;
@@ -671,7 +669,7 @@ class _MapEditorScreenState extends State<MapEditorScreen> {
   Widget build(BuildContext context) {
     const palette = Palette();
     final mediaQuery = MediaQuery.of(context);
-    final settings = SettingsController();
+    final settings = Settings();
 
     final screen = Column(
       children: [
@@ -847,15 +845,19 @@ class _MapEditorScreenState extends State<MapEditorScreen> {
                                 min: 1,
                                 divisions: MAX_BOARD_HEIGHT - 1,
                                 onChangeStart: (newHeight) {
-                                  print("on change start, $newHeight");
-                                  operationNotifier.value = BoardOperationType.changeHeight;
+                                  if (operationNotifier.value == null) {
+                                    print("on change start, $newHeight");
+                                    operationNotifier.value = BoardOperationType.changeHeight;
+                                  }
                                 },
                                 onChanged: (newHeight) {
                                   _changeHeight(newHeight.floor());
                                 },
                                 onChangeEnd: (newHeight) {
-                                  print("on change end, $newHeight");
-                                  operationNotifier.value = null;
+                                  if (operationNotifier.value == BoardOperationType.changeHeight) {
+                                    print("on change end, $newHeight");
+                                    operationNotifier.value = null;
+                                  }
                                 },
                               );
                             }
@@ -899,15 +901,19 @@ class _MapEditorScreenState extends State<MapEditorScreen> {
                                 min: 1,
                                 divisions: MAX_BOARD_WIDTH - 1,
                                 onChangeStart: (newWidth) {
-                                  print("on change start, $newWidth");
-                                  operationNotifier.value = BoardOperationType.changeWidth;
+                                  if (operationNotifier.value == null) {
+                                    print("on change start, $newWidth");
+                                    operationNotifier.value = BoardOperationType.changeWidth;
+                                  }
                                 },
                                 onChanged: (newWidth) {
                                   _changeWidth(newWidth.floor());
                                 },
                                 onChangeEnd: (newWidth) {
-                                  print("on change end, $newWidth");
-                                  operationNotifier.value = null;
+                                  if (operationNotifier.value == BoardOperationType.changeWidth) {
+                                    print("on change end, $newWidth");
+                                    operationNotifier.value = null;
+                                  }
                                 },
                               );
                             }
@@ -930,7 +936,7 @@ class _MapEditorScreenState extends State<MapEditorScreen> {
                   child: ValueListenableBuilder(
                     valueListenable: modeNotifier,
                     builder: (context, EditMode currentMode, ___) {
-                      final makeModeButton = (EditMode mode, Widget icon) => GestureDetector(
+                      final makeModeButton = (EditMode mode, IconData icon) => GestureDetector(
                         onTap: () {
                           modeNotifier.value = mode;
                         },
@@ -939,7 +945,7 @@ class _MapEditorScreenState extends State<MapEditorScreen> {
                           decoration: BoxDecoration(
                             border: Border.all(color: Colors.grey, width: 0.0),
                             borderRadius: BorderRadius.circular(8),
-                            color: currentMode == mode ? Colors.black26 : Colors.black54
+                            color: currentMode == mode ? Colors.white54 : Colors.black54
                           ),
                           child: AspectRatio(
                             aspectRatio: 2,
@@ -948,7 +954,10 @@ class _MapEditorScreenState extends State<MapEditorScreen> {
                               widthFactor: 0.8,
                               child: FittedBox(
                                 alignment: Alignment.center,
-                                child: icon,
+                                child: Icon(
+                                  icon,
+                                  color: currentMode == mode ? Colors.black87 : Colors.white54
+                                )
                               ),
                             ),
                           ),
@@ -958,18 +967,9 @@ class _MapEditorScreenState extends State<MapEditorScreen> {
                         height: 2,
                         width: 2,
                         children: [
-                          makeModeButton(EditMode.paint, Icon(
-                            Icons.brush,
-                            color: const Color.fromRGBO(255, 255, 255, 0.4),
-                          )),
-                          makeModeButton(EditMode.block, Icon(
-                            Icons.check_box_outline_blank,
-                            color: const Color.fromRGBO(255, 255, 255, 0.4),
-                          )),
-                          makeModeButton(EditMode.pan, Icon(
-                            Icons.tab_unselected,
-                            color: const Color.fromRGBO(255, 255, 255, 0.4),
-                          )),
+                          makeModeButton(EditMode.block, Icons.check_box_outline_blank),
+                          makeModeButton(EditMode.paint, Icons.brush),
+                          makeModeButton(EditMode.pan, Icons.tab_unselected),
                         ]
                       );
                     },
@@ -990,15 +990,11 @@ class _MapEditorScreenState extends State<MapEditorScreen> {
                         decoration: BoxDecoration(
                           border: Border.all(color: Colors.grey, width: 0.0),
                           borderRadius: BorderRadius.circular(8),
-                          color: currentTile == tile ? Colors.black26 : Colors.black54
+                          color: currentTile == tile ? Colors.white54 : Colors.black54
                         ),
                         child: AspectRatio(
                           aspectRatio: 2,
-                          child: FractionallySizedBox(
-                            heightFactor: 0.4,
-                            widthFactor: 0.8,
-                            child: Center(child: icon),
-                          ),
+                          child: Center(child: icon),
                         ),
                       ),
                     );
@@ -1006,49 +1002,55 @@ class _MapEditorScreenState extends State<MapEditorScreen> {
                       height: 2,
                       width: 2,
                       children: [
-                        makeTileButton(TileState.blueSpecial, AspectRatio(
-                          aspectRatio: 1,
-                          child: DecoratedBox(
-                            decoration: BoxDecoration(
-                              color: palette.tileBlueSpecial,
-                              border: Border.all(
+                        makeTileButton(TileState.blueSpecial, FractionallySizedBox(
+                          heightFactor: 0.5,
+                          child: AspectRatio(
+                            aspectRatio: 1,
+                            child: DecoratedBox(
+                              decoration: BoxDecoration(
+                                color: palette.tileBlueSpecial,
+                                border: Border.all(
+                                    color: palette.tileEdge,
+                                    width: BoardPainter.EDGE_WIDTH
+                                ),
+                              ),
+                            )
+                          ),
+                        )),
+                        makeTileButton(TileState.yellowSpecial, FractionallySizedBox(
+                          heightFactor: 0.5,
+                          child: AspectRatio(
+                            aspectRatio: 1,
+                            child: DecoratedBox(
+                              decoration: BoxDecoration(
+                                color: palette.tileYellowSpecial,
+                                border: Border.all(
+                                    color: palette.tileEdge,
+                                    width: BoardPainter.EDGE_WIDTH
+                                ),
+                              ),
+                            )
+                          ),
+                        )),
+                        makeTileButton(TileState.unfilled, FractionallySizedBox(
+                          heightFactor: 0.5,
+                          child: AspectRatio(
+                            aspectRatio: 1,
+                            child: DecoratedBox(
+                              decoration: BoxDecoration(
+                                color: palette.tileUnfilled,
+                                border: Border.all(
                                   color: palette.tileEdge,
                                   width: BoardPainter.EDGE_WIDTH
+                                ),
                               ),
-                            ),
-                          )
+                            )
+                          ),
                         )),
-                        makeTileButton(TileState.yellowSpecial, AspectRatio(
-                          aspectRatio: 1,
-                          child: DecoratedBox(
-                            decoration: BoxDecoration(
-                              color: palette.tileYellowSpecial,
-                              border: Border.all(
-                                  color: palette.tileEdge,
-                                  width: BoardPainter.EDGE_WIDTH
-                              ),
-                            ),
-                          )
-                        )),
-                        makeTileButton(TileState.unfilled, AspectRatio(
-                          aspectRatio: 1,
-                          child: DecoratedBox(
-                            decoration: BoxDecoration(
-                              color: palette.tileUnfilled,
-                              border: Border.all(
-                                color: palette.tileEdge,
-                                width: BoardPainter.EDGE_WIDTH
-                              ),
-                            ),
-                          )
-                        )),
-                        makeTileButton(TileState.empty, FittedBox(
-                          alignment: Alignment.center,
-                          fit: BoxFit.contain,
+                        makeTileButton(TileState.empty, Center(
                           child: Icon(
                             Icons.close,
-                            color: const Color.fromRGBO(255, 255, 255, 0.4),
-                            size: 72,
+                            color: currentTile == TileState.empty ? Colors.black87 : Colors.white54
                           ),
                         )),
                       ]

@@ -3,10 +3,10 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:tableturf_mobile/src/card_manager/deck_editor_screen.dart';
-import 'package:tableturf_mobile/src/play_session/components/selection_button.dart';
+import 'package:tableturf_mobile/src/components/selection_button.dart';
 
 import '../game_internals/deck.dart';
-import '../play_session/components/card_widget.dart';
+import '../components/deck_thumbnail.dart';
 import '../settings/settings.dart';
 import '../style/palette.dart';
 
@@ -14,8 +14,9 @@ enum DeckPopupActions {
   delete,
 }
 
+
 class DeckListScreen extends StatefulWidget {
-  const DeckListScreen({Key? key}) : super(key: key);
+  const DeckListScreen({super.key});
 
   @override
   State<DeckListScreen> createState() => _DeckListScreenState();
@@ -26,7 +27,7 @@ class _DeckListScreenState extends State<DeckListScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final settings = context.watch<SettingsController>();
+    final settings = context.watch<Settings>();
     final decks = settings.decks;
     final palette = context.watch<Palette>();
     final mediaQuery = MediaQuery.of(context);
@@ -53,7 +54,7 @@ class _DeckListScreenState extends State<DeckListScreen> {
             children: [
               for (final deckNotifier in decks)
                 AspectRatio(
-                  aspectRatio: 3.95,
+                  aspectRatio: DeckThumbnail.THUMBNAIL_RATIO,
                   child: GestureDetector(
                     onTap: () async {
                       if (_lockButtons) return;
@@ -75,57 +76,6 @@ class _DeckListScreenState extends State<DeckListScreen> {
                           builder: (context, TableturfDeck deck, child) {
                             final textStyle = DefaultTextStyle.of(context).style;
                             const duration = Duration(milliseconds: 200);
-                            final makeDeckListEntry = (TableturfDeck deck, {required bool showPopupMenu})
-                            => Center(
-                              child: Container(
-                                decoration: BoxDecoration(
-                                  border: Border.all(),
-                                  borderRadius: BorderRadius.circular(10),
-                                ),
-                                margin: const EdgeInsets.all(5),
-                                child: Stack(
-                                  fit: StackFit.expand,
-                                  children: [
-                                    ClipRRect(
-                                      borderRadius: BorderRadius.circular(9),
-                                      child: FractionallySizedBox(
-                                        widthFactor: (CardWidget.CARD_WIDTH + 40) / CardWidget.CARD_WIDTH,
-                                        child: Image.asset(
-                                          "assets/images/card_sleeves/sleeve_${deck.cardSleeve}.png",
-                                          color: Color.fromRGBO(32, 32, 32, 0.4),
-                                          colorBlendMode: BlendMode.srcATop,
-                                          fit: BoxFit.fitWidth,
-                                        ),
-                                      ),
-                                    ),
-                                    Center(child: Text(deck.name)),
-                                    if (showPopupMenu) Align(
-                                        alignment: Alignment.topRight,
-                                        child: PopupMenuButton<DeckPopupActions>(
-                                          icon: Icon(
-                                            Icons.more_vert,
-                                            color: Colors.white,
-                                          ),
-                                          onSelected: (val) {
-                                            switch (val) {
-                                              case DeckPopupActions.delete:
-                                                settings.deleteDeck(deck.deckID);
-                                                setState(() {});
-                                                break;
-                                            }
-                                          },
-                                          itemBuilder: (context) => [
-                                            PopupMenuItem(
-                                              child: Text("Delete"),
-                                              value: DeckPopupActions.delete,
-                                            ),
-                                          ],
-                                        )
-                                    )
-                                  ],
-                                ),
-                              ),
-                            );
 
                             return Draggable<ValueNotifier<TableturfDeck>>(
                               data: deckNotifier,
@@ -136,7 +86,7 @@ class _DeckListScreenState extends State<DeckListScreen> {
                                   opacity: 0.9,
                                   child: ConstrainedBox(
                                     constraints: constraints,
-                                    child: makeDeckListEntry(deck, showPopupMenu: false),
+                                    child: DeckThumbnail(deck: deck),
                                   )
                                 ),
                               ),
@@ -151,7 +101,34 @@ class _DeckListScreenState extends State<DeckListScreen> {
                                         scale: accepted.length > 0 ? 0.8 : 1.0,
                                         duration: duration,
                                         curve: Curves.ease,
-                                        child: makeDeckListEntry(deck, showPopupMenu: true)
+                                        child: Stack(
+                                          children: [
+                                            DeckThumbnail(deck: deck),
+                                            Align(
+                                              alignment: Alignment.topRight,
+                                              child: PopupMenuButton<DeckPopupActions>(
+                                                icon: Icon(
+                                                  Icons.more_vert,
+                                                  color: Colors.white,
+                                                ),
+                                                onSelected: (val) {
+                                                  switch (val) {
+                                                    case DeckPopupActions.delete:
+                                                      settings.deleteDeck(deck.deckID);
+                                                      setState(() {});
+                                                      break;
+                                                  }
+                                                },
+                                                itemBuilder: (context) => [
+                                                  PopupMenuItem(
+                                                    child: Text("Delete"),
+                                                    value: DeckPopupActions.delete,
+                                                  ),
+                                                ],
+                                              )
+                                            )
+                                          ],
+                                        )
                                     ),
                                   );
                                 },

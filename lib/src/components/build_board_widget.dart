@@ -2,7 +2,7 @@ import 'dart:math';
 
 import 'package:flutter/material.dart';
 
-import '../../game_internals/battle.dart';
+import '../game_internals/battle.dart';
 import 'board_widget.dart';
 import 'move_overlay.dart';
 

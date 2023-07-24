@@ -22,6 +22,7 @@ class _TurnCounterState extends State<TurnCounter>
   late final Animation<Decoration> _backgroundDarken;
   late final Animation<double> _counterScale;
   late final Animation<Alignment> _counterMove;
+  OverlayEntry? animationLayer;
 
   static const duration = Duration(milliseconds: 1300);
   static const darkenAmount = 0.5;
@@ -123,6 +124,8 @@ class _TurnCounterState extends State<TurnCounter>
   void dispose() {
     widget.battle.turnCountNotifier.removeListener(_onTurnCountChange);
     _tickController.dispose();
+    animationLayer?.remove();
+    animationLayer = null;
     super.dispose();
   }
 
@@ -132,37 +135,39 @@ class _TurnCounterState extends State<TurnCounter>
     final audioController = AudioController();
     final overlayState = Overlay.of(context);
 
-    final backgroundLayer = OverlayEntry(builder: (_) {
-      return DecoratedBoxTransition(
-        decoration: _backgroundDarken,
-        child: Container()
-      );
-    });
-    late final OverlayEntry animationLayer;
+    assert(animationLayer == null);
     animationLayer = OverlayEntry(builder: (context) {
       MediaQuery.of(context);
       final counterContext = _key.currentContext;
       if (counterContext == null) {
-        animationLayer.remove();
-        backgroundLayer.remove();
+        animationLayer?.remove();
+        animationLayer = null;
         return const SizedBox();
       }
       final renderBox = counterContext.findRenderObject()! as RenderBox;
       final globalPos = renderBox.localToGlobal(Offset.zero);
-      return Positioned(
-        top: globalPos.dy,
-        left: globalPos.dx,
-        child: SizedBox(
-          height: renderBox.size.height,
-          width: renderBox.size.width,
-          child: _buildCounter(
-            context: context,
+      return Stack(
+        fit: StackFit.expand,
+        children: [
+          DecoratedBoxTransition(
+              decoration: _backgroundDarken,
+              child: SizedBox.expand(),
           ),
-        )
+          Positioned(
+            top: globalPos.dy,
+            left: globalPos.dx,
+            child: SizedBox(
+              height: renderBox.size.height,
+              width: renderBox.size.width,
+              child: _buildCounter(
+                context: context,
+              ),
+            )
+          )
+        ]
       );
     });
-    overlayState.insert(backgroundLayer);
-    overlayState.insert(animationLayer);
+    overlayState.insert(animationLayer!);
 
     _tickController.value = 0.0;
     audioController.playSfx(newValue <= 3 ? SfxType.turnCountEnding : SfxType.turnCountNormal);
@@ -170,11 +175,11 @@ class _TurnCounterState extends State<TurnCounter>
       setState(() {
         turnCount = newValue;
       });
-      animationLayer.markNeedsBuild();
+      animationLayer?.markNeedsBuild();
     });
     await _tickController.forward();
-    animationLayer.remove();
-    backgroundLayer.remove();
+    animationLayer?.remove();
+    animationLayer = null;
   }
 
   Widget _buildCounter({

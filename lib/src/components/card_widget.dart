@@ -7,12 +7,12 @@ import 'package:provider/provider.dart';
 import 'package:tableturf_mobile/src/audio/audio_controller.dart';
 import 'package:tableturf_mobile/src/audio/sounds.dart';
 
-import '../../style/palette.dart';
+import '../style/palette.dart';
 
-import '../../game_internals/battle.dart';
-import '../../game_internals/player.dart';
-import '../../game_internals/card.dart';
-import '../../game_internals/tile.dart';
+import '../game_internals/battle.dart';
+import '../game_internals/player.dart';
+import '../game_internals/card.dart';
+import '../game_internals/tile.dart';
 
 class CardPatternPainter extends CustomPainter {
   static const EDGE_WIDTH = 0.5;

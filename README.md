@@ -8,9 +8,13 @@ Use `flutter run` to run on a device.
 
 ## Todo list
 
+- [ ] Implement XP from battles
+- [ ] Implement unlocking opponents via ranks
+- [ ] Implement card bit rewards
+- [ ] Implement card packs
 - [ ] Make the UI less shit/better able to handle different screen sizes
+- [ ] Add special tile distance awareness to AI alongside normal tile distance awareness (different calculations per level?)
 - [ ] Screen for testing custom decks/boards
 - [ ] Custom card creator
-- [ ] XP system/some kinda progression
 - [ ] Move all animation durations into a single global list of constants
 - [ ] Multiplayer

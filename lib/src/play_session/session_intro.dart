@@ -9,14 +9,14 @@ import 'package:tableturf_mobile/src/game_internals/battle.dart';
 import 'package:tableturf_mobile/src/game_internals/opponentAI.dart';
 import 'package:tableturf_mobile/src/game_internals/player.dart';
 import 'package:tableturf_mobile/src/game_internals/tile.dart';
-import 'package:tableturf_mobile/src/play_session/components/splashtag.dart';
+import 'package:tableturf_mobile/src/components/splashtag.dart';
 import 'package:tableturf_mobile/src/style/palette.dart';
 import 'package:tableturf_mobile/src/style/my_transition.dart';
 
 import '../audio/songs.dart';
 import '../audio/sounds.dart';
 import 'session_running.dart';
-import 'components/build_board_widget.dart';
+import '../components/build_board_widget.dart';
 
 class PlaySessionIntro extends StatefulWidget {
   final TableturfPlayer yellow, blue;
@@ -24,15 +24,20 @@ class PlaySessionIntro extends StatefulWidget {
   final AILevel aiLevel;
   final AILevel? playerAI;
   final String boardHeroTag;
+  final void Function()? onWin, onLose;
+  final Completer sessionCompleter;
 
   const PlaySessionIntro({
     super.key,
+    required this.sessionCompleter,
     required this.boardHeroTag,
     required this.yellow,
     required this.blue,
     required this.board,
     required this.aiLevel,
     this.playerAI,
+    this.onWin,
+    this.onLose,
   });
 
   @override
@@ -45,11 +50,27 @@ class _PlaySessionIntroState extends State<PlaySessionIntro>
   late final TableturfBattle battle;
 
   late final AnimationController _introAnimator;
-  late final Animation<double> _firstSplashTagOpacity, _secondSplashTagOpacity, _vsSplashOpacity;
+  late final Animation<double> _firstSplashTagOpacity, _secondSplashTagOpacity, _vsSplashOpacity, _vsSplashBackgroundOpacity;
   late final Animation<Alignment> _firstSplashTagTranslation, _secondSplashTagTranslation;
-  late final Animation<double> _vsSplashScale;
+  late final Animation<double> _vsSplashScale, _vsSplashBackgroundScale;
   late final Animation<double> _introScale;
   late final Animation<Decoration> _introBackground;
+
+  static const animationDuration = 4700;
+  static const firstSplashTagEntry = 250.0;
+  static const secondSplashTagEntry = 800.0;
+  static const vsSplashEntry = 1800.0;
+  static const vsSplashBackgroundEntry = vsSplashEntry + 40;
+  static const splashTagEntryPeriod = 200.0;
+  static const vsSplashEntryPeriod = 250.0;
+  static const vsSplashOpacityDurationRatio = 0.2;
+  static const splashTagSettlePeriod = 3000.0;
+  static const splashTagVerticalOffset = -0.4;
+  static const splashTagTranslationStart = 0.9;
+  static const splashTagTranslationFastEnd = 0.6;
+  static const splashTagTranslationSlowEnd = 0.55;
+  static const vsSplashScaleStart = 1.7;
+  static const introFadeOutDuration = 200.0;
 
   @override
   void initState() {
@@ -62,14 +83,6 @@ class _PlaySessionIntroState extends State<PlaySessionIntro>
       playerAI: widget.playerAI,
     );
 
-    const firstSplashTagEntry = 250.0;
-    const secondSplashTagEntry = 800.0;
-    const splashTagEntryPeriod = 200.0;
-    const splashTagSettlePeriod = 3000.0;
-    const vsSplashEntry = 1800.0;
-    const vsSplashEntryPeriod = 100.0;
-    const introFadeOutDuration = 200.0;
-    const animationDuration = 4700;
     _introAnimator = AnimationController(
       duration: const Duration(milliseconds: animationDuration),
       vsync: this
@@ -119,8 +132,12 @@ class _PlaySessionIntroState extends State<PlaySessionIntro>
         weight: vsSplashEntry,
       ),
       TweenSequenceItem(
-          tween: Tween(begin: 0.0, end: 1.0).chain(CurveTween(curve: Curves.easeOut)),
-          weight: splashTagEntryPeriod
+          tween: Tween(begin: 0.0, end: 1.0),
+          weight: splashTagEntryPeriod * vsSplashOpacityDurationRatio
+      ),
+      TweenSequenceItem(
+          tween: ConstantTween(1.0),
+          weight: splashTagEntryPeriod * (1 - vsSplashOpacityDurationRatio)
       ),
       TweenSequenceItem(
         tween: ConstantTween(1.0),
@@ -132,10 +149,29 @@ class _PlaySessionIntroState extends State<PlaySessionIntro>
       ),
     ]).animate(_introAnimator);
 
-    const splashTagVerticalOffset = -0.4;
-    const splashTagTranslationStart = 0.9;
-    const splashTagTranslationFastEnd = 0.6;
-    const splashTagTranslationSlowEnd = 0.55;
+    _vsSplashBackgroundOpacity = TweenSequence([
+      TweenSequenceItem(
+        tween: ConstantTween(0.0),
+        weight: vsSplashBackgroundEntry,
+      ),
+      TweenSequenceItem(
+          tween: Tween(begin: 0.0, end: 1.0),
+          weight: splashTagEntryPeriod * vsSplashOpacityDurationRatio
+      ),
+      TweenSequenceItem(
+          tween: ConstantTween(1.0),
+          weight: splashTagEntryPeriod * (1 - vsSplashOpacityDurationRatio)
+      ),
+      TweenSequenceItem(
+        tween: ConstantTween(1.0),
+        weight: animationDuration - vsSplashBackgroundEntry - splashTagEntryPeriod - introFadeOutDuration,
+      ),
+      TweenSequenceItem(
+          tween: Tween(begin: 1.0, end: 0.0),
+          weight: introFadeOutDuration
+      ),
+    ]).animate(_introAnimator);
+
     _firstSplashTagTranslation = TweenSequence([
       TweenSequenceItem(
         tween: ConstantTween(
@@ -193,19 +229,32 @@ class _PlaySessionIntroState extends State<PlaySessionIntro>
       ),
     ]).animate(_introAnimator);
 
-    const vsSplashScaleStart = 1.8;
     _vsSplashScale = TweenSequence([
       TweenSequenceItem(
         tween: ConstantTween(vsSplashScaleStart),
         weight: vsSplashEntry,
       ),
       TweenSequenceItem(
-        tween: Tween(begin: vsSplashScaleStart, end: 1.0).chain(CurveTween(curve: Curves.bounceOut)),
+        tween: Tween(begin: vsSplashScaleStart, end: 1.0).chain(CurveTween(curve: Curves.elasticOut)),
         weight: vsSplashEntryPeriod,
       ),
       TweenSequenceItem(
         tween: ConstantTween(1.0),
         weight: animationDuration - vsSplashEntry - vsSplashEntryPeriod,
+      )
+    ]).animate(_introAnimator);
+    _vsSplashBackgroundScale = TweenSequence([
+      TweenSequenceItem(
+        tween: ConstantTween(vsSplashScaleStart),
+        weight: vsSplashBackgroundEntry,
+      ),
+      TweenSequenceItem(
+        tween: Tween(begin: vsSplashScaleStart, end: 1.0).chain(CurveTween(curve: Curves.elasticOut)),
+        weight: vsSplashEntryPeriod,
+      ),
+      TweenSequenceItem(
+        tween: ConstantTween(1.0),
+        weight: animationDuration - vsSplashBackgroundEntry - vsSplashEntryPeriod,
       )
     ]).animate(_introAnimator);
 
@@ -249,6 +298,7 @@ class _PlaySessionIntroState extends State<PlaySessionIntro>
     await Future<void>.delayed(const Duration(milliseconds: 200));
     final overlayState = Overlay.of(context);
     final animationLayer = OverlayEntry(builder: (context) {
+      final palette = Palette();
       final mediaQuery = MediaQuery.of(context);
       return DefaultTextStyle(
         style: TextStyle(
@@ -268,6 +318,47 @@ class _PlaySessionIntroState extends State<PlaySessionIntro>
                 child: Stack(
                   fit: StackFit.expand,
                   children: [
+                    ScaleTransition(
+                      scale: _vsSplashBackgroundScale,
+                      child: FadeTransition(
+                        opacity: _vsSplashBackgroundOpacity,
+                        child: Stack(
+                            fit: StackFit.expand,
+                            children: [
+                              Align(
+                                  alignment: Alignment(-0.7, -0.1),
+                                  child: FractionallySizedBox(
+                                      heightFactor: 0.6 * 0.3,
+                                      child: AspectRatio(
+                                          aspectRatio: 1.0,
+                                          child: DecoratedBox(
+                                            decoration: BoxDecoration(
+                                              shape: BoxShape.circle,
+                                              color: palette.tileYellow,
+                                            ),
+                                          )
+                                      )
+                                  )
+                              ),
+                              Align(
+                                  alignment: Alignment(0.7, 0.1),
+                                  child: FractionallySizedBox(
+                                      heightFactor: 0.6 * 0.3,
+                                      child: AspectRatio(
+                                          aspectRatio: 1.0,
+                                          child: DecoratedBox(
+                                            decoration: BoxDecoration(
+                                              shape: BoxShape.circle,
+                                              color: palette.tileBlue,
+                                            ),
+                                          )
+                                      )
+                                  )
+                              ),
+                            ]
+                        ),
+                      ),
+                    ),
                     AlignTransition(
                       alignment: _firstSplashTagTranslation,
                       child: FractionallySizedBox(
@@ -358,8 +449,11 @@ class _PlaySessionIntroState extends State<PlaySessionIntro>
       pageBuilder: (context, animation, secondaryAnimation) {
         return PlaySessionScreen(
           key: const Key('play session screen'),
+          sessionCompleter: widget.sessionCompleter,
           battle: battle,
           boardHeroTag: widget.boardHeroTag,
+          onWin: widget.onWin,
+          onLose: widget.onLose,
         );
       },
       transitionsBuilder: (context, animation, secondaryAnimation, child) {

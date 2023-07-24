@@ -26,7 +26,7 @@ class AudioController {
 
   final Random _random = Random();
 
-  SettingsController? _settings;
+  Settings? _settings;
 
   ValueNotifier<AppLifecycleState>? _lifecycleNotifier;
 
@@ -50,7 +50,7 @@ class AudioController {
     _lifecycleNotifier = lifecycleNotifier;
   }
 
-  void attachSettings(SettingsController settingsController) {
+  void attachSettings(Settings settingsController) {
     if (_settings == settingsController) {
       // Already attached to this instance. Nothing to do.
       return;

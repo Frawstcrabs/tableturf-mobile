@@ -6,11 +6,11 @@ import 'package:flutter/material.dart';
 import 'package:tableturf_mobile/src/settings/settings.dart';
 import 'package:tableturf_mobile/src/style/shaders.dart';
 
-import '../../game_internals/card.dart';
-import '../../style/palette.dart';
+import '../game_internals/card.dart';
+import '../style/palette.dart';
 
-import '../../game_internals/battle.dart';
-import '../../game_internals/tile.dart';
+import '../game_internals/battle.dart';
+import '../game_internals/tile.dart';
 
 class BoardPainter extends CustomPainter {
   static const EDGE_WIDTH = 0.5;
@@ -142,7 +142,7 @@ class BoardSpecialPainter extends CustomPainter {
   @override
   void paint(ui.Canvas canvas, ui.Size size) {
     final activatedSpecials = activatedSpecialsNotifier.value;
-    final settings = SettingsController();
+    final settings = Settings();
 
     final palette = const Palette();
     final bodyPaint = Paint()
@@ -191,7 +191,12 @@ class BoardSpecialPainter extends CustomPainter {
         shader.setFloat(6, (flameColor.blue / 255.0) * flameColor.opacity);
         shader.setFloat(7, flameColor.opacity);
         shader.setFloat(8, flameAnimation.value);
-        canvas.drawRect(flameRect, Paint()..shader = shader);
+        final shaderPaint = Paint()
+          ..shader = shader;
+        canvas.drawRect(
+          flameRect,
+          shaderPaint,
+        );
       }
     }
   }
@@ -316,7 +321,7 @@ class _BoardWidgetState extends State<BoardWidget>
   }
 
   void _runFlameAnimation() {
-    final settings = SettingsController();
+    final settings = Settings();
     if (!settings.continuousAnimation.value) {
       return;
     }

@@ -11,6 +11,9 @@ enum AILevel {
   level2,
   level3,
   level4;
+
+  int toJson() => index;
+  factory AILevel.fromJson(dynamic json) => values[json];
 }
 
 TileGrid _flipBoard(TileGrid board) {

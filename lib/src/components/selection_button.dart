@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:tableturf_mobile/src/audio/audio_controller.dart';
 
-import '../../audio/sounds.dart';
+import '../audio/sounds.dart';
 
 class SelectionButton extends StatefulWidget {
   final Future<bool> Function()? onPressStart;

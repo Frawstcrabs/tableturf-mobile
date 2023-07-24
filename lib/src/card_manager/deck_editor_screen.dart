@@ -4,13 +4,15 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:tableturf_mobile/src/play_session/components/selection_button.dart';
+import 'package:tableturf_mobile/src/components/selection_button.dart';
 
+import '../components/list_select_prompt.dart';
 import '../game_internals/card.dart';
 import '../game_internals/deck.dart';
-import '../play_session/components/card_widget.dart';
+import '../components/card_widget.dart';
 import '../settings/settings.dart';
 import '../style/palette.dart';
+import 'card_popup_transition_painter.dart';
 
 
 class DeckCardWidget extends StatelessWidget {
@@ -100,43 +102,17 @@ class DeckEditorScreen extends StatefulWidget {
 
 class _DeckEditorScreenState extends State<DeckEditorScreen>
     with SingleTickerProviderStateMixin {
-  late final AnimationController _cardPickerController;
-  late final Animation<double> _popupScaleForward, _popupScaleReverse, _cardOpacity;
-  bool _popupIsActive = false;
-  bool _lockButtons = false;
-  final ChangeNotifier _popupExit = ChangeNotifier();
   late final ValueNotifier<bool> _hasEmptyCards = ValueNotifier(true);
   late final ValueNotifier<int> _deckTileCount = ValueNotifier(0);
   late final List<ValueNotifier<TableturfCardIdentifier?>> deckCards;
   late final TextEditingController _textEditingController;
   late final ValueNotifier<String> cardSleeve = ValueNotifier("");
 
+  bool _lockButtons = false;
+
   @override
   void initState() {
     super.initState();
-    _cardPickerController = AnimationController(
-      duration: const Duration(milliseconds: 150),
-      vsync: this
-    );
-    _popupScaleForward = Tween(
-        begin: 0.6,
-        end: 1.0
-    )
-        .chain(CurveTween(curve: Curves.easeOutBack))
-        .animate(_cardPickerController);
-    _popupScaleReverse = Tween(
-        begin: 0.6,
-        end: 1.0
-    )
-    //.chain(CurveTween(curve: Curves.easeOut))
-        .animate(_cardPickerController);
-    _cardOpacity = Tween(
-        begin: 0.0,
-        end: 1.0
-    )
-    //.chain(CurveTween(curve: Curves.easeOut))
-        .animate(_cardPickerController);
-
 
     late final String name;
     if (widget.deck == null) {
@@ -165,7 +141,7 @@ class _DeckEditorScreenState extends State<DeckEditorScreen>
   }
 
   void _computeTileCount() {
-    final settings = SettingsController();
+    final settings = Settings();
     _deckTileCount.value = deckCards
         .map((i) => i.value != null ? settings.identToCard(i.value!) : null)
         .fold(0, (a, c) => a + (c?.count ?? 0));
@@ -173,194 +149,71 @@ class _DeckEditorScreenState extends State<DeckEditorScreen>
 
   @override
   void dispose() {
-    _cardPickerController.dispose();
     _textEditingController.dispose();
     super.dispose();
   }
 
   Future<void> _showCardPopup(BuildContext context, ValueNotifier<TableturfCardIdentifier?> cardNotifier) async {
-    final overlayState = Overlay.of(context);
-    late final OverlayEntry overlayEntry;
-    late final void Function([TableturfCardIdentifier? retCard]) onPopupExit;
     final ScrollController scrollController = ScrollController();
-    onPopupExit = ([retCard]) async {
-      if (retCard != null) {
-        cardNotifier.value = retCard;
-      }
-      await _cardPickerController.reverse();
-      overlayEntry.remove();
-      _popupIsActive = false;
-      _popupExit.removeListener(onPopupExit);
-      scrollController.dispose();
-    };
-    final oldCard = cardNotifier.value;
-    overlayEntry = OverlayEntry(builder: (_) {
-      const popupBorderWidth = 1.0;
-      const cardListPadding = 10.0;
-      const interCardPadding = 5.0;
-      return DefaultTextStyle(
-        style: TextStyle(
-            fontFamily: "Splatfont2",
-            color: Colors.black,
-            fontSize: 16,
-            letterSpacing: 0.6,
-            shadows: [
-              Shadow(
-                color: const Color.fromRGBO(256, 256, 256, 0.4),
-                offset: Offset(1, 1),
-              )
-            ]
+    const popupBorderWidth = 1.0;
+    const cardListPadding = 10.0;
+    const interCardPadding = 5.0;
+
+    final TableturfCardIdentifier? selectedCard = await showListSelectPrompt(
+      context,
+      title: cardNotifier.value == null ? "Select Card" : "Replace Card?",
+      builder: (context, exitPopup) => RawScrollbar(
+        controller: scrollController,
+        thickness: popupBorderWidth + (cardListPadding / 2),
+        padding: const EdgeInsets.fromLTRB(
+          (popupBorderWidth + interCardPadding) / 2,
+          popupBorderWidth + cardListPadding + interCardPadding,
+          (popupBorderWidth + interCardPadding) / 2,
+          popupBorderWidth + cardListPadding + interCardPadding,
         ),
-        child: AnimatedBuilder(
-            animation: _cardPickerController,
-            child: Center(
-              child: FractionallySizedBox(
-                heightFactor: 0.8,
-                widthFactor: 0.8,
-                child: DecoratedBox(
-                  decoration: BoxDecoration(
-                    border: Border.all(
-                      width: popupBorderWidth,
-                    ),
-                    borderRadius: BorderRadius.circular(10),
-                    color: const Color.fromRGBO(192, 192, 192, 1.0),
-                  ),
-                  child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Expanded(
-                          flex: 1,
-                          child: Container(
-                            decoration: BoxDecoration(
-                                border: Border(bottom: BorderSide())
-                            ),
-                            child: Center(
-                                child: Text(
-                                  oldCard == null ? "Select card" : "Replace card?",
-                                )
-                            ),
-                          ),
-                        ),
-                        Expanded(
-                          flex: 8,
-                          child: RepaintBoundary(
-                            child: RawScrollbar(
-                              controller: scrollController,
-                              thickness: popupBorderWidth + (cardListPadding / 2),
-                              padding: const EdgeInsets.fromLTRB(
-                                (popupBorderWidth + interCardPadding) / 2,
-                                popupBorderWidth + cardListPadding + interCardPadding,
-                                (popupBorderWidth + interCardPadding) / 2,
-                                popupBorderWidth + cardListPadding + interCardPadding,
-                              ),
-                              thumbColor: const Color.fromRGBO(0, 0, 0, 0.4),
-                              radius: Radius.circular(6),
-                              child: GridView.builder(
-                                controller: scrollController,
-                                gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                                    mainAxisSpacing: interCardPadding,
-                                    crossAxisSpacing: interCardPadding,
-                                    crossAxisCount: 3,
-                                    childAspectRatio: CardWidget.CARD_RATIO
-                                ),
-                                itemCount: officialCards.length,
-                                padding: const EdgeInsets.all(cardListPadding),
-                                itemBuilder: (_, i) => GestureDetector(
-                                  onTap: () {
-                                    if (deckCards.any((c) => c.value == officialCards[i].ident)) {
-                                      return;
-                                    }
-                                    onPopupExit(officialCards[i].ident);
-                                  },
-                                  child: Padding(
-                                    padding: const EdgeInsets.all(0),
-                                    child: HandCardWidget(
-                                      card: officialCards[i],
-                                      overlayColor: deckCards.any((c) => c.value == officialCards[i].ident)
-                                        ? const Color.fromRGBO(0, 0, 0, 0.4)
-                                        : Colors.transparent
-                                    ),
-                                  )
-                                ),
-                              ),
-                            ),
-                          ),
-                        ),
-                        Expanded(
-                          flex: 1,
-                          child: Container(
-                            decoration: BoxDecoration(
-                                border: Border(top: BorderSide())
-                            ),
-                            child: AspectRatio(
-                              aspectRatio: 4.0,
-                              child: Padding(
-                                padding: const EdgeInsets.all(5),
-                                child: SelectionButton(
-                                  child: Text("Cancel"),
-                                  designRatio: 0.5,
-                                  onPressEnd: () async {
-                                    onPopupExit();
-                                    return Future<void>.delayed(const Duration(milliseconds: 100));
-                                  },
-                                ),
-                              ),
-                            ),
-                          ),
-                        ),
-                      ]
-                  ),
-                ),
+        thumbColor: const Color.fromRGBO(0, 0, 0, 0.4),
+        radius: Radius.circular(6),
+        child: GridView.builder(
+          controller: scrollController,
+          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+              mainAxisSpacing: interCardPadding,
+              crossAxisSpacing: interCardPadding,
+              crossAxisCount: 3,
+              childAspectRatio: CardWidget.CARD_RATIO
+          ),
+          itemCount: officialCards.length,
+          padding: const EdgeInsets.all(cardListPadding),
+          itemBuilder: (_, i) => GestureDetector(
+            onTap: () {
+              if (deckCards.any((c) => c.value == officialCards[i].ident)) {
+                return;
+              }
+              exitPopup(officialCards[i].ident);
+            },
+            child: Padding(
+              padding: const EdgeInsets.all(0),
+              child: HandCardWidget(
+                card: officialCards[i],
+                overlayColor: deckCards.any((c) => c.value == officialCards[i].ident)
+                    ? const Color.fromRGBO(0, 0, 0, 0.4)
+                    : Colors.transparent
               ),
-            ),
-            builder: (_, child) {
-              return Stack(
-                  children: [
-                    GestureDetector(
-                        onTap: onPopupExit,
-                        child: DecoratedBox(
-                          decoration: BoxDecoration(
-                              color: Color.fromRGBO(0, 0, 0, _cardPickerController.value * 0.7)
-                          ),
-                          child: Container(),
-                        )
-                    ),
-                    Opacity(
-                        opacity: _cardOpacity.value,
-                        child: Transform.scale(
-                          scale: _cardPickerController.status == AnimationStatus.forward
-                              ? _popupScaleForward.value
-                              : _popupScaleReverse.value,
-                          child: child!,
-                        )
-                    )
-                  ]
-              );
-            }
+            )
+          ),
         ),
-      );
-    });
-    _popupIsActive = true;
-    overlayState.insert(overlayEntry);
-    _cardPickerController.forward(from: 0.0);
-    _popupExit.addListener(onPopupExit);
+      ),
+    );
+    if (selectedCard != null) {
+      cardNotifier.value = selectedCard;
+    }
+    scrollController.dispose();
   }
 
   Future<void> _showCardSleevePopup(BuildContext context) async {
-    final overlayState = Overlay.of(context);
-    late final OverlayEntry overlayEntry;
-    late final void Function([String? retSleeve]) onPopupExit;
     final ScrollController scrollController = ScrollController();
-    onPopupExit = ([retSleeve]) async {
-      if (retSleeve != null) {
-        cardSleeve.value = retSleeve;
-      }
-      await _cardPickerController.reverse();
-      overlayEntry.remove();
-      _popupIsActive = false;
-      _popupExit.removeListener(onPopupExit);
-      scrollController.dispose();
-    };
+    const popupBorderWidth = 1.0;
+    const cardListPadding = 10.0;
+    const interCardPadding = 5.0;
     const allCardSleeves = [
       "default",
       "cool",
@@ -388,151 +241,54 @@ class _DeckEditorScreenState extends State<DeckEditorScreen>
       "fredcrumbs",
       "spyke",
     ];
-    overlayEntry = OverlayEntry(builder: (_) {
-      const popupBorderWidth = 1.0;
-      const cardListPadding = 10.0;
-      const interCardPadding = 5.0;
-      return DefaultTextStyle(
-        style: TextStyle(
-          fontFamily: "Splatfont2",
-          color: Colors.black,
-          fontSize: 16,
-          letterSpacing: 0.6,
-          shadows: [
-            Shadow(
-              color: const Color.fromRGBO(256, 256, 256, 0.4),
-              offset: Offset(1, 1),
+
+    final String? selectedCard = await showListSelectPrompt(
+      context,
+      title: "Select Card Sleeve",
+      builder: (context, exitPopup) => RawScrollbar(
+        controller: scrollController,
+        thickness: popupBorderWidth + (cardListPadding / 2),
+        padding: const EdgeInsets.fromLTRB(
+          (popupBorderWidth + interCardPadding) / 2,
+          popupBorderWidth + cardListPadding + interCardPadding,
+          (popupBorderWidth + interCardPadding) / 2,
+          popupBorderWidth + cardListPadding + interCardPadding,
+        ),
+        thumbColor: const Color.fromRGBO(0, 0, 0, 0.4),
+        radius: Radius.circular(6),
+        child: GridView.builder(
+          controller: scrollController,
+          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+            mainAxisSpacing: interCardPadding,
+            crossAxisSpacing: interCardPadding,
+            crossAxisCount: 3,
+            childAspectRatio: CardWidget.CARD_RATIO
+          ),
+          itemCount: allCardSleeves.length,
+          padding: const EdgeInsets.all(cardListPadding),
+          itemBuilder: (_, i) => GestureDetector(
+            onTap: () {
+              exitPopup(allCardSleeves[i]);
+            },
+            child: Padding(
+              padding: const EdgeInsets.all(0),
+              child: FittedBox(child: Image.asset(
+                "assets/images/card_sleeves/sleeve_${allCardSleeves[i]}.png"
+              )),
             )
-          ]
+          ),
         ),
-        child: AnimatedBuilder(
-            animation: _cardPickerController,
-            child: Center(
-              child: FractionallySizedBox(
-                heightFactor: 0.8,
-                widthFactor: 0.8,
-                child: DecoratedBox(
-                  decoration: BoxDecoration(
-                    border: Border.all(
-                      width: popupBorderWidth,
-                    ),
-                    borderRadius: BorderRadius.circular(10),
-                    color: const Color.fromRGBO(192, 192, 192, 1.0),
-                  ),
-                  child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Expanded(
-                          flex: 1,
-                          child: Container(
-                            decoration: BoxDecoration(
-                              border: Border(bottom: BorderSide())
-                            ),
-                            child: Center(child: Text("Select card sleeve")),
-                          ),
-                        ),
-                        Expanded(
-                          flex: 8,
-                          child: RepaintBoundary(
-                            child: RawScrollbar(
-                              controller: scrollController,
-                              thickness: popupBorderWidth + (cardListPadding / 2),
-                              padding: const EdgeInsets.fromLTRB(
-                                (popupBorderWidth + interCardPadding) / 2,
-                                popupBorderWidth + cardListPadding + interCardPadding,
-                                (popupBorderWidth + interCardPadding) / 2,
-                                popupBorderWidth + cardListPadding + interCardPadding,
-                              ),
-                              thumbColor: const Color.fromRGBO(0, 0, 0, 0.4),
-                              radius: Radius.circular(6),
-                              child: GridView.builder(
-                                controller: scrollController,
-                                gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                                    mainAxisSpacing: interCardPadding,
-                                    crossAxisSpacing: interCardPadding,
-                                    crossAxisCount: 3,
-                                    childAspectRatio: CardWidget.CARD_RATIO
-                                ),
-                                itemCount: allCardSleeves.length,
-                                padding: const EdgeInsets.all(cardListPadding),
-                                itemBuilder: (_, i) => GestureDetector(
-                                  onTap: () {
-                                    onPopupExit(allCardSleeves[i]);
-                                  },
-                                  child: Padding(
-                                    padding: const EdgeInsets.all(0),
-                                    child: FittedBox(child: Image.asset(
-                                      "assets/images/card_sleeves/sleeve_${allCardSleeves[i]}.png"
-                                    )),
-                                  )
-                                ),
-                              ),
-                            ),
-                          ),
-                        ),
-                        Expanded(
-                          flex: 1,
-                          child: Container(
-                            decoration: BoxDecoration(
-                                border: Border(top: BorderSide())
-                            ),
-                            child: AspectRatio(
-                              aspectRatio: 4.0,
-                              child: Padding(
-                                padding: const EdgeInsets.all(5),
-                                child: SelectionButton(
-                                  child: Text("Cancel"),
-                                  designRatio: 0.5,
-                                  onPressEnd: () async {
-                                    onPopupExit();
-                                    return Future<void>.delayed(const Duration(milliseconds: 100));
-                                  },
-                                ),
-                              ),
-                            ),
-                          ),
-                        ),
-                      ]
-                  ),
-                ),
-              ),
-            ),
-            builder: (_, child) {
-              return Stack(
-                  children: [
-                    GestureDetector(
-                        onTap: onPopupExit,
-                        child: DecoratedBox(
-                          decoration: BoxDecoration(
-                              color: Color.fromRGBO(0, 0, 0, _cardPickerController.value * 0.7)
-                          ),
-                          child: Container(),
-                        )
-                    ),
-                    Opacity(
-                        opacity: _cardOpacity.value,
-                        child: Transform.scale(
-                          scale: _cardPickerController.status == AnimationStatus.forward
-                              ? _popupScaleForward.value
-                              : _popupScaleReverse.value,
-                          child: child!,
-                        )
-                    )
-                  ]
-              );
-            }
-        ),
-      );
-    });
-    _popupIsActive = true;
-    overlayState.insert(overlayEntry);
-    _cardPickerController.forward(from: 0.0);
-    _popupExit.addListener(onPopupExit);
+      )
+    );
+    if (selectedCard != null) {
+      cardSleeve.value = selectedCard;
+    }
+    scrollController.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    final settings = context.watch<SettingsController>();
+    final settings = context.watch<Settings>();
     final palette = context.watch<Palette>();
     final mediaQuery = MediaQuery.of(context);
     final screen = Column(
@@ -696,7 +452,7 @@ class _DeckEditorScreenState extends State<DeckEditorScreen>
                           ),
                           designRatio: 0.5,
                           onPressStart: () async {
-                            if (_lockButtons || _popupIsActive || _hasEmptyCards.value) {
+                            if (_lockButtons || _hasEmptyCards.value) {
                               return false;
                             }
                             _lockButtons = true;
@@ -746,7 +502,7 @@ class _DeckEditorScreenState extends State<DeckEditorScreen>
                         ),
                         designRatio: 0.5,
                         onPressStart: () async {
-                          if (_lockButtons || _popupIsActive) return false;
+                          if (_lockButtons) return false;
                           _lockButtons = true;
                           return true;
                         },
@@ -763,37 +519,28 @@ class _DeckEditorScreenState extends State<DeckEditorScreen>
         )
       ]
     );
-    return WillPopScope(
-      onWillPop: () async {
-        if (_popupIsActive) {
-          _popupExit.notifyListeners();
-          return false;
-        }
-        return true;
-      },
-      child: Scaffold(
-        backgroundColor: palette.backgroundDeckEditor,
-        body: DefaultTextStyle(
-          style: TextStyle(
-            fontFamily: "Splatfont2",
-            color: Colors.black,
-            fontSize: 18,
-            letterSpacing: 0.6,
-            shadows: [
-              Shadow(
-                color: const Color.fromRGBO(256, 256, 256, 0.4),
-                offset: Offset(1, 1),
-              )
-            ]
+    return Scaffold(
+      backgroundColor: palette.backgroundDeckEditor,
+      body: DefaultTextStyle(
+        style: TextStyle(
+          fontFamily: "Splatfont2",
+          color: Colors.black,
+          fontSize: 18,
+          letterSpacing: 0.6,
+          shadows: [
+            Shadow(
+              color: const Color.fromRGBO(256, 256, 256, 0.4),
+              offset: Offset(1, 1),
+            )
+          ]
+        ),
+        child: Padding(
+          padding: mediaQuery.padding,
+          child: Center(
+            child: screen
           ),
-          child: Padding(
-            padding: mediaQuery.padding,
-            child: Center(
-              child: screen
-            ),
-          ),
-        )
-      ),
+        ),
+      )
     );
   }
 }

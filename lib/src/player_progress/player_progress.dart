@@ -3,55 +3,143 @@
 // BSD-style license that can be found in the LICENSE file.
 
 import 'dart:async';
+import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
-
-import 'persistence/player_progress_persistence.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:tableturf_mobile/src/game_internals/card.dart';
+import 'package:tableturf_mobile/src/game_internals/opponentAI.dart';
+import 'package:tableturf_mobile/src/level_selection/opponents.dart';
 
 /// Encapsulates the player's progress.
-class PlayerProgress extends ChangeNotifier {
-  static const maxHighestScoresPerPlayer = 10;
+class PlayerProgress {
+  late final SharedPreferences _prefs;
+  static const DIFFICULTY_UNLOCK_THRESHOLD = 3;
+  static const commitChanges = !kDebugMode;
 
-  final PlayerProgressPersistence _store;
+  static final PlayerProgress _controller = PlayerProgress._internal();
 
-  int _highestLevelReached = 0;
+  factory PlayerProgress() {
+    return _controller;
+  }
 
-  /// Creates an instance of [PlayerProgress] backed by an injected
-  /// persistence [store].
-  PlayerProgress(PlayerProgressPersistence store) : _store = store;
+  PlayerProgress._internal() {}
 
-  /// The highest level that the player has reached so far.
-  int get highestLevelReached => _highestLevelReached;
+  late Map<String, Map<AILevel, int>> _winCounts;
 
-  /// Fetches the latest data from the backing persistence store.
-  Future<void> getLatestFromStore() async {
-    final level = await _store.getHighestLevelReached();
-    if (level > _highestLevelReached) {
-      _highestLevelReached = level;
-      notifyListeners();
-    } else if (level < _highestLevelReached) {
-      await _store.saveHighestLevelReached(_highestLevelReached);
+  late Map<String, Set<AILevel>> _unlockedDifficulties;
+  late int _xp;
+  late List<TableturfCardIdentifier> _unlockedCards;
+
+
+  /// Asynchronously loads values from the injected persistence store.
+  Future<void> loadStateFromPersistence(SharedPreferences prefs) async {
+    _prefs = prefs;
+    final Map<String, dynamic> winCountJson = jsonDecode(
+      _prefs.getString("tableturf-wins") ?? "{}"
+    );
+    _winCounts = Map.fromEntries(winCountJson.entries.map((entry) {
+      final opponentID = entry.key;
+      final winCounts = entry.value as Map<String, dynamic>;
+      return MapEntry(
+        opponentID,
+        {
+          for (final winEntry in winCounts.entries)
+            AILevel.values[int.parse(winEntry.key)]: winEntry.value as int
+        }
+      );
+    }));
+    _xp = _prefs.getInt("tableturf-xp") ?? 0;
+
+    final Map<String, dynamic> unlockedDifficultiesJson = jsonDecode(
+      _prefs.getString("tableturf-unlocked_difficulties") ?? "{}"
+    );
+    _unlockedDifficulties = Map.fromEntries(unlockedDifficultiesJson.entries.map((entry) {
+      final List<dynamic> difficulties = entry.value;
+      return MapEntry(
+        entry.key,
+        Set.from(difficulties.map((i) => AILevel.values[i])),
+      );
+    }));
+  }
+
+  Future<void> _writeWinCounts() async {
+    if (commitChanges) {
+      final encodedJson = jsonEncode({
+        for (final entry in _winCounts.entries)
+          entry.key: {
+            for (final winEntry in entry.value.entries)
+              winEntry.key.index.toString(): winEntry.value
+          }
+      });
+      print(encodedJson);
+      _prefs.setString("tableturf-wins", encodedJson);
     }
   }
 
-  /// Resets the player's progress so it's like if they just started
-  /// playing the game for the first time.
-  void reset() {
-    _highestLevelReached = 0;
-    notifyListeners();
-    _store.saveHighestLevelReached(_highestLevelReached);
+  Map<AILevel, int> getWins(String key) {
+    if (!_winCounts.containsKey(key)) {
+      _winCounts[key] = {
+        for (final level in AILevel.values)
+          level: 0
+      };
+    }
+    return _winCounts[key]!;
   }
 
-  /// Registers [level] as reached.
-  ///
-  /// If this is higher than [highestLevelReached], it will update that
-  /// value and save it to the injected persistence store.
-  void setLevelReached(int level) {
-    if (level > _highestLevelReached) {
-      _highestLevelReached = level;
-      notifyListeners();
-
-      unawaited(_store.saveHighestLevelReached(level));
+  int incrementWins(String key, AILevel difficulty) {
+    final difficultyMap = _winCounts[key]!;
+    if (!difficultyMap.containsKey(difficulty)) {
+      difficultyMap[difficulty] = 1;
+    } else {
+      difficultyMap[difficulty] = difficultyMap[difficulty]! + 1;
     }
+    if (difficultyMap[difficulty] == DIFFICULTY_UNLOCK_THRESHOLD) {
+      if (!_unlockedDifficulties.containsKey(key)) {
+        _unlockedDifficulties[key] = Set.from([AILevel.level1, AILevel.level2]);
+      } else if (difficulty.index < AILevel.values.length - 1){
+        _unlockedDifficulties[key]!.add(AILevel.values[difficulty.index + 1]);
+      }
+    }
+    _writeWinCounts();
+    _writeUnlockedDifficulties();
+    return difficultyMap[difficulty]!;
+  }
+
+  Future<void> _writeUnlockedDifficulties() async {
+    if (commitChanges) {
+      final encodedJson = jsonEncode({
+        for (final entry in _unlockedDifficulties.entries)
+          entry.key: List.from(entry.value.map((level) => level.index))
+      });
+      print(encodedJson);
+      _prefs.setString("tableturf-unlocked_difficulties", encodedJson);
+    }
+  }
+
+  Set<AILevel> getDifficulties(String key) {
+    return _unlockedDifficulties[key] ?? Set.from([AILevel.level1]);
+  }
+
+  void unlockDifficulty(String key, AILevel newDifficulty) {
+    if (!_unlockedDifficulties.containsKey(key)) {
+      _unlockedDifficulties[key] = Set.from([newDifficulty]);
+    } else {
+      _unlockedDifficulties[key]!.add(newDifficulty);
+    }
+    _writeUnlockedDifficulties();
+  }
+
+  Future<void> reset() async {
+    for (final entry in _winCounts.entries) {
+      for (final winEntry in entry.value.entries) {
+        entry.value[winEntry.key] = 0;
+      }
+    }
+    for (final key in _unlockedDifficulties.keys) {
+      _unlockedDifficulties[key] = Set.from([AILevel.level1]);
+    }
+    _writeWinCounts();
+    _writeUnlockedDifficulties();
   }
 }

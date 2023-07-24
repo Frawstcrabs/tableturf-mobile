@@ -16,11 +16,12 @@ import 'package:tableturf_mobile/src/settings/settings.dart';
 import 'package:tableturf_mobile/src/style/palette.dart';
 
 import '../game_internals/card.dart';
+import '../game_internals/opponentAI.dart';
 import '../style/my_transition.dart';
-import 'components/build_board_widget.dart';
-import 'components/multi_choice_prompt.dart';
-import 'components/score_counter.dart';
-import 'components/splashtag.dart';
+import '../components/build_board_widget.dart';
+import '../components/multi_choice_prompt.dart';
+import '../components/score_counter.dart';
+import '../components/splashtag.dart';
 
 void paintScoreBar({
   required Canvas canvas,
@@ -246,11 +247,16 @@ class WinEffectPainter extends CustomPainter {
 class PlaySessionEnd extends StatefulWidget {
   final String boardHeroTag;
   final TableturfBattle battle;
+  final void Function()? onWin, onLose;
+  final Completer sessionCompleter;
 
   const PlaySessionEnd({
     super.key,
+    required this.sessionCompleter,
     required this.boardHeroTag,
     required this.battle,
+    this.onWin,
+    this.onLose,
   });
 
   @override
@@ -379,6 +385,7 @@ class _PlaySessionEndState extends State<PlaySessionEnd>
           //.chain(CurveTween(curve: Curves.decelerate))
           .animate(_scoreSplashAnimator);
       winScoreDropletMoveAnimations = [];
+      widget.onWin?.call();
     } else {
       winner = PlayWinner.blue;
       winScoreMoveAnimation = Tween(
@@ -388,6 +395,7 @@ class _PlaySessionEndState extends State<PlaySessionEnd>
           //.chain(CurveTween(curve: Curves.decelerate))
           .animate(_scoreSplashAnimator);
       winScoreDropletMoveAnimations = [];
+      widget.onLose?.call();
     }
 
     _playInitSequence();
@@ -396,7 +404,7 @@ class _PlaySessionEndState extends State<PlaySessionEnd>
   FutureOr<void> _playInitSequence() async {
     _log.info("outro sequence started");
     final audioController = AudioController();
-    final settings = SettingsController();
+    final settings = Settings();
     if (settings.continuousAnimation.value) {
       _scoreWaveAnimator.repeat();
     }
@@ -444,12 +452,15 @@ class _PlaySessionEndState extends State<PlaySessionEnd>
       audioController.stopSong(fadeDuration: const Duration(milliseconds: 800));
       Navigator.of(context).pushReplacement(buildMyTransition(
         child: PlaySessionIntro(
+          sessionCompleter: widget.sessionCompleter,
           yellow: battle.yellow,
           blue: battle.blue,
           board: battle.origBoard,
           boardHeroTag: "boardView-${Random().nextInt(2^31).toString()}",
           aiLevel: battle.aiLevel,
           playerAI: battle.playerAI,
+          onWin: widget.onWin,
+          onLose: widget.onLose,
         ),
         color: const Palette().backgroundPlaySession,
         transitionDuration: const Duration(milliseconds: 800),
@@ -462,6 +473,7 @@ class _PlaySessionEndState extends State<PlaySessionEnd>
       await audioController.musicPlayer.setAudioSource(ConcatenatingAudioSource(children: []));
     }();
     Navigator.of(context).pop();
+    widget.sessionCompleter.complete();
   }
 
   @override
@@ -542,7 +554,7 @@ class _PlaySessionEndState extends State<PlaySessionEnd>
                         waveAnimation: _scoreWaveAnimator,
                         orientation: mediaQuery.orientation,
                       ),
-                      willChange: SettingsController().continuousAnimation.value,
+                      willChange: Settings().continuousAnimation.value,
                     ),
                   ),
                 ),

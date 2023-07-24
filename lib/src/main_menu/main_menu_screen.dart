@@ -21,7 +21,7 @@ class MainMenuScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final palette = context.watch<Palette>();
-    final settingsController = context.watch<SettingsController>();
+    final settingsController = context.watch<Settings>();
 
     return Scaffold(
       backgroundColor: palette.backgroundMain,

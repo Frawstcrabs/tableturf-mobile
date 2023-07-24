@@ -1,16 +1,18 @@
 import 'dart:async';
 import 'dart:math';
+import 'dart:ui' as ui;
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/src/rendering/object.dart';
 import 'package:provider/provider.dart';
 import 'package:tableturf_mobile/src/game_internals/player.dart';
-import 'package:tableturf_mobile/src/play_session/components/card_selection.dart';
-import 'package:tableturf_mobile/src/play_session/components/selection_button.dart';
+import 'package:tableturf_mobile/src/components/card_selection.dart';
+import 'package:tableturf_mobile/src/components/selection_button.dart';
 import 'package:tableturf_mobile/src/settings/settings.dart';
 
 import '../game_internals/card.dart';
-import '../play_session/components/card_widget.dart';
+import '../components/card_widget.dart';
 import '../style/palette.dart';
 import 'deck_list_screen.dart';
 
@@ -235,7 +237,7 @@ class _CardListItemState extends State<CardListItem> {
 
   @override
   Widget build(BuildContext context) {
-    final settings = SettingsController();
+    final settings = Settings();
     return CardFrontWidget(
       card: settings.identToCard(widget.ident),
       traits: const YellowTraits(),
@@ -330,14 +332,24 @@ class _CardListScreenState extends State<CardListScreen>
                     GestureDetector(
                       onTap: onPopupExit,
                     ),
-                    Center(
-                      child: FractionallySizedBox(
-                        heightFactor: 0.8,
-                        widthFactor: 0.8,
-                        child: CardPopup(
-                          card: officialCards[index]
+                    Dismissible(
+                      direction: DismissDirection.up,
+                      behavior: HitTestBehavior.translucent,
+                      resizeDuration: Duration.zero,
+                      movementDuration: _cardPopupController.duration!,
+                      key: ValueKey(index),
+                      onUpdate: (details) async {
+                        print(details.progress);
+                      },
+                      child: Center(
+                        child: FractionallySizedBox(
+                          heightFactor: 0.8,
+                          widthFactor: 0.8,
+                          child: CardPopup(
+                            card: officialCards[index]
+                          )
                         )
-                      )
+                      ),
                     ),
                   ],
                 );

@@ -2,58 +2,17 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:tableturf_mobile/src/game_internals/player.dart';
-import 'package:tableturf_mobile/src/play_session/components/board_widget.dart';
-import 'package:tableturf_mobile/src/play_session/components/card_selection.dart';
-import 'package:tableturf_mobile/src/play_session/components/selection_button.dart';
+import 'package:tableturf_mobile/src/components/selection_button.dart';
 import 'package:tableturf_mobile/src/settings/settings.dart';
 
-import '../game_internals/card.dart';
 import '../game_internals/map.dart';
-import '../play_session/components/card_widget.dart';
+import '../components/card_widget.dart';
+import '../components/map_thumbnail.dart';
 import '../style/palette.dart';
 import 'map_editor_screen.dart';
 
 enum MapPopupActions {
   delete,
-}
-
-class MapThumbnail extends StatelessWidget {
-  final TableturfMap map;
-  const MapThumbnail({
-    super.key,
-    required this.map,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    const palette = Palette();
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        border: Border.all(
-          color: palette.mapThumbnailBorder,
-          width: 3.0,
-        ),
-        borderRadius: BorderRadius.circular(15.0),
-        color: palette.mapThumbnailBackground,
-      ),
-      child: FractionallySizedBox(
-        heightFactor: 0.9,
-        widthFactor: 0.9,
-        child: Center(
-          child: CustomPaint(
-            painter: BoardPainter(
-              board: map.board,
-            ),
-            child: AspectRatio(
-              aspectRatio: map.board[0].length / map.board.length,
-            ),
-            isComplex: true,
-          )
-        ),
-      )
-    );
-  }
 }
 
 
@@ -82,7 +41,7 @@ class _MapListScreenState extends State<MapListScreen>
   Widget build(BuildContext context) {
     final palette = context.watch<Palette>();
     final mediaQuery = MediaQuery.of(context);
-    final settings = SettingsController();
+    final settings = Settings();
     final mapList = settings.maps;
     final screen = Column(
         children: [
@@ -179,94 +138,67 @@ class _MapListScreenState extends State<MapListScreen>
                             final mapNotifier = mapList[index];
                             final textStyle = DefaultTextStyle.of(context).style;
                             const duration = Duration(milliseconds: 200);
-                            final makeMapListEntry = (TableturfMap map, {required bool showPopupMenu}) {
-                              return DecoratedBox(
-                                  decoration: BoxDecoration(
-                                    border: Border.all(
-                                      color: palette.mapThumbnailBorder,
-                                      width: 3.0,
-                                    ),
-                                    borderRadius: BorderRadius.circular(15.0),
-                                    color: palette.mapThumbnailBackground,
-                                  ),
-                                  child: Stack(
-                                    fit: StackFit.expand,
-                                    children: [
-                                      FractionallySizedBox(
-                                        heightFactor: 0.9,
-                                        widthFactor: 0.9,
-                                        child: Center(
-                                            child: CustomPaint(
-                                              painter: BoardPainter(
-                                                board: map.board,
-                                              ),
-                                              child: AspectRatio(
-                                                aspectRatio: map.board[0].length / map.board.length,
-                                              ),
-                                              isComplex: true,
-                                            )
-                                        ),
-                                      ),
-                                      if (showPopupMenu) Align(
-                                          alignment: Alignment.topRight,
-                                          child: PopupMenuButton<MapPopupActions>(
-                                            icon: Icon(
-                                              Icons.more_vert,
-                                              color: Colors.white,
-                                            ),
-                                            onSelected: (val) {
-                                              switch (val) {
-                                                case MapPopupActions.delete:
-                                                  settings.deleteMap(map.mapID);
-                                                  setState(() {});
-                                                  break;
-                                              }
-                                            },
-                                            itemBuilder: (context) => [
-                                              PopupMenuItem(
-                                                child: Text("Delete"),
-                                                value: MapPopupActions.delete,
-                                              ),
-                                            ],
-                                          )
-                                      )
-                                    ],
-                                  )
-                              );
-                            };
                             return Draggable<ValueNotifier<TableturfMap>>(
-                                data: mapNotifier,
-                                maxSimultaneousDrags: 1,
-                                feedback: DefaultTextStyle(
-                                  style: textStyle,
-                                  child: Opacity(
-                                      opacity: 0.8,
-                                      child: ConstrainedBox(
-                                        constraints: constraints,
-                                        child: makeMapListEntry(mapNotifier.value, showPopupMenu: false),
-                                      )
-                                  ),
+                              data: mapNotifier,
+                              maxSimultaneousDrags: 1,
+                              feedback: DefaultTextStyle(
+                                style: textStyle,
+                                child: Opacity(
+                                    opacity: 0.8,
+                                    child: ConstrainedBox(
+                                      constraints: constraints,
+                                      child: MapThumbnail(map: mapNotifier.value),
+                                    )
                                 ),
-                                childWhenDragging: Container(),
-                                child: DragTarget<ValueNotifier<TableturfMap>>(
-                                  builder: (_, accepted, rejected) {
-                                    return AnimatedOpacity(
-                                      opacity: accepted.length > 0 ? 0.8 : 1.0,
+                              ),
+                              childWhenDragging: Container(),
+                              child: DragTarget<ValueNotifier<TableturfMap>>(
+                                builder: (_, accepted, rejected) {
+                                  return AnimatedOpacity(
+                                    opacity: accepted.length > 0 ? 0.8 : 1.0,
+                                    duration: duration,
+                                    //curve: curve,
+                                    child: AnimatedScale(
+                                      scale: accepted.length > 0 ? 0.8 : 1.0,
                                       duration: duration,
-                                      //curve: curve,
-                                      child: AnimatedScale(
-                                          scale: accepted.length > 0 ? 0.8 : 1.0,
-                                          duration: duration,
-                                          curve: Curves.ease,
-                                          child: makeMapListEntry(mapNotifier.value, showPopupMenu: true)
-                                      ),
-                                    );
-                                  },
-                                  onWillAccept: (newMap) => !identical(mapNotifier, newMap),
-                                  onAccept: (newMap) {
-                                    settings.swapMaps(mapNotifier.value.mapID, newMap.value.mapID);
-                                  },
-                                )
+                                      curve: Curves.ease,
+                                      child: Stack(
+                                        fit: StackFit.expand,
+                                        children: [
+                                          MapThumbnail(map: mapNotifier.value),
+                                          Align(
+                                            alignment: Alignment.topRight,
+                                            child: PopupMenuButton<MapPopupActions>(
+                                              icon: Icon(
+                                                Icons.more_vert,
+                                                color: Colors.white,
+                                              ),
+                                              onSelected: (val) {
+                                                switch (val) {
+                                                  case MapPopupActions.delete:
+                                                    settings.deleteMap(mapNotifier.value.mapID);
+                                                    setState(() {});
+                                                    break;
+                                                }
+                                              },
+                                              itemBuilder: (context) => [
+                                                PopupMenuItem(
+                                                  child: Text("Delete"),
+                                                  value: MapPopupActions.delete,
+                                                ),
+                                              ],
+                                            )
+                                          )
+                                        ],
+                                      )
+                                    ),
+                                  );
+                                },
+                                onWillAccept: (newMap) => !identical(mapNotifier, newMap),
+                                onAccept: (newMap) {
+                                  settings.swapMaps(mapNotifier.value.mapID, newMap.value.mapID);
+                                },
+                              )
                             );
                           }
                         );

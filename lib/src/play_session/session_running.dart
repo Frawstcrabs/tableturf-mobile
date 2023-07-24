@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:math';
 import 'dart:ui';
 
+import 'package:collection/collection.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:just_audio/just_audio.dart';
@@ -10,24 +11,46 @@ import 'package:logging/logging.dart' hide Level;
 import 'package:provider/provider.dart';
 
 import 'package:tableturf_mobile/src/audio/audio_controller.dart';
+import 'package:tableturf_mobile/src/card_manager/deck_editor_screen.dart';
 import 'package:tableturf_mobile/src/game_internals/battle.dart';
 import 'package:tableturf_mobile/src/game_internals/card.dart';
 import 'package:tableturf_mobile/src/game_internals/move.dart';
 import 'package:tableturf_mobile/src/game_internals/player.dart';
 import 'package:tableturf_mobile/src/game_internals/tile.dart';
-import 'package:tableturf_mobile/src/play_session/components/multi_choice_prompt.dart';
+import 'package:tableturf_mobile/src/components/multi_choice_prompt.dart';
 import 'package:tableturf_mobile/src/settings/settings.dart';
 import 'package:tableturf_mobile/src/style/palette.dart';
 import 'package:tableturf_mobile/src/style/my_transition.dart';
 
+import '../game_internals/opponentAI.dart';
 import 'session_end.dart';
-import 'components/arc_tween.dart';
-import 'components/build_board_widget.dart';
-import 'components/special_meter.dart';
-import 'components/turn_counter.dart';
-import 'components/card_widget.dart';
-import 'components/card_selection.dart';
-import 'components/score_counter.dart';
+import '../components/arc_tween.dart';
+import '../components/build_board_widget.dart';
+import '../components/special_meter.dart';
+import '../components/turn_counter.dart';
+import '../components/card_widget.dart';
+import '../components/card_selection.dart';
+import '../components/score_counter.dart';
+
+class AspectRatioBuilder extends StatelessWidget {
+  final List<MapEntry<double, Widget>> ratios;
+  AspectRatioBuilder(Map<double, Widget> unsortedRatios, {super.key}):
+    ratios = unsortedRatios.entries.sorted((e1, e2) => e1.key.compareTo(e2.key));
+
+  @override
+  Widget build(BuildContext context) {
+    assert(ratios.isNotEmpty);
+    final aspectRatio = MediaQuery.of(context).size.aspectRatio;
+    Widget retWidget = ratios.first.value;
+    for (final entry in ratios) {
+      if (entry.key <= aspectRatio) {
+        retWidget = entry.value;
+      }
+    }
+    return retWidget;
+  }
+}
+
 
 class SpecialBackgroundPainter extends CustomPainter {
   final bool isLandscape;
@@ -175,11 +198,16 @@ class _CardDeckSlice extends StatelessWidget {
 class PlaySessionScreen extends StatefulWidget {
   final String boardHeroTag;
   final TableturfBattle battle;
+  final void Function()? onWin, onLose;
+  final Completer sessionCompleter;
 
   const PlaySessionScreen({
     super.key,
+    required this.sessionCompleter,
     required this.boardHeroTag,
     required this.battle,
+    this.onWin,
+    this.onLose,
   });
 
   @override
@@ -861,8 +889,11 @@ class _PlaySessionScreenState extends State<PlaySessionScreen>
       pageBuilder: (context, animation, secondaryAnimation) {
         return PlaySessionEnd(
           key: const Key('play session end'),
+          sessionCompleter: widget.sessionCompleter,
           battle: widget.battle,
           boardHeroTag: widget.boardHeroTag,
+          onWin: widget.onWin,
+          onLose: widget.onLose,
         );
       },
       transitionsBuilder: (context, animation, secondaryAnimation, child) {
@@ -1056,7 +1087,7 @@ class _PlaySessionScreenState extends State<PlaySessionScreen>
   Widget build(BuildContext context) {
     final battle = widget.battle;
     final palette = context.watch<Palette>();
-    final settings = context.watch<SettingsController>();
+    final settings = context.watch<Settings>();
     final mediaQuery = MediaQuery.of(context);
     print("screen building: ${mediaQuery.size.width}/${mediaQuery.size.height}");
 
@@ -1411,105 +1442,499 @@ class _PlaySessionScreenState extends State<PlaySessionScreen>
         ),
       ),
     );
-
     late final Widget screenContents;
+    /*
     if (mediaQuery.orientation == Orientation.portrait) {
-      screenContents = Padding(
-        padding: mediaQuery.padding + EdgeInsets.fromLTRB(0, 10, 0, 5),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Expanded(
-              flex: 3,
-              child: FractionallySizedBox(
-                widthFactor: 0.95,
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Expanded(
+      screenContents = Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Expanded(
+            flex: 7,
+            child: FractionallySizedBox(
+              widthFactor: 0.95,
+              child: Row(
+                children: [
+                  Expanded(
+                    child: FractionallySizedBox(
+                      heightFactor: 0.5,
                       child: RepaintBoundary(
                         child: SpecialMeter(
                           player: battle.yellow,
                           direction: TextDirection.ltr,
                         )
-                      )
+                      ),
+                    )
+                  ),
+                  Expanded(
+                    //aspectRatio: 1,
+                    child: ExactGrid(
+                      height: 2,
+                      width: 2,
+                      children: [
+                        for (final widget in [yellowScore, blueScore, cardDeck, turnCounter])
+                          FractionallySizedBox(
+                            heightFactor: 0.9,
+                            widthFactor: 0.9,
+                            child: widget,
+                          )
+                      ]
                     ),
-                    Expanded(
+                  ),
+                  Expanded(
+                    child: FractionallySizedBox(
+                      heightFactor: 0.5,
                       child: RepaintBoundary(
                         child: SpecialMeter(
                           player: battle.blue,
                           direction: TextDirection.rtl,
                         )
+                      ),
+                    )
+                  ),
+                ]
+              )
+            )
+          ),
+          /*
+          Expanded(
+            flex: 3,
+            child: FractionallySizedBox(
+              widthFactor: 0.95,
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Expanded(
+                    child: RepaintBoundary(
+                      child: SpecialMeter(
+                        player: battle.yellow,
+                        direction: TextDirection.ltr,
                       )
-                    ),
-                  ]
+                    )
+                  ),
+                  Expanded(
+                    child: RepaintBoundary(
+                      child: SpecialMeter(
+                        player: battle.blue,
+                        direction: TextDirection.rtl,
+                      )
+                    )
+                  ),
+                ]
+              ),
+            ),
+          ),
+          const Spacer(flex: 1),
+          Expanded(
+            flex: 3,
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              children: [
+                cardDeck,
+                yellowScore,
+                blueScore,
+                turnCounter,
+              ],
+            ),
+          ),
+          */
+          Expanded(
+            flex: 36,
+            child: FractionallySizedBox(
+              heightFactor: 0.9,
+              child: boardWidget
+            ),
+          ),
+          Expanded(
+            flex: 18,
+            child: RepaintBoundary(
+              child: Container(
+                padding: EdgeInsets.all(10),
+                child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                    children: [
+                      Expanded(
+                        flex: 3,
+                        child: fadeOnControlLock(
+                            child: Row(
+                              children: [
+                                Expanded(
+                                  flex: 2,
+                                  child: handWidget,
+                                ),
+                                Expanded(
+                                  flex: 1,
+                                  child: Column(
+                                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                                    children: [Expanded(child: passButton), Expanded(child: specialButton)],
+                                  ),
+                                ),
+                              ],
+                            )
+                        ),
+                      ),
+                      Expanded(
+                        flex: 1,
+                        child: cardSelections,
+                      )
+                    ]
                 ),
               ),
             ),
-            const Spacer(flex: 1),
-            Expanded(
-              flex: 3,
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+          ),
+        ],
+      );
+    } else {
+      screenContents = Row(
+        children: [
+          Expanded(
+            flex: 2,
+            child: Container(
+              margin: const EdgeInsets.symmetric(horizontal: 5.0),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.spaceAround,
                 children: [
-                  cardDeck,
-                  yellowScore,
-                  blueScore,
-                  turnCounter,
+                  Expanded(
+                    flex: 1,
+                    child: Align(
+                      alignment: Alignment(-0.85, -0.9),
+                      child: FractionallySizedBox(
+                        heightFactor: 1/3,
+                        child: SpecialMeter(player: battle.blue)
+                      )
+                    )
+                  ),
+                  Expanded(
+                    flex: 5,
+                    child: fadeOnControlLock(
+                      child: Column(
+                        children: [
+                          Expanded(
+                              child: handWidget
+                          ),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                            children: [
+                              Expanded(
+                                child: FractionallySizedBox(
+                                  widthFactor: 0.9,
+                                  child: passButton,
+                                )
+                              ),
+                              Expanded(
+                                  child: FractionallySizedBox(
+                                    widthFactor: 0.9,
+                                    child: specialButton,
+                                  )
+                              )
+                            ],
+                          )
+                        ]
+                      ),
+                    ),
+                  ),
+                  Expanded(
+                    flex: 1,
+                    child: Align(
+                      alignment: Alignment(-0.85, 0.9),
+                      child: FractionallySizedBox(
+                        heightFactor: 1/3,
+                        child: SpecialMeter(player: battle.yellow)
+                      )
+                    )
+                  ),
                 ],
               ),
             ),
-            Expanded(
-              flex: 36,
-              child: FractionallySizedBox(
-                heightFactor: 0.9,
-                child: boardWidget
+          ),
+          Expanded(
+            flex: 2,
+            child: FractionallySizedBox(
+              widthFactor: 2/5,
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                children: [
+                  Spacer(flex: 1),
+                  Expanded(
+                    flex: 3,
+                    child: Center(
+                      child: turnCounter
+                    )
+                  ),
+                  Spacer(flex: 2),
+                  Expanded(
+                    flex: 10,
+                    child: Center(
+                      child: FractionallySizedBox(
+                        widthFactor: 0.75,
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                          children: [blueScore, yellowScore, cardDeck]
+                        ),
+                      ),
+                    )
+                  ),
+                  Spacer(flex: 1),
+                ],
               ),
             ),
-            Expanded(
-              flex: 18,
-              child: RepaintBoundary(
-                child: Container(
-                  padding: EdgeInsets.all(10),
-                  child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                      children: [
-                        Expanded(
-                          flex: 3,
-                          child: fadeOnControlLock(
-                              child: Row(
-                                children: [
-                                  Expanded(
-                                    flex: 2,
-                                    child: handWidget,
-                                  ),
-                                  Expanded(
-                                    flex: 1,
-                                    child: Column(
-                                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                                      children: [Expanded(child: passButton), Expanded(child: specialButton)],
-                                    ),
-                                  ),
-                                ],
-                              )
-                          ),
-                        ),
-                        Expanded(
-                          flex: 1,
-                          child: cardSelections,
+          ),
+          Expanded(
+            flex: 3,
+            child: boardWidget
+          ),
+          Expanded(
+            flex: 2,
+            child: cardSelections,
+          )
+        ]
+      );
+    }
+    */
+
+    //[0, 576, 768, 992, 1200, 1400],
+    screenContents = AspectRatioBuilder({
+      500/1000: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Expanded(
+            flex: 3,
+            child: FractionallySizedBox(
+              widthFactor: 0.95,
+              child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Expanded(
+                        child: RepaintBoundary(
+                            child: SpecialMeter(
+                              player: battle.yellow,
+                              direction: TextDirection.ltr,
+                            )
                         )
-                      ]
-                  ),
+                    ),
+                    Expanded(
+                        child: RepaintBoundary(
+                            child: SpecialMeter(
+                              player: battle.blue,
+                              direction: TextDirection.rtl,
+                            )
+                        )
+                    ),
+                  ]
+              ),
+            ),
+          ),
+          const Spacer(flex: 1),
+          Expanded(
+            flex: 3,
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              children: [
+                cardDeck,
+                yellowScore,
+                blueScore,
+                turnCounter,
+              ],
+            ),
+          ),
+          Expanded(
+            flex: 36,
+            child: FractionallySizedBox(
+                heightFactor: 0.9,
+                child: boardWidget
+            ),
+          ),
+          Expanded(
+            flex: 18,
+            child: RepaintBoundary(
+              child: Container(
+                padding: EdgeInsets.all(10),
+                child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                    children: [
+                      Expanded(
+                        flex: 3,
+                        child: fadeOnControlLock(
+                            child: Row(
+                              children: [
+                                Expanded(
+                                  flex: 2,
+                                  child: handWidget,
+                                ),
+                                Expanded(
+                                  flex: 1,
+                                  child: Column(
+                                    mainAxisAlignment: MainAxisAlignment
+                                        .spaceEvenly,
+                                    children: [
+                                      Expanded(child: passButton),
+                                      Expanded(child: specialButton)
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            )
+                        ),
+                      ),
+                      Expanded(
+                        flex: 1,
+                        child: cardSelections,
+                      )
+                    ]
                 ),
               ),
             ),
-          ],
-        ),
-      );
-    } else {
-      screenContents = Padding(
-        padding: mediaQuery.padding + EdgeInsets.fromLTRB(0, 10, 0, 5),
-        child: Row(
+          ),
+        ],
+      ),
+      750/1000: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Expanded(
+              flex: 7,
+              child: FractionallySizedBox(
+                  widthFactor: 0.95,
+                  child: Row(
+                      children: [
+                        Expanded(
+                            child: FractionallySizedBox(
+                              heightFactor: 0.5,
+                              child: RepaintBoundary(
+                                  child: SpecialMeter(
+                                    player: battle.yellow,
+                                    direction: TextDirection.ltr,
+                                  )
+                              ),
+                            )
+                        ),
+                        Expanded(
+                          //aspectRatio: 1,
+                          child: ExactGrid(
+                              height: 2,
+                              width: 2,
+                              children: [
+                                for (final widget in [
+                                  yellowScore,
+                                  blueScore,
+                                  cardDeck,
+                                  turnCounter
+                                ])
+                                  FractionallySizedBox(
+                                    heightFactor: 0.9,
+                                    widthFactor: 0.9,
+                                    child: widget,
+                                  )
+                              ]
+                          ),
+                        ),
+                        Expanded(
+                            child: FractionallySizedBox(
+                              heightFactor: 0.5,
+                              child: RepaintBoundary(
+                                  child: SpecialMeter(
+                                    player: battle.blue,
+                                    direction: TextDirection.rtl,
+                                  )
+                              ),
+                            )
+                        ),
+                      ]
+                  )
+              )
+          ),
+          // */
+          /*
+          Expanded(
+            flex: 3,
+            child: FractionallySizedBox(
+              widthFactor: 0.95,
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Expanded(
+                    child: RepaintBoundary(
+                      child: SpecialMeter(
+                        player: battle.yellow,
+                        direction: TextDirection.ltr,
+                      )
+                    )
+                  ),
+                  Expanded(
+                    child: RepaintBoundary(
+                      child: SpecialMeter(
+                        player: battle.blue,
+                        direction: TextDirection.rtl,
+                      )
+                    )
+                  ),
+                ]
+              ),
+            ),
+          ),
+          const Spacer(flex: 1),
+          Expanded(
+            flex: 3,
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              children: [
+                cardDeck,
+                yellowScore,
+                blueScore,
+                turnCounter,
+              ],
+            ),
+          ),
+          // */
+          Expanded(
+            flex: 36,
+            child: FractionallySizedBox(
+                heightFactor: 0.9,
+                child: boardWidget
+            ),
+          ),
+          Expanded(
+            flex: 18,
+            child: RepaintBoundary(
+              child: Container(
+                padding: EdgeInsets.all(10),
+                child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                    children: [
+                      Expanded(
+                        flex: 3,
+                        child: fadeOnControlLock(
+                            child: Row(
+                              children: [
+                                Expanded(
+                                  flex: 2,
+                                  child: handWidget,
+                                ),
+                                Expanded(
+                                  flex: 1,
+                                  child: Column(
+                                    mainAxisAlignment: MainAxisAlignment
+                                        .spaceEvenly,
+                                    children: [
+                                      Expanded(child: passButton),
+                                      Expanded(child: specialButton)
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            )
+                        ),
+                      ),
+                      Expanded(
+                        flex: 1,
+                        child: cardSelections,
+                      )
+                    ]
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+      1000/1000: Row(
           children: [
             Expanded(
               flex: 2,
@@ -1519,53 +1944,54 @@ class _PlaySessionScreenState extends State<PlaySessionScreen>
                   mainAxisAlignment: MainAxisAlignment.spaceAround,
                   children: [
                     Expanded(
-                      flex: 1,
-                      child: Align(
-                        alignment: Alignment(-0.85, -0.9),
-                        child: FractionallySizedBox(
-                          heightFactor: 1/3,
-                          child: SpecialMeter(player: battle.blue)
+                        flex: 1,
+                        child: Align(
+                            alignment: Alignment(-0.85, -0.9),
+                            child: FractionallySizedBox(
+                                heightFactor: 1 / 3,
+                                child: SpecialMeter(player: battle.blue)
+                            )
                         )
-                      )
                     ),
                     Expanded(
                       flex: 5,
                       child: fadeOnControlLock(
                         child: Column(
-                          children: [
-                            Expanded(
-                                child: handWidget
-                            ),
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                              children: [
-                                Expanded(
-                                  child: FractionallySizedBox(
-                                    widthFactor: 0.9,
-                                    child: passButton,
+                            children: [
+                              Expanded(
+                                  child: handWidget
+                              ),
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment
+                                    .spaceEvenly,
+                                children: [
+                                  Expanded(
+                                      child: FractionallySizedBox(
+                                        widthFactor: 0.9,
+                                        child: passButton,
+                                      )
+                                  ),
+                                  Expanded(
+                                      child: FractionallySizedBox(
+                                        widthFactor: 0.9,
+                                        child: specialButton,
+                                      )
                                   )
-                                ),
-                                Expanded(
-                                    child: FractionallySizedBox(
-                                      widthFactor: 0.9,
-                                      child: specialButton,
-                                    )
-                                )
-                              ],
-                            )
-                          ]
+                                ],
+                              )
+                            ]
                         ),
                       ),
                     ),
                     Expanded(
-                      flex: 1,
-                      child: Align(
-                        alignment: Alignment(-0.85, 0.9),
-                        child: FractionallySizedBox(
-                          heightFactor: 1/3,
-                          child: SpecialMeter(player: battle.yellow)
+                        flex: 1,
+                        child: Align(
+                            alignment: Alignment(-0.85, 0.9),
+                            child: FractionallySizedBox(
+                                heightFactor: 1 / 3,
+                                child: SpecialMeter(player: battle.yellow)
+                            )
                         )
-                      )
                     ),
                   ],
                 ),
@@ -1574,29 +2000,30 @@ class _PlaySessionScreenState extends State<PlaySessionScreen>
             Expanded(
               flex: 2,
               child: FractionallySizedBox(
-                widthFactor: 2/5,
+                widthFactor: 2 / 5,
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                   children: [
                     Spacer(flex: 1),
                     Expanded(
-                      flex: 3,
-                      child: Center(
-                        child: turnCounter
-                      )
+                        flex: 3,
+                        child: Center(
+                            child: turnCounter
+                        )
                     ),
                     Spacer(flex: 2),
                     Expanded(
-                      flex: 10,
-                      child: Center(
-                        child: FractionallySizedBox(
-                          widthFactor: 0.75,
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                            children: [blueScore, yellowScore, cardDeck]
+                        flex: 10,
+                        child: Center(
+                          child: FractionallySizedBox(
+                            widthFactor: 0.75,
+                            child: Column(
+                                mainAxisAlignment: MainAxisAlignment
+                                    .spaceEvenly,
+                                children: [blueScore, yellowScore, cardDeck]
+                            ),
                           ),
-                        ),
-                      )
+                        )
                     ),
                     Spacer(flex: 1),
                   ],
@@ -1604,22 +2031,16 @@ class _PlaySessionScreenState extends State<PlaySessionScreen>
               ),
             ),
             Expanded(
-              flex: 3,
-              child: boardWidget
+                flex: 3,
+                child: boardWidget
             ),
             Expanded(
               flex: 2,
               child: cardSelections,
             )
           ]
-        ),
-      );
-    }
-
-    final screen = Container(
-      color: palette.backgroundPlaySession,
-      child: screenContents,
-    );
+      ),
+    });
 
     return DefaultTextStyle(
       style: TextStyle(
@@ -1657,11 +2078,18 @@ class _PlaySessionScreenState extends State<PlaySessionScreen>
                 );
                 if (choice == 0) {
                   battle.stopAllProgress = true;
+                  widget.sessionCompleter.complete();
                   return true;
                 }
                 return false;
               },
-              child: screen
+              child: Container(
+                color: palette.backgroundPlaySession,
+                child: Padding(
+                  padding: mediaQuery.padding + const EdgeInsets.fromLTRB(0, 10, 0, 5),
+                  child: screenContents,
+                ),
+              )
             ),
           ),
         ),

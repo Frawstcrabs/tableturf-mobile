@@ -45,6 +45,7 @@ class SplashTag extends StatelessWidget {
                         fontSize: 66 * designRatio,
                         color: Colors.white,
                         letterSpacing: 1.2 * designRatio,
+                        shadows: const [],
                       )
                     )
                   )

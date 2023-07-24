@@ -4,11 +4,11 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:tableturf_mobile/src/game_internals/player.dart';
 
-import '../../game_internals/card.dart';
-import '../../style/palette.dart';
+import '../game_internals/card.dart';
+import '../style/palette.dart';
 
-import '../../game_internals/battle.dart';
-import '../../game_internals/move.dart';
+import '../game_internals/battle.dart';
+import '../game_internals/move.dart';
 
 import 'card_widget.dart';
 import 'flip_card.dart';
@@ -129,29 +129,29 @@ class CardFrontWidget extends StatelessWidget {
                       var strokeText = FractionallySizedBox(
                         widthFactor: maxTextWidth,
                         child: FittedBox(
-                            fit: textSize.width <= constraints.maxWidth * maxTextWidth
-                                ? BoxFit.fitHeight
-                                : BoxFit.fill,
-                            child: Stack(
-                              children: [
-                                Text(
-                                    cardName,
-                                    textAlign: TextAlign.center,
-                                    style: textStyle.copyWith(
-                                      foreground: Paint()
-                                        ..style = PaintingStyle.stroke
-                                        ..strokeWidth = 7.2 * sizeRatio
-                                        ..strokeJoin = StrokeJoin.round
-                                        ..color = Colors.black,
-                                    )
-                                ),
-                                Text(
+                          fit: textSize.width <= constraints.maxWidth * maxTextWidth
+                              ? BoxFit.fitHeight
+                              : BoxFit.fill,
+                          child: Stack(
+                            children: [
+                              Text(
                                   cardName,
                                   textAlign: TextAlign.center,
-                                  style: textStyle,
-                                ),
-                              ],
-                            )
+                                  style: textStyle.copyWith(
+                                    foreground: Paint()
+                                      ..style = PaintingStyle.stroke
+                                      ..strokeWidth = 7.2 * sizeRatio
+                                      ..strokeJoin = StrokeJoin.round
+                                      ..color = Colors.black,
+                                  )
+                              ),
+                              Text(
+                                cardName,
+                                textAlign: TextAlign.center,
+                                style: textStyle,
+                              ),
+                            ],
+                          )
                         ),
                       );
                       switch (card.rarity) {
@@ -350,6 +350,7 @@ class _CardSelectionWidgetState extends State<CardSelectionWidget>
   late AnimationController _confirmController;
   late AnimationController _flipController;
   late Animation<double> confirmMoveIn, confirmMoveOut, confirmFadeIn, confirmFadeOut;
+  late Animation<double> cardFlip;
   Widget _prevFront = Container();
 
   @override
@@ -404,6 +405,10 @@ class _CardSelectionWidgetState extends State<CardSelectionWidget>
         ),
       ),
     );
+    cardFlip = Tween<double>(
+      begin: 1.0,
+      end: 0.0,
+    ).animate(_flipController);
   }
 
   @override
@@ -527,6 +532,13 @@ class _CardSelectionWidgetState extends State<CardSelectionWidget>
   }
 
   Widget _buildCard(BuildContext context) {
+    /*
+    return FlipTransition(
+      skew: _flipController,
+      front: _buildCardFront(context),
+      back: _buildCardBack(context),
+    );
+    */
     final front = _buildCardFront(context);
     final back = _buildCardBack(context);
     return AnimatedBuilder(

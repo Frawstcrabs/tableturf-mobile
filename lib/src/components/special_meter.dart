@@ -119,41 +119,45 @@ class SpecialMeter extends StatelessWidget {
               ),
               Expanded(
                 flex: 5,
-                child: LayoutBuilder(
-                  builder: (_, constraints) {
-                    final tileSize = constraints.maxHeight;
-                    return FittedBox(
-                      fit: BoxFit.fill,
-                      child: ValueListenableBuilder(
-                        valueListenable: player.special,
-                        builder: (_, int specialCount, __) {
-                          return Row(
-                            textDirection: direction,
-                            children: [
-                              for (var i = 0; i < max(specialCount, 4); i++)
-                                Container(
-                                  margin: const EdgeInsets.symmetric(horizontal: 2),
-                                  child: Stack(
-                                    children: [
-                                      Container(
-                                        color: Color.fromRGBO(0, 0, 0, max((4 - i) / 4, 0)),
-                                        width: tileSize,
-                                        height: tileSize,
-                                      ),
-                                      if (i < specialCount)
-                                        SpecialTile(
+                child: RepaintBoundary(
+                  child: LayoutBuilder(
+                    builder: (_, constraints) {
+                      final tileSize = constraints.maxHeight;
+                      return FittedBox(
+                        fit: BoxFit.fill,
+                        child: ValueListenableBuilder(
+                          valueListenable: player.special,
+                          builder: (_, int specialCount, __) {
+                            return Row(
+                              textDirection: direction,
+                              children: [
+                                for (var i = 0; i < max(specialCount, 4); i++)
+                                  Container(
+                                    margin: const EdgeInsets.symmetric(horizontal: 2),
+                                    child: i < 4 ? Stack(
+                                      children: [
+                                        Container(
+                                          color: Color.fromRGBO(0, 0, 0, (4 - i) / 4),
+                                          width: tileSize,
+                                          height: tileSize,
+                                        ),
+                                        if (i < specialCount) SpecialTile(
                                           colour: player.traits.specialColour,
                                           tileSize: tileSize,
                                         )
-                                    ]
-                                  ),
-                                )
-                            ]
-                          );
-                        }
-                      ),
-                    );
-                  }
+                                      ]
+                                    ) : SpecialTile(
+                                      colour: player.traits.specialColour,
+                                      tileSize: tileSize,
+                                    ),
+                                  )
+                              ]
+                            );
+                          }
+                        ),
+                      );
+                    }
+                  ),
                 ),
               )
             ]

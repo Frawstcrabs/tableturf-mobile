@@ -21,8 +21,6 @@ import 'package:tableturf_mobile/src/style/shaders.dart';
 import 'src/app_lifecycle/app_lifecycle.dart';
 import 'src/audio/audio_controller.dart';
 import 'src/main_menu/main_menu_screen.dart';
-import 'src/player_progress/persistence/local_storage_player_progress_persistence.dart';
-import 'src/player_progress/persistence/player_progress_persistence.dart';
 import 'src/player_progress/player_progress.dart';
 import 'src/settings/settings.dart';
 import 'src/style/palette.dart';
@@ -67,7 +65,6 @@ Future<void> guardedMain() async {
   runApp(
     MyApp(
       sharedPreferences: prefs,
-      playerProgressPersistence: LocalStoragePlayerProgressPersistence(),
     ),
   );
 }
@@ -75,11 +72,9 @@ Future<void> guardedMain() async {
 Logger _log = Logger('main.dart');
 
 class MyApp extends StatelessWidget {
-  final PlayerProgressPersistence playerProgressPersistence;
   final SharedPreferences sharedPreferences;
 
   const MyApp({
-    required this.playerProgressPersistence,
     required this.sharedPreferences,
     super.key,
   });
@@ -89,19 +84,17 @@ class MyApp extends StatelessWidget {
     return AppLifecycleObserver(
       child: MultiProvider(
         providers: [
-          ChangeNotifierProvider(
-            create: (context) {
-              var progress = PlayerProgress(playerProgressPersistence);
-              progress.getLatestFromStore();
-              return progress;
-            },
-          ),
-          Provider<SettingsController>(
+          Provider<PlayerProgress>(
             lazy: false,
-            create: (context) => SettingsController()
+            create: (context) => PlayerProgress()
               ..loadStateFromPersistence(sharedPreferences),
           ),
-          ProxyProvider2<SettingsController, ValueNotifier<AppLifecycleState>,
+          Provider<Settings>(
+            lazy: false,
+            create: (context) => Settings()
+              ..loadStateFromPersistence(sharedPreferences),
+          ),
+          ProxyProvider2<Settings, ValueNotifier<AppLifecycleState>,
               AudioController>(
             // Ensures that the AudioController is created on startup,
             // and not "only when it's needed", as is default behavior.

@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:math';
 
 import 'package:flutter/material.dart';
@@ -14,8 +15,9 @@ import '../game_internals/opponentAI.dart';
 import '../settings/settings.dart';
 import 'session_intro.dart';
 
-PageRouteBuilder<T> buildGameSessionPage<T>({
+PageRouteBuilder<T> _buildGameSessionPage<T>({
   required BuildContext context,
+  required Completer sessionCompleter,
   required TableturfMap map,
   required TableturfDeck yellowDeck,
   required TableturfDeck blueDeck,
@@ -25,9 +27,11 @@ PageRouteBuilder<T> buildGameSessionPage<T>({
   String? blueIcon,
   required AILevel aiLevel,
   AILevel? playerAI,
+  void Function()? onWin,
+  void Function()? onLose,
   Palette palette = const Palette(),
 }) {
-  final settings = SettingsController();
+  final settings = Settings();
 
   final yellowDeckCards = yellowDeck.cards
       .map((ident) => TableturfCard(settings.identToCard(ident)))
@@ -58,15 +62,52 @@ PageRouteBuilder<T> buildGameSessionPage<T>({
 
   return buildMyTransition(
     child: PlaySessionIntro(
+      sessionCompleter: sessionCompleter,
       yellow: yellowPlayer,
       blue: bluePlayer,
       board: map.board.copy(),
       boardHeroTag: "boardView-${Random().nextInt(2^31).toString()}",
       aiLevel: aiLevel,
       playerAI: playerAI,
+      onWin: onWin,
+      onLose: onLose,
     ),
     color: palette.backgroundPlaySession,
     transitionDuration: const Duration(milliseconds: 800),
     reverseTransitionDuration: const Duration(milliseconds: 800),
   );
+}
+
+Future<void> startGame({
+  required BuildContext context,
+  required TableturfMap map,
+  required TableturfDeck yellowDeck,
+  required TableturfDeck blueDeck,
+  String yellowName = "You",
+  String blueName = "Them",
+  String? yellowIcon,
+  String? blueIcon,
+  required AILevel aiLevel,
+  AILevel? playerAI,
+  void Function()? onWin,
+  void Function()? onLose,
+  Palette palette = const Palette()
+}) {
+  final sessionCompleter = Completer();
+  Navigator.of(context).push(_buildGameSessionPage(
+      context: context,
+      sessionCompleter: sessionCompleter,
+      map: map,
+      yellowDeck: yellowDeck,
+      blueDeck: blueDeck,
+      yellowName: yellowName,
+      blueName: blueName,
+      yellowIcon: yellowIcon,
+      blueIcon: blueIcon,
+      aiLevel: aiLevel,
+      playerAI: playerAI,
+      onWin: onWin,
+      onLose: onLose,
+  ));
+  return sessionCompleter.future;
 }

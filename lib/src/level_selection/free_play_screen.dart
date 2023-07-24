@@ -35,7 +35,7 @@ class _FreePlayScreenState extends State<FreePlayScreen> {
   @override
   Widget build(BuildContext context) {
     final palette = context.watch<Palette>();
-    final settings = SettingsController();
+    final settings = Settings();
     //final playerProgress = context.watch<PlayerProgress>();
     const officialRandomiser = TableturfDeck(
       deckID: -1000,
@@ -50,25 +50,20 @@ class _FreePlayScreenState extends State<FreePlayScreen> {
       cards: [],
     );
 
-    var deckList = [
+    final deckList = [
       for (final deck in settings.decks)
-        DropdownMenuItem(
-          value: deck.value,
-          child: Text(deck.value.name),
-        ),
-      DropdownMenuItem(
-        value: officialRandomiser,
-        child: Text("Official Randomiser"),
-      ),
-      DropdownMenuItem(
-        value: pureRandomiser,
-        child: Text("Pure Randomiser"),
-      ),
+        deck.value,
+      //officialRandomiser,
+      pureRandomiser,
       for (final opponent in opponents)
+        opponent.deck,
+    ];
+    final deckListWidgets = [
+      for (final deck in deckList)
         DropdownMenuItem(
-          value: opponent.deck,
-          child: Text(opponent.name),
-        ),
+          value: deck,
+          child: Text(deck.name)
+        )
     ];
     return Scaffold(
       backgroundColor: palette.backgroundLevelSelection,
@@ -94,7 +89,7 @@ class _FreePlayScreenState extends State<FreePlayScreen> {
                   opponentDeck = newDeck;
                 });
               },
-              items: deckList,
+              items: deckListWidgets,
             ),
             DropdownButton2<TableturfDeck?>(
               isExpanded: true,
@@ -105,7 +100,7 @@ class _FreePlayScreenState extends State<FreePlayScreen> {
                   playerDeck = newDeck;
                 });
               },
-              items: deckList,
+              items: deckListWidgets,
             ),
             DropdownButton2<TableturfMap?>(
               isExpanded: true,
@@ -180,7 +175,7 @@ class _FreePlayScreenState extends State<FreePlayScreen> {
                   );
                 } else if (playerDeck!.deckID == -1001) {
                   // pure randomiser
-                  yellowRandomiser = createPureRandomDeck();
+                  yellowRandomiser = createPureRandomCards();
                   for (final card in yellowRandomiser) {
                     settings.registerTempCard(card);
                   }
@@ -203,7 +198,7 @@ class _FreePlayScreenState extends State<FreePlayScreen> {
                   );
                 } else if (opponentDeck!.deckID == -1001) {
                   // pure randomiser
-                  blueRandomiser = createPureRandomDeck();
+                  blueRandomiser = createPureRandomCards();
                   for (final card in blueRandomiser) {
                     settings.registerTempCard(card);
                   }
@@ -219,7 +214,7 @@ class _FreePlayScreenState extends State<FreePlayScreen> {
 
                 final playerName = playerAI != null ? tempPlayerDeck.name : settings.playerName.value;
 
-                await Navigator.of(context).push(buildGameSessionPage(
+                await startGame(
                   context: context,
                   map: map!,
                   yellowDeck: tempPlayerDeck,
@@ -230,7 +225,7 @@ class _FreePlayScreenState extends State<FreePlayScreen> {
                   blueIcon: deckIcons[tempOpponentDeck.deckID],
                   playerAI: playerAI,
                   aiLevel: difficulty!,
-                ));
+                );
                 if (yellowRandomiser != null) {
                   for (final card in yellowRandomiser) {
                     settings.removeTempCard(card.ident);
