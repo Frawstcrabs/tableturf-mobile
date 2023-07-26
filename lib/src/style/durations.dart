@@ -1,3 +1,3 @@
 class Durations {
-  static const xpBarFill = Duration(milliseconds: 667);
+  static const xpBarFill = Duration(milliseconds: 1333);
 }
