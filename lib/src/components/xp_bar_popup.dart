@@ -236,6 +236,7 @@ class _XpBarPopupState extends State<XpBarPopup>
       vsync: this
     );
 
+    xpDiff = widget.afterXp - widget.beforeXp;
     startAnimation();
   }
 
@@ -243,7 +244,6 @@ class _XpBarPopupState extends State<XpBarPopup>
     final transitionFuture = transitionController.animateTo(0.5);
     barWaveController.repeat();
 
-    xpDiff = widget.afterXp - widget.beforeXp;
     final beforeRank = calculateXpToRank(widget.beforeXp);
     final afterRank = calculateXpToRank(widget.afterXp);
     final rankBrackets = rankRequirements.sublist(beforeRank - 1, afterRank);
@@ -455,6 +455,58 @@ class _XpBarPopupState extends State<XpBarPopup>
                             ]
                           )
                         )
+                      )
+                    )
+                  ),
+                  if (xpDiff > 0) Align(
+                    alignment: Alignment(0.9, -0.25),
+                    child: FractionallySizedBox(
+                      widthFactor: 0.15,
+                      child: AspectRatio(
+                        aspectRatio: 1.0,
+                        child: DecoratedBox(
+                          decoration: BoxDecoration(
+                            gradient: LinearGradient(
+                              colors: [
+                                Palette.xpAddedPointsGradientStart,
+                                Palette.xpAddedPointsGradientEnd,
+                              ],
+                              begin: Alignment.topCenter,
+                              end: Alignment.bottomCenter,
+                            ),
+                            shape: BoxShape.circle
+                          ),
+                          child: Transform.translate(
+                            offset: Offset(0, 6) * designRatio,
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Text(
+                                  "Tableturf",
+                                  style: TextStyle(
+                                    fontSize: 12 * designRatio,
+                                    height: 1.0,
+                                  ),
+                                ),
+                                Text(
+                                  "points",
+                                  style: TextStyle(
+                                    fontSize: 12 * designRatio,
+                                    height: 1.0,
+                                  ),
+                                ),
+                                Text(
+                                  "+$xpDiff",
+                                  style: TextStyle(
+                                    fontFamily: "Splatfont1",
+                                    fontSize: 18 * designRatio,
+                                    height: 1.25,
+                                  ),
+                                )
+                              ],
+                            ),
+                          )
+                        ),
                       )
                     )
                   )
