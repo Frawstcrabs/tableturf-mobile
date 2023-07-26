@@ -16,7 +16,7 @@ import '../game_internals/tile.dart';
 /// and saves them to an injected persistence store.
 class Settings {
   late final SharedPreferences _prefs;
-  static const commitChanges = !kDebugMode;
+  static const _commitChanges = !kDebugMode;
 
   static final Settings _controller = Settings._internal();
 
@@ -90,31 +90,31 @@ class Settings {
 
   void setPlayerName(String name) {
     _playerName.value = name;
-    if (commitChanges)
+    if (_commitChanges)
       _prefs.setString('playerName', name);
   }
 
   void toggleMusicOn() {
     _musicOn.value = !_musicOn.value;
-    if (commitChanges)
+    if (_commitChanges)
       _prefs.setBool('musicOn', _musicOn.value);
   }
 
   void toggleMuted() {
     _muted.value = !_muted.value;
-    if (commitChanges)
+    if (_commitChanges)
       _prefs.setBool('muted', _muted.value);
   }
 
   void toggleSoundsOn() {
     _soundsOn.value = !_soundsOn.value;
-    if (commitChanges)
+    if (_commitChanges)
       _prefs.setBool('soundsOn', _soundsOn.value);
   }
 
   void toggleContinuousAnimation() {
     _continuousAnimation.value = !_continuousAnimation.value;
-    if (commitChanges)
+    if (_commitChanges)
       _prefs.setBool('continuousAnimation', _continuousAnimation.value);
   }
 
@@ -128,13 +128,13 @@ class Settings {
   }
 
   Future<void> _writeNextDeckID() async {
-    if (commitChanges) {
+    if (_commitChanges) {
       await _prefs.setInt("tableturf-deck_nextID", _nextDeckID);
     }
   }
 
   Future<void> _writeDeck(TableturfDeck deck) async {
-    if (commitChanges) {
+    if (_commitChanges) {
       await _prefs.setString(
         "tableturf-deck_deck-${deck.deckID}",
         jsonEncode(deck.toJson()),
@@ -143,7 +143,7 @@ class Settings {
   }
 
   Future<void> _writeDeckIndexes() async {
-    if (commitChanges) {
+    if (_commitChanges) {
       await _prefs.setString(
         "tableturf-deck_list",
         jsonEncode([for (final deck in _decks) deck.value.deckID]),
@@ -152,7 +152,7 @@ class Settings {
   }
 
   Future<void> _deleteDeck(int deckID) async {
-    if (commitChanges) {
+    if (_commitChanges) {
       await _prefs.remove("tableturf-deck_deck-$deckID");
     }
   }
@@ -205,13 +205,13 @@ class Settings {
   }
 
   Future<void> _writeNextMapID() async {
-    if (commitChanges) {
+    if (_commitChanges) {
       await _prefs.setInt("tableturf-map_nextID", _nextMapID);
     }
   }
 
   Future<void> _writeMap(TableturfMap map) async {
-    if (commitChanges) {
+    if (_commitChanges) {
       await _prefs.setString(
         "tableturf-map_map-${map.mapID}",
         jsonEncode(map.toJson()),
@@ -220,7 +220,7 @@ class Settings {
   }
 
   Future<void> _writeMapIndexes() async {
-    if (commitChanges) {
+    if (_commitChanges) {
       await _prefs.setString(
         "tableturf-map_list",
         jsonEncode([for (final map in _maps) map.value.mapID]),
@@ -229,7 +229,7 @@ class Settings {
   }
 
   Future<void> _deleteMap(int mapID) async {
-    if (commitChanges) {
+    if (_commitChanges) {
       await _prefs.remove("tableturf-map_map-$mapID");
     }
   }

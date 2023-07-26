@@ -29,6 +29,7 @@ PageRouteBuilder<T> _buildGameSessionPage<T>({
   AILevel? playerAI,
   void Function()? onWin,
   void Function()? onLose,
+  required bool showXpPopup,
   Palette palette = const Palette(),
 }) {
   final settings = Settings();
@@ -60,7 +61,7 @@ PageRouteBuilder<T> _buildGameSessionPage<T>({
     special: 0,
   );
 
-  return buildMyTransition(
+  return buildFadeToBlackTransition(
     child: PlaySessionIntro(
       sessionCompleter: sessionCompleter,
       yellow: yellowPlayer,
@@ -71,6 +72,7 @@ PageRouteBuilder<T> _buildGameSessionPage<T>({
       playerAI: playerAI,
       onWin: onWin,
       onLose: onLose,
+      showXpPopup: showXpPopup,
     ),
     color: palette.backgroundPlaySession,
     transitionDuration: const Duration(milliseconds: 800),
@@ -91,23 +93,25 @@ Future<void> startGame({
   AILevel? playerAI,
   void Function()? onWin,
   void Function()? onLose,
+  bool showXpPopup = false,
   Palette palette = const Palette()
 }) {
   final sessionCompleter = Completer();
   Navigator.of(context).push(_buildGameSessionPage(
-      context: context,
-      sessionCompleter: sessionCompleter,
-      map: map,
-      yellowDeck: yellowDeck,
-      blueDeck: blueDeck,
-      yellowName: yellowName,
-      blueName: blueName,
-      yellowIcon: yellowIcon,
-      blueIcon: blueIcon,
-      aiLevel: aiLevel,
-      playerAI: playerAI,
-      onWin: onWin,
-      onLose: onLose,
+    context: context,
+    sessionCompleter: sessionCompleter,
+    map: map,
+    yellowDeck: yellowDeck,
+    blueDeck: blueDeck,
+    yellowName: yellowName,
+    blueName: blueName,
+    yellowIcon: yellowIcon,
+    blueIcon: blueIcon,
+    aiLevel: aiLevel,
+    playerAI: playerAI,
+    onWin: onWin,
+    onLose: onLose,
+    showXpPopup: showXpPopup,
   ));
   return sessionCompleter.future;
 }

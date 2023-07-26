@@ -200,12 +200,14 @@ class PlaySessionScreen extends StatefulWidget {
   final TableturfBattle battle;
   final void Function()? onWin, onLose;
   final Completer sessionCompleter;
+  final bool showXpPopup;
 
   const PlaySessionScreen({
     super.key,
     required this.sessionCompleter,
     required this.boardHeroTag,
     required this.battle,
+    required this.showXpPopup,
     this.onWin,
     this.onLose,
   });
@@ -894,6 +896,7 @@ class _PlaySessionScreenState extends State<PlaySessionScreen>
           boardHeroTag: widget.boardHeroTag,
           onWin: widget.onWin,
           onLose: widget.onLose,
+          showXpPopup: widget.showXpPopup,
         );
       },
       transitionsBuilder: (context, animation, secondaryAnimation, child) {

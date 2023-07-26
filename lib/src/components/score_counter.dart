@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:tableturf_mobile/src/game_internals/player.dart';
 
-import '../game_internals/battle.dart';
-
 
 class ScoreCounter extends StatefulWidget {
   final ValueNotifier<int> scoreNotifier;
@@ -52,7 +50,7 @@ class _ScoreCounterState extends State<ScoreCounter>
         tween: Tween(
           begin: 0.0,
           end: 1.0,
-        ).chain(CurveTween(curve: Curves.elasticIn.flipped)),
+        ).chain(CurveTween(curve: Curves.elasticOut)),
         weight: 40.0
       ),
       TweenSequenceItem(

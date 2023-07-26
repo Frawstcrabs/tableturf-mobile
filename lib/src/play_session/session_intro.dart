@@ -26,6 +26,7 @@ class PlaySessionIntro extends StatefulWidget {
   final String boardHeroTag;
   final void Function()? onWin, onLose;
   final Completer sessionCompleter;
+  final bool showXpPopup;
 
   const PlaySessionIntro({
     super.key,
@@ -35,6 +36,7 @@ class PlaySessionIntro extends StatefulWidget {
     required this.blue,
     required this.board,
     required this.aiLevel,
+    required this.showXpPopup,
     this.playerAI,
     this.onWin,
     this.onLose,
@@ -454,6 +456,7 @@ class _PlaySessionIntroState extends State<PlaySessionIntro>
           boardHeroTag: widget.boardHeroTag,
           onWin: widget.onWin,
           onLose: widget.onLose,
+          showXpPopup: widget.showXpPopup,
         );
       },
       transitionsBuilder: (context, animation, secondaryAnimation, child) {

@@ -4,14 +4,11 @@
 
 import 'package:flutter/material.dart';
 
-PageRouteBuilder<T> buildMyTransition<T>({
+PageRouteBuilder<T> buildFadeToBlackTransition<T>({
   required Widget child,
   required Color color,
-  String? name,
-  String? restorationId,
   Duration transitionDuration = const Duration(milliseconds: 400),
   Duration reverseTransitionDuration = const Duration(milliseconds: 400),
-  LocalKey? key,
 }) {
   return PageRouteBuilder<T>(
     pageBuilder: (_, __, ___) => child,

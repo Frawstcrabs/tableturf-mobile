@@ -12,103 +12,17 @@ import 'package:tableturf_mobile/src/audio/sounds.dart';
 import 'package:tableturf_mobile/src/game_internals/battle.dart';
 import 'package:tableturf_mobile/src/game_internals/player.dart';
 import 'package:tableturf_mobile/src/play_session/session_intro.dart';
+import 'package:tableturf_mobile/src/player_progress/player_progress.dart';
 import 'package:tableturf_mobile/src/settings/settings.dart';
 import 'package:tableturf_mobile/src/style/palette.dart';
 
-import '../game_internals/card.dart';
-import '../game_internals/opponentAI.dart';
+import '../components/xp_bar_popup.dart';
 import '../style/my_transition.dart';
 import '../components/build_board_widget.dart';
 import '../components/multi_choice_prompt.dart';
 import '../components/score_counter.dart';
 import '../components/splashtag.dart';
-
-void paintScoreBar({
-  required Canvas canvas,
-  required Size size,
-  required Animation<double> length,
-  required Animation<double> waveAnimation,
-  double opacity = 1.0,
-  required AxisDirection direction,
-  required Color color,
-}) {
-  const WAVE_WIDTH = 0.3;
-  const WAVE_HEIGHT = 0.4;
-  const OVERPAINT = 5.0;
-  if (opacity == 0.0) return;
-
-  final paint = Paint()
-    ..style = PaintingStyle.fill
-    ..strokeJoin = StrokeJoin.miter;
-  final waveWidth = (direction == AxisDirection.up || direction == AxisDirection.down ? size.width : size.height) * WAVE_WIDTH;
-  final waveHeight = waveWidth * WAVE_HEIGHT;
-  final path = Path();
-
-  switch (direction) {
-    case AxisDirection.up:
-      var d = size.width + (waveWidth * 2) * (1 - waveAnimation.value) + OVERPAINT;
-      path.moveTo(-OVERPAINT, size.height + OVERPAINT);
-      path.lineTo(size.width + OVERPAINT, size.height + OVERPAINT);
-      path.lineTo(d, size.height * (1.0 - length.value));
-      var outWave = true;
-
-      for (; d > -OVERPAINT; d -= waveWidth) {
-        path.relativeQuadraticBezierTo(
-          -waveWidth/2, outWave ? waveHeight : -waveHeight,
-          -waveWidth, 0.0,
-        );
-        outWave = !outWave;
-      }
-      break;
-    case AxisDirection.right:
-      var d = (waveWidth * -2) * (1 - waveAnimation.value) - OVERPAINT;
-      path.moveTo(size.width + OVERPAINT, size.height + OVERPAINT);
-      path.lineTo(size.width + OVERPAINT, -OVERPAINT);
-      path.lineTo(size.width * (1.0 - length.value), d);
-      var outWave = true;
-
-      for (; d < size.height + OVERPAINT; d += waveWidth) {
-        path.relativeQuadraticBezierTo(
-          outWave ? waveHeight : -waveHeight, waveWidth/2,
-          0.0, waveWidth,
-        );
-        outWave = !outWave;
-      }
-      break;
-    case AxisDirection.down:
-      var d = size.width + (waveWidth * 2) * (1 - waveAnimation.value) + OVERPAINT;
-      path.moveTo(-OVERPAINT,-OVERPAINT);
-      path.lineTo(size.width + OVERPAINT, -OVERPAINT);
-      path.lineTo(d, size.height * length.value);
-      var outWave = true;
-
-      for (; d > - OVERPAINT; d -= waveWidth) {
-        path.relativeQuadraticBezierTo(
-          -waveWidth/2, outWave ? waveHeight : -waveHeight,
-          -waveWidth, 0.0,
-        );
-        outWave = !outWave;
-      }
-      break;
-    case AxisDirection.left:
-      var d = (waveWidth * -2) * (1 - waveAnimation.value) - OVERPAINT;
-      path.moveTo(-OVERPAINT, -OVERPAINT);
-      path.lineTo(size.width * length.value, d);
-      var outWave = true;
-
-      for (; d < size.height + OVERPAINT; d += waveWidth) {
-        path.relativeQuadraticBezierTo(
-          outWave ? waveHeight : -waveHeight, waveWidth/2,
-          0.0, waveWidth,
-        );
-        outWave = !outWave;
-      }
-      path.lineTo(-OVERPAINT, size.height + OVERPAINT);
-      break;
-  }
-  path.close();
-  canvas.drawPath(path, paint..color = color.withOpacity(opacity));
-}
+import '../components/paint_score_bar.dart';
 
 class ScoreBarPainter extends CustomPainter {
   final Animation<double> yellowLength, blueLength, waveAnimation;
@@ -138,7 +52,7 @@ class ScoreBarPainter extends CustomPainter {
         length: blueLength,
         waveAnimation: waveAnimation,
         direction: AxisDirection.right,
-        color: palette.tileBlue,
+        paint: Paint()..color = palette.tileBlue
       );
       paintScoreBar(
         canvas: canvas,
@@ -146,7 +60,7 @@ class ScoreBarPainter extends CustomPainter {
         length: yellowLength,
         waveAnimation: waveAnimation,
         direction: AxisDirection.left,
-        color: palette.tileYellow,
+          paint: Paint()..color = palette.tileYellow
       );
     } else {
       paintScoreBar(
@@ -155,7 +69,7 @@ class ScoreBarPainter extends CustomPainter {
         length: blueLength,
         waveAnimation: waveAnimation,
         direction: AxisDirection.down,
-        color: palette.tileBlue,
+        paint: Paint()..color = palette.tileBlue
       );
       paintScoreBar(
         canvas: canvas,
@@ -163,7 +77,7 @@ class ScoreBarPainter extends CustomPainter {
         length: yellowLength,
         waveAnimation: waveAnimation,
         direction: AxisDirection.up,
-        color: palette.tileYellow,
+        paint: Paint()..color = palette.tileYellow
       );
     }
   }
@@ -202,6 +116,9 @@ class WinEffectPainter extends CustomPainter {
   void paint(Canvas canvas, Size size) {
     late AxisDirection direction;
     late Color color;
+
+    if (opacity.value == 0.0) return;
+
     switch (winner) {
       case PlayWinner.blue:
         color = const Palette().tileBlue;
@@ -231,9 +148,8 @@ class WinEffectPainter extends CustomPainter {
       size: size,
       length: length,
       waveAnimation: waveAnimation,
-      opacity: opacity.value,
       direction: direction,
-      color: color,
+      paint: Paint()..color = color.withOpacity(opacity.value),
     );
   }
 
@@ -249,12 +165,14 @@ class PlaySessionEnd extends StatefulWidget {
   final TableturfBattle battle;
   final void Function()? onWin, onLose;
   final Completer sessionCompleter;
+  final bool showXpPopup;
 
   const PlaySessionEnd({
     super.key,
     required this.sessionCompleter,
     required this.boardHeroTag,
     required this.battle,
+    required this.showXpPopup,
     this.onWin,
     this.onLose,
   });
@@ -271,7 +189,10 @@ class _PlaySessionEndState extends State<PlaySessionEnd>
   late final Animation<double> yellowScoreAnimation, blueScoreAnimation;
   late final Animation<double> winScoreMoveAnimation, winScoreFadeAnimation;
   late final PlayWinner winner;
-  bool initSequenceEnded = false;
+  bool canProgressOverlays = false;
+  int overlayProgress = 0;
+
+  late int beforeXp, afterXp;
 
   late final List<Animation<Offset>> winScoreDropletMoveAnimations;
   late final Animation<double> scoreFade, scoreSize;
@@ -375,6 +296,8 @@ class _PlaySessionEndState extends State<PlaySessionEnd>
       ),
     ]).animate(_scoreSplashAnimator);
 
+    final playerProgress = PlayerProgress();
+    beforeXp = playerProgress.xp;
     const winSplashExtendDist = 5.0;
     if (yellowScoreRatio > 0.5) {
       winner = PlayWinner.yellow;
@@ -397,6 +320,7 @@ class _PlaySessionEndState extends State<PlaySessionEnd>
       winScoreDropletMoveAnimations = [];
       widget.onLose?.call();
     }
+    afterXp = playerProgress.xp;
 
     _playInitSequence();
   }
@@ -416,7 +340,7 @@ class _PlaySessionEndState extends State<PlaySessionEnd>
     await Future<void>.delayed(const Duration(milliseconds: 300));
     await _scoreCountersAnimator.forward();
     await Future<void>.delayed(const Duration(milliseconds: 300));
-    initSequenceEnded = true;
+    canProgressOverlays = true;
 
     final yellowScore = widget.battle.yellowCountNotifier.value;
     final blueScore = widget.battle.blueCountNotifier.value;
@@ -437,7 +361,6 @@ class _PlaySessionEndState extends State<PlaySessionEnd>
   }
 
   Future<void> _checkRematch() async {
-    if (!initSequenceEnded) return;
     final audioController = AudioController();
     var choice = await showMultiChoicePrompt(
       context,
@@ -450,7 +373,7 @@ class _PlaySessionEndState extends State<PlaySessionEnd>
       battle.yellow.reset();
       battle.blue.reset();
       audioController.stopSong(fadeDuration: const Duration(milliseconds: 800));
-      Navigator.of(context).pushReplacement(buildMyTransition(
+      Navigator.of(context).pushReplacement(buildFadeToBlackTransition(
         child: PlaySessionIntro(
           sessionCompleter: widget.sessionCompleter,
           yellow: battle.yellow,
@@ -461,6 +384,7 @@ class _PlaySessionEndState extends State<PlaySessionEnd>
           playerAI: battle.playerAI,
           onWin: widget.onWin,
           onLose: widget.onLose,
+          showXpPopup: widget.showXpPopup,
         ),
         color: const Palette().backgroundPlaySession,
         transitionDuration: const Duration(milliseconds: 800),
@@ -468,12 +392,26 @@ class _PlaySessionEndState extends State<PlaySessionEnd>
       ));
       return;
     }
-    () async {
+        () async {
       await audioController.stopSong(fadeDuration: const Duration(milliseconds: 600));
       await audioController.musicPlayer.setAudioSource(ConcatenatingAudioSource(children: []));
     }();
     Navigator.of(context).pop();
     widget.sessionCompleter.complete();
+  }
+
+  Future<void> _runOverlays() async {
+    if (!canProgressOverlays) return;
+    canProgressOverlays = false;
+    if (widget.showXpPopup) {
+      await showXpBarPopup(
+        context,
+        beforeXp: beforeXp,
+        afterXp: afterXp,
+      );
+      await Future<void>.delayed(const Duration(milliseconds: 100));
+    }
+    await _checkRematch();
   }
 
   @override
@@ -713,10 +651,10 @@ class _PlaySessionEndState extends State<PlaySessionEnd>
       child: Padding(
         padding: mediaQuery.padding,
         child: GestureDetector(
-          onTap: _checkRematch,
+          onTap: _runOverlays,
           child: WillPopScope(
             onWillPop: () async {
-              _checkRematch();
+              _runOverlays();
               return false;
             },
             child: screen

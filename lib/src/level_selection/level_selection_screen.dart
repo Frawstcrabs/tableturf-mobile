@@ -143,6 +143,8 @@ List<TableturfCardData> createPureRandomCards() {
 }
 
 
+const BATTLE_LOSS_XP = 40;
+
 class LevelSelectionEntry extends StatefulWidget {
   final String name;
   final String entryID;
@@ -621,7 +623,12 @@ class _LevelSelectionScreenState extends State<LevelSelectionScreen> {
                                     "deck:${opponent.deck.deckID}",
                                     difficulty
                                   );
-                                }
+                                  playerProgress.xp += difficulty.xpAmount;
+                                },
+                                onLose: () async {
+                                  playerProgress.xp += BATTLE_LOSS_XP;
+                                },
+                                showXpPopup: true,
                               );
                             },
                           ),
@@ -646,8 +653,14 @@ class _LevelSelectionScreenState extends State<LevelSelectionScreen> {
                               blueIcon: "clonejelly",
                               aiLevel: difficulty,
                               onWin: () async {
-                                playerProgress.incrementWins("clonejelly", difficulty);
-                              }
+                                playerProgress.incrementWins(
+                                    "clonejelly", difficulty);
+                                playerProgress.xp += difficulty.xpAmount;
+                              },
+                              onLose: () async {
+                                playerProgress.xp += BATTLE_LOSS_XP;
+                              },
+                              showXpPopup: true,
                             );
                           },
                         ),
@@ -683,7 +696,12 @@ class _LevelSelectionScreenState extends State<LevelSelectionScreen> {
                               aiLevel: difficulty,
                               onWin: () async {
                                 playerProgress.incrementWins("randomiser", difficulty);
+                                playerProgress.xp += difficulty.xpAmount;
                               },
+                              onLose: () async {
+                                playerProgress.xp += BATTLE_LOSS_XP;
+                              },
+                              showXpPopup: true,
                             );
                             for (final card in randomCards) {
                               settings.removeTempCard(card.ident);

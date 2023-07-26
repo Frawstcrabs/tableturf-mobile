@@ -24,10 +24,7 @@ import 'package:flutter/material.dart';
 /// or even get the colors from the network.
 class Palette {
   const Palette();
-  Color get pen => const Color(0xff1d75fb);
   Color get darkPen => const Color(0xFF0050bc);
-  Color get redPen => const Color(0xFFd10841);
-  Color get inkFullOpacity => const Color(0xff352b42);
   Color get ink => const Color(0xee352b42);
   Color get backgroundMain => const Color(0xffffffd1);
   Color get backgroundLevelSelection => const Color(0xffa2dcc7);
@@ -36,12 +33,8 @@ class Palette {
   Color get backgroundDeckEditor => const Color.fromRGBO(229, 224, 239, 1.0);
   Color get backgroundMapList => const Color.fromRGBO(43, 43, 73, 1.0);
   Color get backgroundMapEditor => const Color.fromRGBO(40, 40, 44, 1.0);
-  Color get mapThumbnailBorder => const Color.fromRGBO(62, 66, 168, 1.0);
-  Color get mapThumbnailBackground => const Color.fromRGBO(139, 146, 243, 1.0);
   Color get backgroundPlaySession => const Color(0xff3f2f93);
-  Color get background4 => const Color(0xffffd7ff);
   Color get backgroundSettings => const Color(0xffbfc8e3);
-  Color get trueWhite => const Color(0xffffffff);
 
   Color get tileUnfilled => const Color.fromRGBO(0, 0, 0, 0.8);
   Color get tileEdge => const Color.fromRGBO(80, 80, 80, 1);
@@ -61,10 +54,17 @@ class Palette {
   Color get cardEdge => const Color.fromRGBO(0, 0, 0, 1);
   Color get cardTileUnfilled => const Color.fromRGBO(32, 32, 32, 0.4);
   Color get cardTileEdge => const Color.fromRGBO(120, 120, 120, 1);
+  Color get mapThumbnailBorder => const Color.fromRGBO(62, 66, 168, 1.0);
+  Color get mapThumbnailBackground => const Color.fromRGBO(139, 146, 243, 1.0);
 
   Color get inGameButtonSelected => const Color.fromRGBO(216, 216, 0, 1);
   Color get inGameButtonUnselected => const Color.fromRGBO(109, 161, 198, 1);
 
   Color get selectionButtonSelected => const Color.fromRGBO(167, 231, 9, 1.0);
   Color get selectionButtonUnselected => const Color.fromRGBO(71, 16, 175, 1.0);
+
+  Color get xpTitleText => const Color.fromRGBO(206, 56, 226, 1.0);
+  Color get xpRankUpText => const Color.fromRGBO(250, 253, 3, 1.0);
+  Color get xpAddedPointsGradientStart => const Color.fromRGBO(107, 213, 2, 1.0);
+  Color get xpAddedPointsGradientEnd => const Color.fromRGBO(31, 169, 7, 1.0);
 }

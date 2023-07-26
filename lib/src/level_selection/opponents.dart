@@ -2,7 +2,6 @@ import 'dart:convert';
 
 import 'package:flutter/services.dart';
 import 'package:json_annotation/json_annotation.dart';
-import 'package:tableturf_mobile/src/game_internals/card.dart';
 
 import '../game_internals/deck.dart';
 

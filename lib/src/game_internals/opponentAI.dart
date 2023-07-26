@@ -7,10 +7,14 @@ import 'move.dart';
 import 'tile.dart';
 
 enum AILevel {
-  level1,
-  level2,
-  level3,
-  level4;
+  level1(xpAmount: 100),
+  level2(xpAmount: 115),
+  level3(xpAmount: 130),
+  level4(xpAmount: 150);
+
+  final int xpAmount;
+
+  const AILevel({required this.xpAmount});
 
   int toJson() => index;
   factory AILevel.fromJson(dynamic json) => values[json];

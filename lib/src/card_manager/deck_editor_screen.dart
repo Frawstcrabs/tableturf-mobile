@@ -12,7 +12,6 @@ import '../game_internals/deck.dart';
 import '../components/card_widget.dart';
 import '../settings/settings.dart';
 import '../style/palette.dart';
-import 'card_popup_transition_painter.dart';
 
 
 class DeckCardWidget extends StatelessWidget {

@@ -47,7 +47,7 @@ class MainMenuScreen extends StatelessWidget {
             ElevatedButton(
               onPressed: () {
                 //audioController.playSfx(SfxType.buttonTap);
-                Navigator.of(context).push(buildMyTransition<void>(
+                Navigator.of(context).push(buildFadeToBlackTransition<void>(
                   child: const LevelSelectionScreen(),
                   color: palette.backgroundLevelSelection,
                 ));
@@ -58,7 +58,7 @@ class MainMenuScreen extends StatelessWidget {
             ElevatedButton(
               onPressed: () {
                 //audioController.playSfx(SfxType.buttonTap);
-                Navigator.of(context).push(buildMyTransition<void>(
+                Navigator.of(context).push(buildFadeToBlackTransition<void>(
                   child: const FreePlayScreen(),
                   color: palette.backgroundLevelSelection,
                 ));
@@ -68,7 +68,7 @@ class MainMenuScreen extends StatelessWidget {
             _gap,
             ElevatedButton(
               onPressed: () {
-                Navigator.of(context).push(buildMyTransition<void>(
+                Navigator.of(context).push(buildFadeToBlackTransition<void>(
                   child: const CardListScreen(),
                   color: palette.backgroundCardList,
                 ));
@@ -78,7 +78,7 @@ class MainMenuScreen extends StatelessWidget {
             _gap,
             ElevatedButton(
               onPressed: () {
-                Navigator.of(context).push(buildMyTransition<void>(
+                Navigator.of(context).push(buildFadeToBlackTransition<void>(
                   child: const MapListScreen(),
                   color: palette.backgroundCardList,
                 ));

@@ -9,13 +9,33 @@ import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:tableturf_mobile/src/game_internals/card.dart';
 import 'package:tableturf_mobile/src/game_internals/opponentAI.dart';
-import 'package:tableturf_mobile/src/level_selection/opponents.dart';
+
+const rankRequirements = [
+   100,  200,  300,  400,  500,  600,  700,  800,  900, 1000,
+  1100, 1200, 1300, 1400, 1500, 1600, 1700, 1800, 1900, 2000,
+  2100, 2200, 2300, 2400, 2500, 2600, 2700, 2800, 2900, 3000,
+  3100, 3200, 3300, 3400, 3500, 3600, 3700, 3800, 3900, 4000,
+  4100, 4200, 4300, 4400, 4500, 4600, 4700, 4800, 4900,
+];
+final maxRankAmount = rankRequirements.reduce((a, b) => a + b);
+
+int calculateXpToRank(int xp) {
+  int ret = 1;
+  for (final amount in rankRequirements) {
+    if (amount > xp) {
+      break;
+    }
+    ret += 1;
+    xp -= amount;
+  }
+  return ret;
+}
 
 /// Encapsulates the player's progress.
 class PlayerProgress {
   late final SharedPreferences _prefs;
   static const DIFFICULTY_UNLOCK_THRESHOLD = 3;
-  static const commitChanges = !kDebugMode;
+  static const _commitChanges = !kDebugMode;
 
   static final PlayerProgress _controller = PlayerProgress._internal();
 
@@ -31,6 +51,17 @@ class PlayerProgress {
   late int _xp;
   late List<TableturfCardIdentifier> _unlockedCards;
 
+  int get xp => _xp;
+  set xp(int value) {
+    _xp = value;
+    if (_commitChanges) {
+      _prefs.setInt("tableturf-xp", value);
+    }
+  }
+
+  int get rank => calculateXpToRank(_xp);
+
+  List<int> get remainingRankRequirements => rankRequirements.sublist(rank - 1);
 
   /// Asynchronously loads values from the injected persistence store.
   Future<void> loadStateFromPersistence(SharedPreferences prefs) async {
@@ -64,7 +95,7 @@ class PlayerProgress {
   }
 
   Future<void> _writeWinCounts() async {
-    if (commitChanges) {
+    if (_commitChanges) {
       final encodedJson = jsonEncode({
         for (final entry in _winCounts.entries)
           entry.key: {
@@ -107,7 +138,7 @@ class PlayerProgress {
   }
 
   Future<void> _writeUnlockedDifficulties() async {
-    if (commitChanges) {
+    if (_commitChanges) {
       final encodedJson = jsonEncode({
         for (final entry in _unlockedDifficulties.entries)
           entry.key: List.from(entry.value.map((level) => level.index))
@@ -139,6 +170,7 @@ class PlayerProgress {
     for (final key in _unlockedDifficulties.keys) {
       _unlockedDifficulties[key] = Set.from([AILevel.level1]);
     }
+    xp = 0;
     _writeWinCounts();
     _writeUnlockedDifficulties();
   }
