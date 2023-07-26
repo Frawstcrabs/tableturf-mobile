@@ -11,7 +11,7 @@ import 'package:tableturf_mobile/src/settings/settings.dart';
 
 import '../game_internals/card.dart';
 import '../components/card_widget.dart';
-import '../style/palette.dart';
+import '../style/constants.dart';
 import 'deck_list_screen.dart';
 
 class CardRarityDisplay extends StatefulWidget {
@@ -378,7 +378,6 @@ class _CardListScreenState extends State<CardListScreen>
 
   @override
   Widget build(BuildContext context) {
-    final palette = context.watch<Palette>();
     final mediaQuery = MediaQuery.of(context);
     final screen = Column(
         children: [
@@ -489,7 +488,7 @@ class _CardListScreenState extends State<CardListScreen>
         return true;
       },
       child: Scaffold(
-          backgroundColor: palette.backgroundCardList,
+          backgroundColor: Palette.backgroundCardList,
           body: DefaultTextStyle(
             style: TextStyle(
                 fontFamily: "Splatfont2",

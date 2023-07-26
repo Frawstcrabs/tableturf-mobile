@@ -23,7 +23,7 @@ import 'src/audio/audio_controller.dart';
 import 'src/main_menu/main_menu_screen.dart';
 import 'src/player_progress/player_progress.dart';
 import 'src/settings/settings.dart';
-import 'src/style/palette.dart';
+import 'src/style/constants.dart';
 import 'src/style/snack_bar.dart';
 
 Future<void> main() async {
@@ -109,23 +109,18 @@ class MyApp extends StatelessWidget {
             },
             //dispose: (context, audio) => audio.dispose(),
           ),
-          Provider(
-            create: (context) => Palette(),
-          ),
         ],
         child: Builder(builder: (context) {
-          final palette = context.watch<Palette>();
-
           return MaterialApp(
             title: 'Tableturf Mobile',
             theme: ThemeData.from(
               colorScheme: ColorScheme.fromSeed(
-                seedColor: palette.darkPen,
-                background: palette.backgroundMain,
+                seedColor: Palette.darkPen,
+                background: Palette.backgroundMain,
               ),
               textTheme: TextTheme(
                 bodyMedium: TextStyle(
-                  color: palette.ink,
+                  color: Palette.ink,
                 ),
               ),
             ),

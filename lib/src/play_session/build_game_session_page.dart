@@ -2,13 +2,14 @@ import 'dart:async';
 import 'dart:math';
 
 import 'package:flutter/material.dart';
+import 'package:tableturf_mobile/src/audio/audio_controller.dart';
 
 import 'package:tableturf_mobile/src/game_internals/player.dart';
 import 'package:tableturf_mobile/src/game_internals/card.dart';
 import 'package:tableturf_mobile/src/game_internals/map.dart';
 import 'package:tableturf_mobile/src/game_internals/tile.dart';
 import 'package:tableturf_mobile/src/style/my_transition.dart';
-import 'package:tableturf_mobile/src/style/palette.dart';
+import 'package:tableturf_mobile/src/style/constants.dart';
 
 import '../game_internals/deck.dart';
 import '../game_internals/opponentAI.dart';
@@ -30,7 +31,6 @@ PageRouteBuilder<T> _buildGameSessionPage<T>({
   void Function()? onWin,
   void Function()? onLose,
   required bool showXpPopup,
-  Palette palette = const Palette(),
 }) {
   final settings = Settings();
 
@@ -74,7 +74,7 @@ PageRouteBuilder<T> _buildGameSessionPage<T>({
       onLose: onLose,
       showXpPopup: showXpPopup,
     ),
-    color: palette.backgroundPlaySession,
+    color: Palette.backgroundPlaySession,
     transitionDuration: const Duration(milliseconds: 800),
     reverseTransitionDuration: const Duration(milliseconds: 800),
   );
@@ -94,8 +94,7 @@ Future<void> startGame({
   void Function()? onWin,
   void Function()? onLose,
   bool showXpPopup = false,
-  Palette palette = const Palette()
-}) {
+}) async {
   final sessionCompleter = Completer();
   Navigator.of(context).push(_buildGameSessionPage(
     context: context,
@@ -113,5 +112,6 @@ Future<void> startGame({
     onLose: onLose,
     showXpPopup: showXpPopup,
   ));
-  return sessionCompleter.future;
+  await sessionCompleter.future;
+  AudioController().stopSong(fadeDuration: Durations.fadeToBlackTransition);
 }

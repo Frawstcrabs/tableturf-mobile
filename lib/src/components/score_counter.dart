@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:tableturf_mobile/src/game_internals/player.dart';
 
+import '../style/constants.dart';
+
 
 class ScoreCounter extends StatefulWidget {
   final ValueNotifier<int> scoreNotifier;
@@ -35,11 +37,11 @@ class _ScoreCounterState extends State<ScoreCounter>
     _prevScore = widget.scoreNotifier.value;
     widget.scoreNotifier.addListener(onScoreUpdate);
     showDiffController = AnimationController(
-        duration: const Duration(milliseconds: 1000),
+        duration: Durations.animateBattleScoreDiff,
         vsync: this
     );
     showSumController = AnimationController(
-        duration: const Duration(milliseconds: 200),
+        duration: Durations.animateBattleScoreSum,
         vsync: this
     );
     showDiffController.value = 1.0;

@@ -14,7 +14,7 @@ import 'package:tableturf_mobile/src/game_internals/player.dart';
 import 'package:tableturf_mobile/src/play_session/session_intro.dart';
 import 'package:tableturf_mobile/src/player_progress/player_progress.dart';
 import 'package:tableturf_mobile/src/settings/settings.dart';
-import 'package:tableturf_mobile/src/style/palette.dart';
+import 'package:tableturf_mobile/src/style/constants.dart';
 
 import '../components/xp_bar_popup.dart';
 import '../style/my_transition.dart';
@@ -43,7 +43,6 @@ class ScoreBarPainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
-    final palette = const Palette();
     canvas.drawColor(Colors.black38, BlendMode.srcOver);
     if (orientation == Orientation.portrait) {
       paintScoreBar(
@@ -52,7 +51,7 @@ class ScoreBarPainter extends CustomPainter {
         length: blueLength,
         waveAnimation: waveAnimation,
         direction: AxisDirection.right,
-        paint: Paint()..color = palette.tileBlue
+        paint: Paint()..color = Palette.tileBlue
       );
       paintScoreBar(
         canvas: canvas,
@@ -60,7 +59,7 @@ class ScoreBarPainter extends CustomPainter {
         length: yellowLength,
         waveAnimation: waveAnimation,
         direction: AxisDirection.left,
-          paint: Paint()..color = palette.tileYellow
+          paint: Paint()..color = Palette.tileYellow
       );
     } else {
       paintScoreBar(
@@ -69,7 +68,7 @@ class ScoreBarPainter extends CustomPainter {
         length: blueLength,
         waveAnimation: waveAnimation,
         direction: AxisDirection.down,
-        paint: Paint()..color = palette.tileBlue
+        paint: Paint()..color = Palette.tileBlue
       );
       paintScoreBar(
         canvas: canvas,
@@ -77,7 +76,7 @@ class ScoreBarPainter extends CustomPainter {
         length: yellowLength,
         waveAnimation: waveAnimation,
         direction: AxisDirection.up,
-        paint: Paint()..color = palette.tileYellow
+        paint: Paint()..color = Palette.tileYellow
       );
     }
   }
@@ -121,7 +120,7 @@ class WinEffectPainter extends CustomPainter {
 
     switch (winner) {
       case PlayWinner.blue:
-        color = const Palette().tileBlue;
+        color = Palette.tileBlue;
         switch (orientation) {
           case Orientation.portrait:
             direction = AxisDirection.right;
@@ -132,7 +131,7 @@ class WinEffectPainter extends CustomPainter {
         }
         break;
       case PlayWinner.yellow:
-        color = const Palette().tileYellow;
+        color = Palette.tileYellow;
         switch (orientation) {
           case Orientation.portrait:
             direction = AxisDirection.left;
@@ -297,6 +296,7 @@ class _PlaySessionEndState extends State<PlaySessionEnd>
     ]).animate(_scoreSplashAnimator);
 
     final playerProgress = PlayerProgress();
+    final audioController = AudioController();
     beforeXp = playerProgress.xp;
     const winSplashExtendDist = 5.0;
     if (yellowScoreRatio > 0.5) {
@@ -328,27 +328,28 @@ class _PlaySessionEndState extends State<PlaySessionEnd>
   FutureOr<void> _playInitSequence() async {
     _log.info("outro sequence started");
     final audioController = AudioController();
+    switch (winner) {
+      case PlayWinner.blue:
+        await audioController.loadSong(SongType.resultLose);
+        break;
+      case PlayWinner.yellow:
+        await audioController.loadSong(SongType.resultWin);
+        break;
+    }
     final settings = Settings();
     if (settings.continuousAnimation.value) {
       _scoreWaveAnimator.repeat();
     }
     await Future<void>.delayed(const Duration(milliseconds: 1300));
-    audioController.playSfx(SfxType.scoreBarFill);
+    await audioController.playSfx(SfxType.scoreBarFill);
     await _scoreBarAnimator.forward();
     _scoreSplashAnimator.forward(from: 0.0);
-    audioController.playSfx(SfxType.scoreBarImpact);
+    await audioController.playSfx(SfxType.scoreBarImpact);
     await Future<void>.delayed(const Duration(milliseconds: 300));
     await _scoreCountersAnimator.forward();
     await Future<void>.delayed(const Duration(milliseconds: 300));
     canProgressOverlays = true;
-
-    final yellowScore = widget.battle.yellowCountNotifier.value;
-    final blueScore = widget.battle.blueCountNotifier.value;
-    if (yellowScore > blueScore) {
-      audioController.playSong(SongType.resultWin);
-    } else {
-      audioController.playSong(SongType.resultLose);
-    }
+    audioController.startSong();
   }
 
   @override
@@ -386,16 +387,12 @@ class _PlaySessionEndState extends State<PlaySessionEnd>
           onLose: widget.onLose,
           showXpPopup: widget.showXpPopup,
         ),
-        color: const Palette().backgroundPlaySession,
+        color: Palette.backgroundPlaySession,
         transitionDuration: const Duration(milliseconds: 800),
         reverseTransitionDuration: const Duration(milliseconds: 800),
       ));
       return;
     }
-        () async {
-      await audioController.stopSong(fadeDuration: const Duration(milliseconds: 600));
-      await audioController.musicPlayer.setAudioSource(ConcatenatingAudioSource(children: []));
-    }();
     Navigator.of(context).pop();
     widget.sessionCompleter.complete();
   }
@@ -416,7 +413,6 @@ class _PlaySessionEndState extends State<PlaySessionEnd>
 
   @override
   Widget build(BuildContext context) {
-    final palette = context.watch<Palette>();
     final mediaQuery = MediaQuery.of(context);
 
     final boardWidget = buildBoardWidget(
@@ -428,7 +424,7 @@ class _PlaySessionEndState extends State<PlaySessionEnd>
     late final Widget screen;
     if (mediaQuery.orientation == Orientation.portrait) {
       screen = Container(
-        color: palette.backgroundPlaySession,
+        color: Palette.backgroundPlaySession,
         child: Column(
           mainAxisAlignment: MainAxisAlignment.spaceEvenly,
           children: [
@@ -529,7 +525,7 @@ class _PlaySessionEndState extends State<PlaySessionEnd>
       );
     } else {
       screen = Container(
-        color: palette.backgroundPlaySession,
+        color: Palette.backgroundPlaySession,
         padding: mediaQuery.padding,
         child: Row(
           mainAxisAlignment: MainAxisAlignment.spaceEvenly,

@@ -12,7 +12,7 @@ import '../card_manager/card_list_screen.dart';
 import '../settings/settings.dart';
 import '../settings/settings_screen.dart';
 import '../style/my_transition.dart';
-import '../style/palette.dart';
+import '../style/constants.dart';
 import '../style/responsive_screen.dart';
 
 class MainMenuScreen extends StatelessWidget {
@@ -20,11 +20,10 @@ class MainMenuScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final palette = context.watch<Palette>();
     final settingsController = context.watch<Settings>();
 
     return Scaffold(
-      backgroundColor: palette.backgroundMain,
+      backgroundColor: Palette.backgroundMain,
       body: ResponsiveScreen(
         mainAreaProminence: 0.45,
         squarishMainArea: Center(
@@ -49,7 +48,7 @@ class MainMenuScreen extends StatelessWidget {
                 //audioController.playSfx(SfxType.buttonTap);
                 Navigator.of(context).push(buildFadeToBlackTransition<void>(
                   child: const LevelSelectionScreen(),
-                  color: palette.backgroundLevelSelection,
+                  color: Palette.backgroundLevelSelection,
                 ));
               },
               child: const Text('Continue'),
@@ -60,7 +59,7 @@ class MainMenuScreen extends StatelessWidget {
                 //audioController.playSfx(SfxType.buttonTap);
                 Navigator.of(context).push(buildFadeToBlackTransition<void>(
                   child: const FreePlayScreen(),
-                  color: palette.backgroundLevelSelection,
+                  color: Palette.backgroundLevelSelection,
                 ));
               },
               child: const Text('Free play'),
@@ -70,7 +69,7 @@ class MainMenuScreen extends StatelessWidget {
               onPressed: () {
                 Navigator.of(context).push(buildFadeToBlackTransition<void>(
                   child: const CardListScreen(),
-                  color: palette.backgroundCardList,
+                  color: Palette.backgroundCardList,
                 ));
               },
               child: const Text("Manage Cards")
@@ -80,7 +79,7 @@ class MainMenuScreen extends StatelessWidget {
               onPressed: () {
                 Navigator.of(context).push(buildFadeToBlackTransition<void>(
                   child: const MapListScreen(),
-                  color: palette.backgroundCardList,
+                  color: Palette.backgroundCardList,
                 ));
               },
               child: const Text("Manage Maps")

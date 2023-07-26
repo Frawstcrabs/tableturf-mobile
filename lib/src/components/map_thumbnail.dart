@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../game_internals/map.dart';
-import '../style/palette.dart';
+import '../style/constants.dart';
 import 'board_widget.dart';
 
 class MapThumbnail extends StatelessWidget {
@@ -13,15 +13,14 @@ class MapThumbnail extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    const palette = Palette();
     return DecoratedBox(
         decoration: BoxDecoration(
           border: Border.all(
-            color: palette.mapThumbnailBorder,
+            color: Palette.mapThumbnailBorder,
             width: 3.0,
           ),
           borderRadius: BorderRadius.circular(15.0),
-          color: palette.mapThumbnailBackground,
+          color: Palette.mapThumbnailBackground,
         ),
         child: FractionallySizedBox(
           heightFactor: 0.9,

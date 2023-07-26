@@ -6,7 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../player_progress/player_progress.dart';
-import '../style/palette.dart';
+import '../style/constants.dart';
 import '../style/responsive_screen.dart';
 import 'custom_name_dialog.dart';
 import 'settings.dart';
@@ -19,10 +19,9 @@ class SettingsScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final settings = context.watch<Settings>();
-    final palette = context.watch<Palette>();
 
     return Scaffold(
-      backgroundColor: palette.backgroundSettings,
+      backgroundColor: Palette.backgroundSettings,
       body: ResponsiveScreen(
         squarishMainArea: ListView(
           children: [

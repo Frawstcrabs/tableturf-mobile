@@ -19,7 +19,7 @@ import '../game_internals/deck.dart';
 import '../game_internals/map.dart';
 import '../game_internals/tile.dart';
 import '../play_session/build_game_session_page.dart';
-import '../style/palette.dart';
+import '../style/constants.dart';
 import '../style/responsive_screen.dart';
 import '../components/deck_thumbnail.dart';
 
@@ -563,12 +563,11 @@ class _LevelSelectionScreenState extends State<LevelSelectionScreen> {
   final ValueNotifier<String?> openedEntryNotifier = ValueNotifier(null);
   @override
   Widget build(BuildContext context) {
-    final palette = context.watch<Palette>();
     final settings = Settings();
     final playerProgress = context.watch<PlayerProgress>();
 
     return Scaffold(
-      backgroundColor: palette.backgroundLevelSelection,
+      backgroundColor: Palette.backgroundLevelSelection,
       body: ResponsiveScreen(
         squarishMainArea: Column(
           children: [

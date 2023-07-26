@@ -11,7 +11,7 @@ import '../game_internals/card.dart';
 import '../game_internals/deck.dart';
 import '../components/card_widget.dart';
 import '../settings/settings.dart';
-import '../style/palette.dart';
+import '../style/constants.dart';
 
 
 class DeckCardWidget extends StatelessWidget {
@@ -19,7 +19,6 @@ class DeckCardWidget extends StatelessWidget {
   const DeckCardWidget({super.key, required this.card});
 
   Widget build(BuildContext context) {
-    final palette = context.watch<Palette>();
     final card = this.card;
     if (card == null) {
       return LayoutBuilder(
@@ -32,10 +31,10 @@ class DeckCardWidget extends StatelessWidget {
                 aspectRatio: cardAspectRatio,
                 child: Container(
                   decoration: BoxDecoration(
-                    color: palette.cardBackgroundSelectable,
+                    color: Palette.cardBackgroundSelectable,
                     border: Border.all(
                       width: 1.0,
-                      color: palette.cardEdge,
+                      color: Palette.cardEdge,
                     ),
                   ),
                   child: Center(
@@ -50,7 +49,7 @@ class DeckCardWidget extends StatelessWidget {
           }
       );
     }
-    return HandCardWidget(card: card, background: palette.cardBackgroundSelectable);
+    return HandCardWidget(card: card, background: Palette.cardBackgroundSelectable);
   }
 }
 
@@ -288,7 +287,6 @@ class _DeckEditorScreenState extends State<DeckEditorScreen>
   @override
   Widget build(BuildContext context) {
     final settings = context.watch<Settings>();
-    final palette = context.watch<Palette>();
     final mediaQuery = MediaQuery.of(context);
     final screen = Column(
       children: [
@@ -519,7 +517,7 @@ class _DeckEditorScreenState extends State<DeckEditorScreen>
       ]
     );
     return Scaffold(
-      backgroundColor: palette.backgroundDeckEditor,
+      backgroundColor: Palette.backgroundDeckEditor,
       body: DefaultTextStyle(
         style: TextStyle(
           fontFamily: "Splatfont2",

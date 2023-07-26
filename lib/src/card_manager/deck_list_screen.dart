@@ -8,7 +8,7 @@ import 'package:tableturf_mobile/src/components/selection_button.dart';
 import '../game_internals/deck.dart';
 import '../components/deck_thumbnail.dart';
 import '../settings/settings.dart';
-import '../style/palette.dart';
+import '../style/constants.dart';
 
 enum DeckPopupActions {
   delete,
@@ -29,7 +29,6 @@ class _DeckListScreenState extends State<DeckListScreen> {
   Widget build(BuildContext context) {
     final settings = context.watch<Settings>();
     final decks = settings.decks;
-    final palette = context.watch<Palette>();
     final mediaQuery = MediaQuery.of(context);
     final screen = Column(
       children: [
@@ -212,7 +211,7 @@ class _DeckListScreenState extends State<DeckListScreen> {
     return WillPopScope(
       onWillPop: () async => true,
       child: Scaffold(
-          backgroundColor: palette.backgroundDeckList,
+          backgroundColor: Palette.backgroundDeckList,
           body: DefaultTextStyle(
             style: TextStyle(
                 fontFamily: "Splatfont2",

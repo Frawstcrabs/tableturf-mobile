@@ -5,7 +5,7 @@ import 'package:provider/provider.dart';
 import 'package:tableturf_mobile/src/game_internals/player.dart';
 
 import '../game_internals/card.dart';
-import '../style/palette.dart';
+import '../style/constants.dart';
 
 import '../game_internals/battle.dart';
 import '../game_internals/move.dart';
@@ -444,7 +444,6 @@ class _CardSelectionWidgetState extends State<CardSelectionWidget>
   Widget _buildAwaiting(BuildContext context) {
     return LayoutBuilder(
       builder: (context, constraints) {
-        final palette = context.watch<Palette>();
         final cornerRadius = CardWidget.CORNER_RADIUS * (constraints.maxHeight/CardWidget.CARD_HEIGHT);
         return Center(
           child: AspectRatio(
@@ -454,7 +453,7 @@ class _CardSelectionWidgetState extends State<CardSelectionWidget>
                 color: Color.fromRGBO(32, 32, 32, 0.8),
                 border: Border.all(
                   width: 1.0,
-                  color: palette.cardEdge,
+                  color: Palette.cardEdge,
                 ),
                 borderRadius: BorderRadius.circular(cornerRadius),
               ),
@@ -619,16 +618,15 @@ class CardSelectionConfirmButton extends StatelessWidget {
   }
 
   Widget _buildButton(BuildContext context) {
-    final palette = context.watch<Palette>();
     return LayoutBuilder(builder: (context, constraints) {
       final cornerRadius = CardWidget.CORNER_RADIUS * (constraints.maxHeight/CardWidget.CARD_HEIGHT);
       final textStyle = DefaultTextStyle.of(context).style;
       return Container(
         decoration: BoxDecoration(
-          color: palette.inGameButtonSelected,
+          color: Palette.inGameButtonSelected,
           border: Border.all(
             width: 1.0,
-            color: palette.cardEdge,
+            color: Palette.cardEdge,
           ),
           borderRadius: BorderRadius.circular(cornerRadius),
         ),
@@ -647,13 +645,12 @@ class CardSelectionConfirmButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final palette = context.watch<Palette>();
     final selectionWidget = CardSelectionWidget(
       battle: battle,
       player: battle.yellow,
       moveNotifier: battle.yellowMoveNotifier,
-      tileColour: palette.tileYellow,
-      tileSpecialColour: palette.tileYellowSpecial,
+      tileColour: Palette.tileYellow,
+      tileSpecialColour: Palette.tileYellowSpecial,
       loopAnimation: loopAnimation,
     );
     return Stack(

@@ -5,6 +5,7 @@ import 'package:tableturf_mobile/src/audio/sounds.dart';
 import 'package:tableturf_mobile/src/game_internals/battle.dart';
 
 import 'package:tableturf_mobile/src/audio/audio_controller.dart';
+import 'package:tableturf_mobile/src/style/constants.dart';
 
 class TurnCounter extends StatefulWidget {
   final TableturfBattle battle;
@@ -24,7 +25,6 @@ class _TurnCounterState extends State<TurnCounter>
   late final Animation<Alignment> _counterMove;
   OverlayEntry? animationLayer;
 
-  static const duration = Duration(milliseconds: 1300);
   static const darkenAmount = 0.5;
   static const focusScale = 1.4;
   static const counterBounceHeight = 2.5;
@@ -36,7 +36,7 @@ class _TurnCounterState extends State<TurnCounter>
     widget.battle.turnCountNotifier.addListener(_onTurnCountChange);
 
     _tickController = AnimationController(
-      duration: duration,
+      duration: Durations.animateTurnCounter,
       vsync: this,
     );
 
@@ -93,29 +93,32 @@ class _TurnCounterState extends State<TurnCounter>
 
     // taken from bounceOut curve code
     const bounceCurveRatio = 2.75;
-    const bounceLength = 6.0;
     _counterMove = TweenSequence([
       TweenSequenceItem(
         tween: ConstantTween(Alignment.center),
-        weight: 36.0,
+        weight: Durations.turnCounterUpdate.inMilliseconds.toDouble(),
       ),
       TweenSequenceItem(
         tween: Tween(
           begin: Alignment.center,
           end: const Alignment(0.0, -counterBounceHeight),
         ).chain(CurveTween(curve: Curves.decelerate)),
-        weight: bounceLength,
+        weight: Durations.turnCounterBounceUp.inMilliseconds.toDouble(),
       ),
       TweenSequenceItem(
         tween: Tween(
           begin: const Alignment(0.0, -counterBounceHeight),
           end: Alignment.center,
         ).chain(CurveTween(curve: Curves.bounceOut)),
-        weight: bounceLength * bounceCurveRatio,
+        weight: Durations.turnCounterBounceUp.inMilliseconds * bounceCurveRatio,
       ),
       TweenSequenceItem(
         tween: ConstantTween(Alignment.center),
-        weight: 130.0 - 36.0 - (bounceLength * (bounceCurveRatio + 1.0))
+        weight: (
+          Durations.animateTurnCounter.inMilliseconds
+          - Durations.turnCounterUpdate.inMilliseconds
+          - (Durations.turnCounterBounceUp.inMilliseconds * (bounceCurveRatio + 1.0))
+        )
       ),
     ]).animate(_tickController);
   }
@@ -170,8 +173,8 @@ class _TurnCounterState extends State<TurnCounter>
     overlayState.insert(animationLayer!);
 
     _tickController.value = 0.0;
-    audioController.playSfx(newValue <= 3 ? SfxType.turnCountEnding : SfxType.turnCountNormal);
-    Timer(const Duration(milliseconds: 360), () async {
+    await audioController.playSfx(newValue <= 3 ? SfxType.turnCountEnding : SfxType.turnCountNormal);
+    Timer(Durations.turnCounterUpdate, () async {
       setState(() {
         turnCount = newValue;
       });

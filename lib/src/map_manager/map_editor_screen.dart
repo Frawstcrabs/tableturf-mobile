@@ -15,7 +15,7 @@ import '../game_internals/tile.dart';
 import '../components/board_widget.dart';
 import '../components/selection_button.dart';
 import '../components/card_selection.dart';
-import '../style/palette.dart';
+import '../style/constants.dart';
 
 class GridPainter extends CustomPainter {
   static const DASH_LENGTH = 0.4;
@@ -125,19 +125,18 @@ class PaintOperationPainter extends CustomPainter {
       size.height / gridHeight,
       size.width / gridWidth,
     );
-    final palette = const Palette();
     final bodyPaint = Paint()
       ..style = PaintingStyle.fill
       ..strokeJoin = StrokeJoin.miter
-      ..color = state == TileState.unfilled ? palette.tileUnfilled
-        : state == TileState.yellowSpecial ? palette.tileYellowSpecial
-        : state == TileState.blueSpecial ? palette.tileBlueSpecial
+      ..color = state == TileState.unfilled ? Palette.tileUnfilled
+        : state == TileState.yellowSpecial ? Palette.tileYellowSpecial
+        : state == TileState.blueSpecial ? Palette.tileBlueSpecial
         : Colors.red.withOpacity(0.7);
     final edgePaint = Paint()
       ..style = PaintingStyle.stroke
       ..strokeJoin = StrokeJoin.miter
       ..strokeWidth = BoardPainter.EDGE_WIDTH
-      ..color = palette.tileEdge;
+      ..color = Palette.tileEdge;
     for (final coords in coordsSet) {
       final tileRect = Rect.fromLTWH(
           coords.x * tileSideLength,
@@ -185,13 +184,12 @@ class BlockOperationPainter extends CustomPainter {
       size.height / gridHeight,
       size.width / gridWidth,
     );
-    final palette = const Palette();
     final bodyPaint = Paint()
       ..style = PaintingStyle.fill
       ..strokeJoin = StrokeJoin.miter
-      ..color = state == TileState.unfilled ? palette.tileUnfilled
-        : state == TileState.yellowSpecial ? palette.tileYellowSpecial
-        : state == TileState.blueSpecial ? palette.tileBlueSpecial
+      ..color = state == TileState.unfilled ? Palette.tileUnfilled
+        : state == TileState.yellowSpecial ? Palette.tileYellowSpecial
+        : state == TileState.blueSpecial ? Palette.tileBlueSpecial
         : Colors.red.withOpacity(0.7);
     final edgePaint = Paint()
       ..style = PaintingStyle.stroke
@@ -667,7 +665,6 @@ class _MapEditorScreenState extends State<MapEditorScreen> {
 
   @override
   Widget build(BuildContext context) {
-    const palette = Palette();
     final mediaQuery = MediaQuery.of(context);
     final settings = Settings();
 
@@ -1008,9 +1005,9 @@ class _MapEditorScreenState extends State<MapEditorScreen> {
                             aspectRatio: 1,
                             child: DecoratedBox(
                               decoration: BoxDecoration(
-                                color: palette.tileBlueSpecial,
+                                color: Palette.tileBlueSpecial,
                                 border: Border.all(
-                                    color: palette.tileEdge,
+                                    color: Palette.tileEdge,
                                     width: BoardPainter.EDGE_WIDTH
                                 ),
                               ),
@@ -1023,9 +1020,9 @@ class _MapEditorScreenState extends State<MapEditorScreen> {
                             aspectRatio: 1,
                             child: DecoratedBox(
                               decoration: BoxDecoration(
-                                color: palette.tileYellowSpecial,
+                                color: Palette.tileYellowSpecial,
                                 border: Border.all(
-                                    color: palette.tileEdge,
+                                    color: Palette.tileEdge,
                                     width: BoardPainter.EDGE_WIDTH
                                 ),
                               ),
@@ -1038,9 +1035,9 @@ class _MapEditorScreenState extends State<MapEditorScreen> {
                             aspectRatio: 1,
                             child: DecoratedBox(
                               decoration: BoxDecoration(
-                                color: palette.tileUnfilled,
+                                color: Palette.tileUnfilled,
                                 border: Border.all(
-                                  color: palette.tileEdge,
+                                  color: Palette.tileEdge,
                                   width: BoardPainter.EDGE_WIDTH
                                 ),
                               ),
@@ -1132,7 +1129,7 @@ class _MapEditorScreenState extends State<MapEditorScreen> {
     return WillPopScope(
       onWillPop: () async => true,
       child: Scaffold(
-        backgroundColor: palette.backgroundMapEditor,
+        backgroundColor: Palette.backgroundMapEditor,
         body: DefaultTextStyle(
           style: TextStyle(
             fontFamily: "Splatfont2",

@@ -6,6 +6,7 @@ import 'dart:async';
 import 'dart:math';
 import 'package:flutter/foundation.dart';
 import 'package:logging/logging.dart';
+import 'package:tableturf_mobile/src/style/constants.dart';
 
 import '../audio/audio_controller.dart';
 import '../audio/songs.dart';
@@ -22,12 +23,12 @@ int clamp(int x, int _min, int _max) {
 }
 
 class BattleEvent {
-  get duration => Duration.zero;
+  Duration get duration => Duration.zero;
   const BattleEvent();
 }
 
 class BoardUpdate extends BattleEvent {
-  get duration => const Duration(milliseconds: 1000);
+  get duration => Durations.battleUpdateTiles;
   final Map<Coords, TileState> updates;
   final SfxType sfx;
 
@@ -35,14 +36,14 @@ class BoardUpdate extends BattleEvent {
 }
 
 class BoardSpecialUpdate extends BattleEvent {
-  get duration => const Duration(milliseconds: 1000);
+  get duration => Durations.battleUpdateSpecials;
   final Set<Coords> updates;
 
   const BoardSpecialUpdate(this.updates);
 }
 
 class ScoreUpdate extends BattleEvent {
-  get duration => const Duration(milliseconds: 1500);
+  get duration => Durations.battleUpdateScores;
   final int yellowScore, blueScore;
 
   const ScoreUpdate(this.yellowScore, this.blueScore);
@@ -59,7 +60,7 @@ class EndTurn extends BattleEvent {
 }
 
 class NopEvent extends BattleEvent {
-  get duration => const Duration(milliseconds: 1000);
+  get duration => Durations.battleNopEvent;
   const NopEvent();
 }
 
@@ -105,7 +106,7 @@ class TableturfBattle {
 
   final ValueNotifier<int> yellowCountNotifier = ValueNotifier(1);
   final ValueNotifier<int> blueCountNotifier = ValueNotifier(1);
-  final ValueNotifier<int> turnCountNotifier = ValueNotifier(12);
+  final ValueNotifier<int> turnCountNotifier = ValueNotifier(1);
   int _yellowSpecialCount = 0, _blueSpecialCount = 0;
 
   final TableturfPlayer yellow;
@@ -303,8 +304,9 @@ class TableturfBattle {
 
         await Future<void>.delayed(eventsDuration - (musicFadeTime + musicSilenceTime));
         await audioController.stopSong(fadeDuration: musicFadeTime);
+        audioController.loadSong(SongType.last3Turns);
         await Future<void>.delayed(musicSilenceTime);
-        await audioController.playSong(SongType.last3Turns);
+        await audioController.startSong();
       }();
     }
 

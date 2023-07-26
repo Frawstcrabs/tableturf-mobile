@@ -2,6 +2,7 @@ import 'dart:math';
 
 import 'package:flutter/material.dart';
 import 'package:tableturf_mobile/src/game_internals/player.dart';
+import 'package:tableturf_mobile/src/style/constants.dart';
 
 import 'card_widget.dart';
 
@@ -24,7 +25,7 @@ class _SpecialTileState extends State<SpecialTile>
     super.initState();
 
     _introAnimation = AnimationController(
-      duration: const Duration(milliseconds: 250),
+      duration: Durations.animateInSpecialPoint,
       vsync: this
     );
 

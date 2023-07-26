@@ -7,7 +7,7 @@ import 'package:tableturf_mobile/src/settings/settings.dart';
 import 'package:tableturf_mobile/src/style/shaders.dart';
 
 import '../game_internals/card.dart';
-import '../style/palette.dart';
+import '../style/constants.dart';
 
 import '../game_internals/battle.dart';
 import '../game_internals/tile.dart';
@@ -29,7 +29,6 @@ class BoardPainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
-    final palette = const Palette();
     final bodyPaint = Paint()
       ..style = PaintingStyle.fill
       ..strokeJoin = StrokeJoin.miter;
@@ -37,7 +36,7 @@ class BoardPainter extends CustomPainter {
       ..style = PaintingStyle.stroke
       ..strokeJoin = StrokeJoin.miter
       ..strokeWidth = EDGE_WIDTH
-      ..color = palette.tileEdge;
+      ..color = Palette.tileEdge;
     // draw
 
     final tileSideLength = this.tileSideLength ?? min(
@@ -49,12 +48,12 @@ class BoardPainter extends CustomPainter {
         final state = board[y][x];
         if (state == TileState.empty) continue;
 
-        bodyPaint.color = state == TileState.unfilled ? palette.tileUnfilled
-            : state == TileState.wall ? palette.tileWall
-            : state == TileState.yellow ? palette.tileYellow
-            : state == TileState.yellowSpecial ? palette.tileYellowSpecial
-            : state == TileState.blue ? palette.tileBlue
-            : state == TileState.blueSpecial ? palette.tileBlueSpecial
+        bodyPaint.color = state == TileState.unfilled ? Palette.tileUnfilled
+            : state == TileState.wall ? Palette.tileWall
+            : state == TileState.yellow ? Palette.tileYellow
+            : state == TileState.yellowSpecial ? Palette.tileYellowSpecial
+            : state == TileState.blue ? Palette.tileBlue
+            : state == TileState.blueSpecial ? Palette.tileBlueSpecial
             : Color.fromRGBO(0, 0, 0, 0);
         if ((specialButtonOn?.value ?? false) && !state.isSpecial && state != TileState.empty) {
           bodyPaint.color = Color.alphaBlend(
@@ -144,7 +143,6 @@ class BoardSpecialPainter extends CustomPainter {
     final activatedSpecials = activatedSpecialsNotifier.value;
     final settings = Settings();
 
-    final palette = const Palette();
     final bodyPaint = Paint()
       ..style = PaintingStyle.fill
       ..strokeJoin = StrokeJoin.miter;
@@ -158,8 +156,8 @@ class BoardSpecialPainter extends CustomPainter {
       final x = coords.x;
       final y = coords.y;
       final state = board[y][x];
-      bodyPaint.color = state == TileState.yellowSpecial ? palette.tileYellowSpecialCenter
-          : state == TileState.blueSpecial ? palette.tileBlueSpecialCenter
+      bodyPaint.color = state == TileState.yellowSpecial ? Palette.tileYellowSpecialCenter
+          : state == TileState.blueSpecial ? Palette.tileBlueSpecialCenter
           : throw Exception("Invalid tile colour given for special: ${state.name}");
       canvas.drawCircle(
           Offset(
@@ -176,9 +174,8 @@ class BoardSpecialPainter extends CustomPainter {
             tileSideLength * 2,
             tileSideLength * 2
         );
-        final flameColor = state == TileState.yellowSpecial ? palette
-            .tileYellowSpecialFlame
-            : state == TileState.blueSpecial ? palette.tileBlueSpecialFlame
+        final flameColor = state == TileState.yellowSpecial ? Palette.tileYellowSpecialFlame
+            : state == TileState.blueSpecial ? Palette.tileBlueSpecialFlame
             : Color.fromRGBO(0, 0, 0, 1);
         shader.setImageSampler(0, fireMask);
         shader.setImageSampler(1, fireEffect);

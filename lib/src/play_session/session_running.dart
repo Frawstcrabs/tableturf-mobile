@@ -19,7 +19,7 @@ import 'package:tableturf_mobile/src/game_internals/player.dart';
 import 'package:tableturf_mobile/src/game_internals/tile.dart';
 import 'package:tableturf_mobile/src/components/multi_choice_prompt.dart';
 import 'package:tableturf_mobile/src/settings/settings.dart';
-import 'package:tableturf_mobile/src/style/palette.dart';
+import 'package:tableturf_mobile/src/style/constants.dart';
 import 'package:tableturf_mobile/src/style/my_transition.dart';
 
 import '../game_internals/opponentAI.dart';
@@ -568,8 +568,6 @@ class _PlaySessionScreenState extends State<PlaySessionScreen>
 
   @override
   void dispose() {
-    AudioController().musicPlayer.stop();
-    AudioController().musicPlayer.setAudioSource(ConcatenatingAudioSource(children: []));
     lifecycleNotifier.removeListener(_setBackgroundFlag);
     widget.battle.endOfGameNotifier.removeListener(_onGameEnd);
     widget.battle.specialMoveNotifier.removeListener(_onSpecialMove);
@@ -1089,7 +1087,6 @@ class _PlaySessionScreenState extends State<PlaySessionScreen>
   @override
   Widget build(BuildContext context) {
     final battle = widget.battle;
-    final palette = context.watch<Palette>();
     final settings = context.watch<Settings>();
     final mediaQuery = MediaQuery.of(context);
     print("screen building: ${mediaQuery.size.width}/${mediaQuery.size.height}");
@@ -1215,8 +1212,8 @@ class _PlaySessionScreenState extends State<PlaySessionScreen>
             duration: const Duration(milliseconds: 200),
             decoration: BoxDecoration(
               color: battle.movePassNotifier.value
-                  ? palette.inGameButtonSelected
-                  : palette.inGameButtonUnselected,
+                  ? Palette.inGameButtonSelected
+                  : Palette.inGameButtonUnselected,
               borderRadius: BorderRadius.all(Radius.circular(10)),
               border: Border.all(
                 width: 0.5,
@@ -1282,8 +1279,8 @@ class _PlaySessionScreenState extends State<PlaySessionScreen>
       battle: battle,
       player: battle.blue,
       moveNotifier: battle.blueMoveNotifier,
-      tileColour: palette.tileBlue,
-      tileSpecialColour: palette.tileBlueSpecial,
+      tileColour: Palette.tileBlue,
+      tileSpecialColour: Palette.tileBlueSpecial,
       loopAnimation: settings.continuousAnimation.value,
     );
     final yellowCardSelection = CardSelectionConfirmButton(
@@ -2087,7 +2084,7 @@ class _PlaySessionScreenState extends State<PlaySessionScreen>
                 return false;
               },
               child: Container(
-                color: palette.backgroundPlaySession,
+                color: Palette.backgroundPlaySession,
                 child: Padding(
                   padding: mediaQuery.padding + const EdgeInsets.fromLTRB(0, 10, 0, 5),
                   child: screenContents,

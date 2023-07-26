@@ -4,11 +4,13 @@
 
 import 'package:flutter/material.dart';
 
+import 'constants.dart';
+
 PageRouteBuilder<T> buildFadeToBlackTransition<T>({
   required Widget child,
   required Color color,
-  Duration transitionDuration = const Duration(milliseconds: 400),
-  Duration reverseTransitionDuration = const Duration(milliseconds: 400),
+  Duration transitionDuration = Durations.fadeToBlackTransition,
+  Duration reverseTransitionDuration = Durations.fadeToBlackTransition,
 }) {
   return PageRouteBuilder<T>(
     pageBuilder: (_, __, ___) => child,
@@ -40,7 +42,7 @@ class FadeToBlackTransition extends StatefulWidget {
 class _FadeToBlackTransitionState extends State<FadeToBlackTransition> {
   static const _clearDecoration = BoxDecoration(color: Colors.transparent);
   static const _opaqueDecoration = BoxDecoration(color: Colors.black);
-  final blackScreenTween = TweenSequence([
+  static final blackScreenTween = TweenSequence([
     TweenSequenceItem(
       tween: DecorationTween(begin: _clearDecoration, end: _opaqueDecoration),
       weight: 20,
@@ -55,7 +57,7 @@ class _FadeToBlackTransitionState extends State<FadeToBlackTransition> {
     ),
   ]);
 
-  final widgetScreenTween = TweenSequence([
+  static final widgetScreenTween = TweenSequence([
     TweenSequenceItem(
       tween: ConstantTween(0.0),
       weight: 50,

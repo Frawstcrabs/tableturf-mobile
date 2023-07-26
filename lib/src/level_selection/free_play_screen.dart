@@ -15,7 +15,7 @@ import '../game_internals/card.dart';
 import '../game_internals/deck.dart';
 import '../game_internals/map.dart';
 import '../play_session/build_game_session_page.dart';
-import '../style/palette.dart';
+import '../style/constants.dart';
 import '../style/responsive_screen.dart';
 
 class FreePlayScreen extends StatefulWidget {
@@ -34,7 +34,6 @@ class _FreePlayScreenState extends State<FreePlayScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final palette = context.watch<Palette>();
     final settings = Settings();
     //final playerProgress = context.watch<PlayerProgress>();
     const officialRandomiser = TableturfDeck(
@@ -66,7 +65,7 @@ class _FreePlayScreenState extends State<FreePlayScreen> {
         )
     ];
     return Scaffold(
-      backgroundColor: palette.backgroundLevelSelection,
+      backgroundColor: Palette.backgroundLevelSelection,
       body: ResponsiveScreen(
         squarishMainArea: Column(
           children: [

@@ -8,7 +8,7 @@ import 'package:tableturf_mobile/src/settings/settings.dart';
 import '../game_internals/map.dart';
 import '../components/card_widget.dart';
 import '../components/map_thumbnail.dart';
-import '../style/palette.dart';
+import '../style/constants.dart';
 import 'map_editor_screen.dart';
 
 enum MapPopupActions {
@@ -39,7 +39,6 @@ class _MapListScreenState extends State<MapListScreen>
 
   @override
   Widget build(BuildContext context) {
-    final palette = context.watch<Palette>();
     final mediaQuery = MediaQuery.of(context);
     final settings = Settings();
     final mapList = settings.maps;
@@ -91,11 +90,11 @@ class _MapListScreenState extends State<MapListScreen>
                       child: DecoratedBox(
                         decoration: BoxDecoration(
                           border: Border.all(
-                            color: palette.mapThumbnailBorder,
+                            color: Palette.mapThumbnailBorder,
                             width: 3.0,
                           ),
                           borderRadius: BorderRadius.circular(15.0),
-                          color: palette.mapThumbnailBackground,
+                          color: Palette.mapThumbnailBackground,
                         ),
                         child: FractionallySizedBox(
                           heightFactor: 0.4,
@@ -246,7 +245,7 @@ class _MapListScreenState extends State<MapListScreen>
         return true;
       },
       child: Scaffold(
-          backgroundColor: palette.backgroundMapList,
+          backgroundColor: Palette.backgroundMapList,
           body: DefaultTextStyle(
             style: TextStyle(
                 fontFamily: "Splatfont2",

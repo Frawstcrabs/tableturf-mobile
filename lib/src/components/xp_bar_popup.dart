@@ -2,11 +2,12 @@ import 'dart:async';
 import 'dart:math';
 
 import 'package:flutter/material.dart';
+import 'package:tableturf_mobile/src/audio/audio_controller.dart';
+import 'package:tableturf_mobile/src/audio/sounds.dart';
 import 'package:tableturf_mobile/src/player_progress/player_progress.dart';
-import 'package:tableturf_mobile/src/style/durations.dart';
 
 import '../components/paint_score_bar.dart';
-import '../style/palette.dart';
+import '../style/constants.dart';
 
 class XpBarPainter extends CustomPainter {
   final Animation<double> length, waveAnimation;
@@ -258,7 +259,7 @@ class _XpBarPopupState extends State<XpBarPopup>
       int remainingXp = xpDiff;
       for (final bracket in rankBrackets) {
         final tweenStart = max(xpRangeStart, 0);
-        final tweenEnd = min(remainingXp, bracket);
+        final tweenEnd = min(tweenStart + remainingXp, bracket);
         entries.add(XpBarAnimationEntry(
           begin: tweenStart,
           end: tweenEnd,
@@ -271,6 +272,8 @@ class _XpBarPopupState extends State<XpBarPopup>
       bool firstTween = true;
       currentRank.value = beforeRank;
       currentXpRequirement = rankBrackets[0];
+      final audioController = AudioController();
+      audioController.playSfx(SfxType.xpGaugeFill);
       for (final entry in entries) {
         currentXpRequirement = entry.range;
         barLengthController.duration =
@@ -281,6 +284,7 @@ class _XpBarPopupState extends State<XpBarPopup>
         ).animate(barLengthController);
         if (!firstTween) {
           currentRank.value += 1;
+          audioController.playSfx(SfxType.rankUp);
           rankUpController.forward(from: 0.0);
         } else {
           firstTween = false;
@@ -313,7 +317,6 @@ class _XpBarPopupState extends State<XpBarPopup>
   Widget build(BuildContext context) {
     final mediaQuery = MediaQuery.of(context);
     final isLandscape = mediaQuery.orientation == Orientation.landscape;
-    const palette = Palette();
 
     final promptBox = FractionallySizedBox(
       heightFactor: isLandscape ? 0.5 : null,
@@ -346,7 +349,7 @@ class _XpBarPopupState extends State<XpBarPopup>
                                 "Tableturf Rank",
                                 style: TextStyle(
                                   fontFamily: "Splatfont1",
-                                  color: palette.xpTitleText,
+                                  color: Palette.xpTitleText,
                                   shadows: [
                                     Shadow(offset: Offset(1, 1) * designRatio)
                                   ]
@@ -446,7 +449,7 @@ class _XpBarPopupState extends State<XpBarPopup>
                           "Rank Up!",
                           style: TextStyle(
                             fontFamily: "Splatfont1",
-                            color: palette.xpRankUpText,
+                            color: Palette.xpRankUpText,
                             shadows: [
                               Shadow(offset: Offset(1, 1) * designRatio)
                             ]

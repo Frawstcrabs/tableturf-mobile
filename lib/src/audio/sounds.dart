@@ -65,6 +65,10 @@ enum SfxType {
   specialCutIn,
   turnCountNormal,
   turnCountEnding,
+  giveUpOpen,
+  giveUpSelect,
   scoreBarFill,
   scoreBarImpact,
+  xpGaugeFill,
+  rankUp,
 }

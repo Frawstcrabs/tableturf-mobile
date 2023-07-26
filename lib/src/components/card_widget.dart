@@ -6,7 +6,7 @@ import 'package:provider/provider.dart';
 import 'package:tableturf_mobile/src/audio/audio_controller.dart';
 import 'package:tableturf_mobile/src/audio/sounds.dart';
 
-import '../style/palette.dart';
+import '../style/constants.dart';
 
 import '../game_internals/battle.dart';
 import '../game_internals/player.dart';
@@ -24,7 +24,6 @@ class CardPatternPainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
-    final palette = const Palette();
     final bodyPaint = Paint()
       ..style = PaintingStyle.fill
       ..strokeJoin = StrokeJoin.miter;
@@ -32,13 +31,13 @@ class CardPatternPainter extends CustomPainter {
       ..style = PaintingStyle.stroke
       ..strokeJoin = StrokeJoin.miter
       ..strokeWidth = EDGE_WIDTH
-      ..color = palette.cardTileEdge;
+      ..color = Palette.cardTileEdge;
     // draw
     for (var y = 0; y < pattern.length; y++) {
       for (var x = 0; x < pattern[0].length; x++) {
         final state = pattern[y][x];
 
-        bodyPaint.color = state == TileState.unfilled ? palette.cardTileUnfilled
+        bodyPaint.color = state == TileState.unfilled ? Palette.cardTileUnfilled
             : state == TileState.yellow ? traits.normalColour
             : state == TileState.yellowSpecial ? traits.specialColour
             : Colors.red;
@@ -78,8 +77,6 @@ class CardPainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
-    const palette = Palette();
-
     // portrait layout
     final cardRect = Offset.zero & size;
     canvas.clipRect(cardRect);
@@ -90,10 +87,10 @@ class CardPainter extends CustomPainter {
       ..style = PaintingStyle.stroke
       ..strokeJoin = StrokeJoin.miter
       ..strokeWidth = EDGE_WIDTH
-      ..color = palette.cardTileEdge;
-    final background = this.background ?? palette.cardBackgroundSelectable;
+      ..color = Palette.cardTileEdge;
+    final background = this.background ?? Palette.cardBackgroundSelectable;
     canvas.drawRect(cardRect, bodyPaint..color = background);
-    canvas.drawRect(cardRect, edgePaint..color = palette.cardEdge);
+    canvas.drawRect(cardRect, edgePaint..color = Palette.cardEdge);
 
     // draw card image
     if (cardImage != null) {
@@ -110,12 +107,12 @@ class CardPainter extends CustomPainter {
       // draw card pattern
       final patternOrigin = size.width * (1/18);
       final tileSize = size.width * (1/9);
-      edgePaint.color = palette.cardTileEdge;
+      edgePaint.color = Palette.cardTileEdge;
       for (var y = 0; y < card.pattern.length; y++) {
         for (var x = 0; x < card.pattern[0].length; x++) {
           final state = card.pattern[y][x];
 
-          bodyPaint.color = state == TileState.unfilled ? palette.cardTileUnfilled
+          bodyPaint.color = state == TileState.unfilled ? Palette.cardTileUnfilled
               : state == TileState.yellow ? traits.normalColour
               : state == TileState.yellowSpecial ? traits.specialColour
               : Colors.red;
@@ -165,7 +162,7 @@ class CardPainter extends CustomPainter {
       final specialPointOrigin = Offset(countBoxSize + patternOrigin*1.5, size.width * 1.05);
       final specialPointSize = Size.square(countBoxSize * 0.275);
       bodyPaint.color = traits.specialColour;
-      edgePaint.color = palette.cardEdge;
+      edgePaint.color = Palette.cardEdge;
       for (var i = 0; i < card.special; i++) {
         final specialPoint = (specialPointOrigin + Offset(countBoxSize * 0.3 * (i % 5), countBoxSize * 0.375 * (i ~/ 5))) & specialPointSize;
         canvas.drawRect(specialPoint, bodyPaint);
@@ -176,12 +173,12 @@ class CardPainter extends CustomPainter {
       // draw card pattern
       final patternOrigin = size.height * (1/18);
       final tileSize = size.height * (1/9);
-      edgePaint.color = palette.cardTileEdge;
+      edgePaint.color = Palette.cardTileEdge;
       for (var y = 0; y < card.pattern.length; y++) {
         for (var x = 0; x < card.pattern[0].length; x++) {
           final state = card.pattern[y][x];
 
-          bodyPaint.color = state == TileState.unfilled ? palette.cardTileUnfilled
+          bodyPaint.color = state == TileState.unfilled ? Palette.cardTileUnfilled
               : state == TileState.yellow ? traits.normalColour
               : state == TileState.yellowSpecial ? traits.specialColour
               : Colors.red;
@@ -232,7 +229,7 @@ class CardPainter extends CustomPainter {
       final specialPointOrigin = Offset(size.height + (countBoxSize * (0.5 - 0.45)), (patternOrigin*2));
       final specialPointSize = Size.square(countBoxSize * 0.4);
       bodyPaint.color = traits.specialColour;
-      edgePaint.color = palette.cardEdge;
+      edgePaint.color = Palette.cardEdge;
       for (var i = 0; i < card.special; i++) {
         final specialPoint = (specialPointOrigin + Offset(countBoxSize * 0.45 * (i % 2), countBoxSize * 0.45 * (i ~/ 2))) & specialPointSize;
         canvas.drawRect(specialPoint, bodyPaint);
@@ -331,7 +328,7 @@ class _HandCardWidgetState extends State<HandCardWidget> {
           card: widget.card,
           cardImage: _imageInfo?.image,
           traits: const YellowTraits(),
-          background: widget.background ?? const Palette().cardBackgroundSelectable,
+          background: widget.background ?? Palette.cardBackgroundSelectable,
           overlayColor: widget.overlayColor,
         ),
         child: LayoutBuilder(
@@ -435,7 +432,7 @@ class _CardWidgetState extends State<CardWidget>
     final newCard = widget.cardNotifier.value;
     _prevWidget = _prevCard == null
         ? Container()
-        : _buildCard(_prevCard!, Palette());
+        : _buildCard(_prevCard!);
     try {
       if (_prevCard == null && newCard != null) {
         await _transitionController.forward(from: 0.0).orCancel;
@@ -463,13 +460,13 @@ class _CardWidgetState extends State<CardWidget>
       : battle.moveSpecialNotifier.value ? card.isPlayableSpecial : card.isPlayable;
   }
 
-  Widget _buildCard(TableturfCard card, Palette palette) {
+  Widget _buildCard(TableturfCard card) {
     final isSelectable = _cardIsSelectable(card);
     final isSelected = widget.battle.moveCardNotifier.value == card;
     final Color background = (
         isSelected
-            ? palette.cardBackgroundSelected
-            : palette.cardBackgroundSelectable
+            ? Palette.cardBackgroundSelected
+            : Palette.cardBackgroundSelectable
     );
     final cardWidget = HandCardWidget(
       card: card.data,
@@ -493,7 +490,6 @@ class _CardWidgetState extends State<CardWidget>
 
   @override
   Widget build(BuildContext context) {
-    final palette = context.watch<Palette>();
     final moveCardNotifier = widget.battle.moveCardNotifier;
     var reactiveCard = GestureDetector(
       child: AnimatedBuilder(
@@ -505,7 +501,7 @@ class _CardWidgetState extends State<CardWidget>
           moveCardNotifier,
         ]),
         builder: (_, __) {
-          return _buildCard(widget.cardNotifier.value!, palette);
+          return _buildCard(widget.cardNotifier.value!);
         }
       ),
       onTapDown: (details) {

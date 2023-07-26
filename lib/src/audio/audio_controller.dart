@@ -19,7 +19,8 @@ class AudioController {
   static final _log = Logger('AudioController');
 
   final AudioPlayer musicPlayer;
-  Timer? _musicLoopTimer, _musicFadeTimer;
+  StreamSubscription<int?>? _musicLoopTimer;
+  Timer? _musicFadeTimer;
 
   final Soundpool _sfxPlayer;
   final Map<SfxType, List<int>> _sfxSources;
@@ -97,13 +98,13 @@ class AudioController {
   Future<void> playSfx(SfxType type) async {
     final muted = _settings?.muted.value ?? true;
     if (muted) {
-      _log.info(() => 'Ignoring playing sound ($type) because audio is muted.');
+      _log.info(() => 'Ignoring playing sound because audio is muted.');
       return;
     }
     final soundsOn = _settings?.soundsOn.value ?? false;
     if (!soundsOn) {
       _log.info(() =>
-          'Ignoring playing sound ($type) because sounds are turned off.');
+          'Ignoring playing sound because sounds are turned off.');
       return;
     }
 
@@ -113,50 +114,60 @@ class AudioController {
     await _sfxPlayer.play(options[index]);
   }
 
-  Future<void> playSong(SongType type) async {
-    final muted = _settings?.muted.value ?? true;
-    if (muted) {
-      _log.info('Ignoring playing sound ($type) because audio is muted.');
-      return;
-    }
-    final musicOn = _settings?.musicOn.value ?? false;
-    if (!musicOn) {
-      _log.info('Ignoring playing song ($type) because music is turned off.');
-      return;
-    }
-    _musicLoopTimer?.cancel();
+  Future<void> loadSong(SongType type) async {
+    await _musicLoopTimer?.cancel();
     _musicFadeTimer?.cancel();
-
     final song = songMap[type]!;
-
     await musicPlayer.setAudioSource(
       ConcatenatingAudioSource(
+        useLazyPreparation: false,
         children: [
           AudioSource.uri(Uri.parse("asset:///assets/music/${song.introFilename}")),
           AudioSource.uri(Uri.parse("asset:///assets/music/${song.loopFilename}")),
         ]
       )
     );
+    _log.info(musicPlayer.audioSource?.sequence);
+    await musicPlayer.pause();
     await musicPlayer.setLoopMode(LoopMode.all);
     await musicPlayer.setVolume(1.0);
-    musicPlayer.play();
-    _musicLoopTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
-      if (musicPlayer.currentIndex == null) {
-        timer.cancel();
-        return;
-      }
-      if (musicPlayer.currentIndex == 1) {
+    _musicLoopTimer = musicPlayer.currentIndexStream.listen((index) async {
+      if (index == null) {
+        _musicLoopTimer?.cancel();
+      } else if (index == 1) {
         musicPlayer.setLoopMode(LoopMode.one);
-        timer.cancel();
+        _musicLoopTimer?.cancel();
       }
     });
+    _log.info(musicPlayer.audioSource?.sequence);
+  }
+
+  Future<void> startSong() async {
+    assert(musicPlayer.audioSource != null);
+    final muted = _settings?.muted.value ?? true;
+    if (muted) {
+      _log.info('Ignoring playing sound because audio is muted.');
+      return;
+    }
+    final musicOn = _settings?.musicOn.value ?? false;
+    if (!musicOn) {
+      _log.info('Ignoring playing song because music is turned off.');
+      return;
+    }
+    await musicPlayer.play();
+  }
+
+  Future<void> playSong(SongType type) async {
+    await loadSong(type);
+    await startSong();
   }
 
   Future<void> stopSong({Duration? fadeDuration}) async {
     _musicLoopTimer?.cancel();
     _musicFadeTimer?.cancel();
-    if (fadeDuration == null) {
+    if (fadeDuration == null || fadeDuration <= Duration.zero) {
       await musicPlayer.stop();
+      await musicPlayer.setAudioSource(ConcatenatingAudioSource(children: []));
       return;
     }
 
@@ -179,6 +190,7 @@ class AudioController {
 
       if (vol == 0.0) {
         musicPlayer.stop();
+        musicPlayer.setAudioSource(ConcatenatingAudioSource(children: []));
         t.cancel();
         retFuture.complete();
       }
@@ -238,6 +250,7 @@ class AudioController {
   }
 
   Future<void> _muteSfx() async {
+    print("muting sfx");
     for (final soundIds in _sfxSources.values) {
       for (final soundId in soundIds) {
         _sfxPlayer.setVolume(soundId: soundId, volume: 0.0);
@@ -246,6 +259,7 @@ class AudioController {
   }
 
   Future<void> _unmuteSfx() async {
+    print("unmuting sfx");
     for (final entry in _sfxSources.entries) {
       final sfx = entry.key;
       final soundIds = entry.value;

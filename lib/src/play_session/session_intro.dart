@@ -10,7 +10,7 @@ import 'package:tableturf_mobile/src/game_internals/opponentAI.dart';
 import 'package:tableturf_mobile/src/game_internals/player.dart';
 import 'package:tableturf_mobile/src/game_internals/tile.dart';
 import 'package:tableturf_mobile/src/components/splashtag.dart';
-import 'package:tableturf_mobile/src/style/palette.dart';
+import 'package:tableturf_mobile/src/style/constants.dart';
 import 'package:tableturf_mobile/src/style/my_transition.dart';
 
 import '../audio/songs.dart';
@@ -300,7 +300,6 @@ class _PlaySessionIntroState extends State<PlaySessionIntro>
     await Future<void>.delayed(const Duration(milliseconds: 200));
     final overlayState = Overlay.of(context);
     final animationLayer = OverlayEntry(builder: (context) {
-      final palette = Palette();
       final mediaQuery = MediaQuery.of(context);
       return DefaultTextStyle(
         style: TextStyle(
@@ -336,7 +335,7 @@ class _PlaySessionIntroState extends State<PlaySessionIntro>
                                           child: DecoratedBox(
                                             decoration: BoxDecoration(
                                               shape: BoxShape.circle,
-                                              color: palette.tileYellow,
+                                              color: Palette.tileYellow,
                                             ),
                                           )
                                       )
@@ -351,7 +350,7 @@ class _PlaySessionIntroState extends State<PlaySessionIntro>
                                           child: DecoratedBox(
                                             decoration: BoxDecoration(
                                               shape: BoxShape.circle,
-                                              color: palette.tileBlue,
+                                              color: Palette.tileBlue,
                                             ),
                                           )
                                       )
@@ -431,13 +430,14 @@ class _PlaySessionIntroState extends State<PlaySessionIntro>
       );
     });
     overlayState.insert(animationLayer);
+    final audioController = AudioController();
+    await audioController.loadSong(SongType.battle1);
     await Future<void>.delayed(const Duration(milliseconds: 800));
 
-    final audioController = AudioController();
     _introAnimator.value = 0.0;
-    audioController.playSfx(SfxType.gameIntro);
-    Future.delayed(const Duration(milliseconds: 2075), () async {
-      await audioController.playSong(SongType.battle1);
+    await audioController.playSfx(SfxType.gameIntro);
+    Future.delayed(const Duration(milliseconds: 2150), () async {
+      await audioController.startSong();
     });
     Future.delayed(const Duration(milliseconds: 3500), () async {
       audioController.playSfx(SfxType.gameIntroExit);
@@ -484,11 +484,10 @@ class _PlaySessionIntroState extends State<PlaySessionIntro>
 
   @override
   Widget build(BuildContext context) {
-    final palette = context.watch<Palette>();
     final mediaQuery = MediaQuery.of(context);
 
     final screen = Container(
-      color: palette.backgroundPlaySession,
+      color: Palette.backgroundPlaySession,
       child: Padding(
         padding: mediaQuery.padding,
         child: buildBoardWidget(
