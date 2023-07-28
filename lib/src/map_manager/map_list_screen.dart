@@ -13,6 +13,7 @@ import 'map_editor_screen.dart';
 
 enum MapPopupActions {
   delete,
+  duplicate,
 }
 
 
@@ -178,12 +179,20 @@ class _MapListScreenState extends State<MapListScreen>
                                                     settings.deleteMap(mapNotifier.value.mapID);
                                                     setState(() {});
                                                     break;
+                                                  case MapPopupActions.duplicate:
+                                                    settings.duplicateMap(mapNotifier.value.mapID);
+                                                    setState(() {});
+                                                    break;
                                                 }
                                               },
                                               itemBuilder: (context) => [
                                                 PopupMenuItem(
                                                   child: Text("Delete"),
                                                   value: MapPopupActions.delete,
+                                                ),
+                                                PopupMenuItem(
+                                                  child: Text("Duplicate"),
+                                                  value: MapPopupActions.duplicate,
                                                 ),
                                               ],
                                             )

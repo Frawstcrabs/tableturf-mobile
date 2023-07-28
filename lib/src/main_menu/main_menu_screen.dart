@@ -29,13 +29,14 @@ class MainMenuScreen extends StatelessWidget {
         squarishMainArea: Center(
           child: Transform.rotate(
             angle: -0.1,
-            child: const Text(
+            child: Text(
               'Tableturf Mobile',
               textAlign: TextAlign.center,
               style: TextStyle(
                 fontFamily: 'Splatfont1',
                 fontSize: 55,
                 height: 1,
+                color: Colors.grey[200],
               ),
             ),
           ),

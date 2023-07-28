@@ -84,15 +84,21 @@ class AudioController {
   Future<void> initialize() async {
     for (final sfx in SfxType.values) {
       _sfxSources[sfx] = [];
-      final volume = soundTypeToVolume(sfx);
-      for (final filename in soundTypeToFilename(sfx)) {
-        final content = await rootBundle.load("assets/sfx/$filename");
-        final soundId = await _sfxPlayer.load(content);
-        print("loading sfx $filename return sound id $soundId");
-        await _sfxPlayer.setVolume(soundId: soundId, volume: volume);
-        _sfxSources[sfx]!.add(soundId);
-      }
     }
+    await Future.wait([
+      for (final sfx in SfxType.values) () async {
+        final volume = soundTypeToVolume(sfx);
+        _sfxSources[sfx] = await Future.wait([
+          for (final filename in soundTypeToFilename(sfx)) () async {
+            final content = await rootBundle.load("assets/sfx/$filename");
+            final soundId = await _sfxPlayer.load(content);
+            _log.info("loading sfx $filename return sound id $soundId");
+            await _sfxPlayer.setVolume(soundId: soundId, volume: volume);
+            return soundId;
+          }()
+        ]);
+      }()
+    ]);
   }
 
   Future<void> playSfx(SfxType type) async {
@@ -140,6 +146,7 @@ class AudioController {
       }
     });
     _log.info(musicPlayer.audioSource?.sequence);
+    _log.info("load complete");
   }
 
   Future<void> startSong() async {
@@ -154,6 +161,7 @@ class AudioController {
       _log.info('Ignoring playing song because music is turned off.');
       return;
     }
+    _log.info("playing song: ${musicPlayer.audioSource?.sequence}");
     await musicPlayer.play();
   }
 
@@ -167,6 +175,7 @@ class AudioController {
     _musicFadeTimer?.cancel();
     if (fadeDuration == null || fadeDuration <= Duration.zero) {
       await musicPlayer.stop();
+      _log.info("clearing music source");
       await musicPlayer.setAudioSource(ConcatenatingAudioSource(children: []));
       return;
     }
@@ -178,7 +187,7 @@ class AudioController {
     int stepLen = max(4, fadeTime ~/ 100);
     int lastTick = DateTime.now().millisecondsSinceEpoch;
 
-    _musicFadeTimer = Timer.periodic(new Duration(milliseconds: stepLen), ( Timer t ) {
+    _musicFadeTimer = Timer.periodic(new Duration(milliseconds: stepLen), (t) async {
       var now = DateTime.now().millisecondsSinceEpoch;
       var tick = (now - lastTick) / fadeTime;
       lastTick = now;
@@ -189,9 +198,10 @@ class AudioController {
       musicPlayer.setVolume(vol);
 
       if (vol == 0.0) {
-        musicPlayer.stop();
-        musicPlayer.setAudioSource(ConcatenatingAudioSource(children: []));
         t.cancel();
+        _log.info("clearing music source");
+        await musicPlayer.stop();
+        await musicPlayer.setAudioSource(ConcatenatingAudioSource(children: []));
         retFuture.complete();
       }
     });
@@ -250,7 +260,7 @@ class AudioController {
   }
 
   Future<void> _muteSfx() async {
-    print("muting sfx");
+    _log.info("muting sfx");
     for (final soundIds in _sfxSources.values) {
       for (final soundId in soundIds) {
         _sfxPlayer.setVolume(soundId: soundId, volume: 0.0);
@@ -259,7 +269,7 @@ class AudioController {
   }
 
   Future<void> _unmuteSfx() async {
-    print("unmuting sfx");
+    _log.info("unmuting sfx");
     for (final entry in _sfxSources.entries) {
       final sfx = entry.key;
       final soundIds = entry.value;

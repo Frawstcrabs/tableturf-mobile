@@ -18,10 +18,6 @@ import 'tile.dart';
 import 'move.dart';
 import 'player.dart';
 
-int clamp(int x, int _min, int _max) {
-  return min(_max, max(_min, x));
-}
-
 class BattleEvent {
   Duration get duration => Duration.zero;
   const BattleEvent();
@@ -106,7 +102,7 @@ class TableturfBattle {
 
   final ValueNotifier<int> yellowCountNotifier = ValueNotifier(1);
   final ValueNotifier<int> blueCountNotifier = ValueNotifier(1);
-  final ValueNotifier<int> turnCountNotifier = ValueNotifier(12);
+  final ValueNotifier<int> turnCountNotifier = ValueNotifier(kReleaseMode ? 12 : 4);
   int _yellowSpecialCount = 0, _blueSpecialCount = 0;
 
   final TableturfPlayer yellow;
@@ -304,8 +300,10 @@ class TableturfBattle {
 
         await Future<void>.delayed(eventsDuration - (musicFadeTime + musicSilenceTime));
         await audioController.stopSong(fadeDuration: musicFadeTime);
-        audioController.loadSong(SongType.last3Turns);
-        await Future<void>.delayed(musicSilenceTime);
+        await Future.wait([
+          audioController.loadSong(SongType.last3Turns),
+          Future<void>.delayed(musicSilenceTime),
+        ]);
         await audioController.startSong();
       }();
     }

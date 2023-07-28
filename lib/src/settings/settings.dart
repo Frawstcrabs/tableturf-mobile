@@ -196,6 +196,24 @@ class Settings {
     return deck;
   }
 
+  void duplicateDeck(int deckID) {
+    final oldDeckIndex = _decks.indexWhere((deck) => deck.value.deckID == deckID);
+    final oldDeck = _decks[oldDeckIndex].value;
+    final deck = TableturfDeck(
+      deckID: _nextDeckID,
+      cards: oldDeck.cards,
+      name: oldDeck.name,
+      cardSleeve: oldDeck.cardSleeve,
+    );
+    _decks.insert(oldDeckIndex + 1, ValueNotifier(deck));
+    _nextDeckID += 1;
+    () async {
+      await _writeNextDeckID();
+      await _writeDeck(deck);
+      await _writeDeckIndexes();
+    }();
+  }
+
   void deleteDeck(int deckID) {
     _decks.removeWhere((deck) => deck.value.deckID == deckID);
     () async {
@@ -276,6 +294,23 @@ class Settings {
       await _writeMapIndexes();
     }();
     return map;
+  }
+
+  void duplicateMap(int mapID) {
+    final oldMapIndex = _maps.indexWhere((map) => map.value.mapID == mapID);
+    final oldMap = _maps[oldMapIndex].value;
+    final map = TableturfMap(
+      mapID: _nextMapID,
+      name: oldMap.name,
+      board: oldMap.board.copy()
+    );
+    _maps.insert(oldMapIndex + 1, ValueNotifier(map));
+    _nextMapID += 1;
+    () async {
+      await _writeNextMapID();
+      await _writeMap(map);
+      await _writeMapIndexes();
+    }();
   }
 
   void deleteMap(int mapID) {

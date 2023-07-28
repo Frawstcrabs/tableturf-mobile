@@ -301,7 +301,6 @@ double _rateMove({
         );
       }
       break;
-
        */
     case AILevel.level4:
       final specialScoreDesire = 1.0 + ((12 - turnsLeft) / 8);
@@ -485,7 +484,7 @@ TableturfMove findBestBlueMove(List<dynamic> args) {
   final int special = args[2];
   final int turnsLeft = args[3];
   final AILevel aiLevel = args[4];
-  final bool flipBoard = args.length == 6 ? args[5] : true;
+  final bool flipBoard = args.length >= 6 ? args[5] : true;
 
   final startTime = DateTime.now().microsecondsSinceEpoch;
   final board = flipBoard ? _flipBoard(rawBoard) : rawBoard;
@@ -508,8 +507,8 @@ TableturfMove findBestBlueMove(List<dynamic> args) {
   return TableturfMove(
     card: bestMove.card,
     rotation: newRot,
-    x: (board[0].length - 1) - bestMove.x - pattern[0].length + 1,
-    y: (board.length - 1) - bestMove.y - pattern.length + 1,
+    x: board[0].length - bestMove.x - pattern[0].length,
+    y: board.length - bestMove.y - pattern.length,
     pass: bestMove.pass,
     special: bestMove.special,
     traits: const BlueTraits(),

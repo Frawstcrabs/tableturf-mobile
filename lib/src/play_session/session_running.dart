@@ -877,9 +877,9 @@ class _PlaySessionScreenState extends State<PlaySessionScreen>
     _scoreFadeController.reverse(from: 1.0);
     await _outroController.animateTo(0.5);
     await AudioController().stopSong(
-      fadeDuration: const Duration(milliseconds: 1000)
+      fadeDuration: const Duration(milliseconds: 700)
     );
-    await Future<void>.delayed(const Duration(milliseconds: 1500));
+    await Future<void>.delayed(const Duration(milliseconds: 900));
     await _outroController.forward(from: 0.5);
     animationLayer.remove();
     widget.battle.updateScores();
@@ -986,8 +986,8 @@ class _PlaySessionScreenState extends State<PlaySessionScreen>
     final newX = ((piecePosition!.dx - boardLocation.dx) / boardTileStep).floor();
     final newY = ((piecePosition!.dy - boardLocation.dy) / boardTileStep).floor();
     final newCoords = Coords(
-        clamp(newX, 0, board[0].length - 1),
-        clamp(newY, 0, board.length - 1),
+        newX.clamp(0, board[0].length - 1),
+        newY.clamp(0, board.length - 1),
     );
     if ((
     newY < 0 ||
@@ -2071,10 +2071,13 @@ class _PlaySessionScreenState extends State<PlaySessionScreen>
                 if (_lockInputs) {
                   return false;
                 }
+                final audioController = AudioController();
+                audioController.playSfx(SfxType.giveUpOpen);
                 var choice = await showMultiChoicePrompt(
                   context,
                   title: "Give up?",
-                  options: ["Yeah", "Nah"]
+                  options: ["Yeah", "Nah"],
+                  sfx: [SfxType.giveUpSelect, SfxType.menuButtonPress],
                 );
                 if (choice == 0) {
                   battle.stopAllProgress = true;

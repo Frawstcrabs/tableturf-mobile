@@ -83,11 +83,13 @@ class _MultiChoiceOverlayController {
 class _MultiChoiceOverlay extends StatefulWidget {
   final String title;
   final List<String> options;
+  final List<SfxType>? sfx;
   final bool useWave;
   final _MultiChoiceOverlayController _controller;
   const _MultiChoiceOverlay({
     required this.title,
     required this.options,
+    this.sfx,
     required this.useWave,
     required _MultiChoiceOverlayController controller
   }): _controller = controller;
@@ -248,7 +250,7 @@ class _MultiChoiceOverlayState extends State<_MultiChoiceOverlay>
                                             onPressEnd: _createTapCallback(i),
                                             designRatio: designRatio,
                                             child: Text(widget.options[i]),
-                                            sfx: SfxType.menuButtonPress,
+                                            sfx: widget.sfx?[i] ?? SfxType.menuButtonPress,
                                           ),
                                         ),
                                       ),
@@ -309,14 +311,17 @@ class _MultiChoiceOverlayState extends State<_MultiChoiceOverlay>
 Future<int> showMultiChoicePrompt(BuildContext context, {
   required String title,
   required List<String> options,
+  List<SfxType>? sfx,
   bool useWave = false,
 }) async {
+  assert(sfx == null || options.length == sfx.length);
   final controller = _MultiChoiceOverlayController();
   final overlayState = Overlay.of(context);
   final selectionLayer = OverlayEntry(builder: (context) {
     return _MultiChoiceOverlay(
       title: title,
       options: options,
+      sfx: sfx,
       useWave: useWave,
       controller: controller
     );

@@ -345,9 +345,9 @@ class _PlaySessionEndState extends State<PlaySessionEnd>
     await _scoreBarAnimator.forward();
     _scoreSplashAnimator.forward(from: 0.0);
     await audioController.playSfx(SfxType.scoreBarImpact);
-    await Future<void>.delayed(const Duration(milliseconds: 300));
+    await Future<void>.delayed(const Duration(milliseconds: 250));
     await _scoreCountersAnimator.forward();
-    await Future<void>.delayed(const Duration(milliseconds: 300));
+    await Future<void>.delayed(const Duration(milliseconds: 250));
     canProgressOverlays = true;
     audioController.startSong();
   }
@@ -365,15 +365,15 @@ class _PlaySessionEndState extends State<PlaySessionEnd>
     final audioController = AudioController();
     var choice = await showMultiChoicePrompt(
       context,
-      title: "Keep playing?",
-      options: ["Nah", "Yes!"],
+      title: widget.battle.playerAI == null ? "Keep playing?" : "Go again?",
+      options: ["Yes!", "Nah"],
       useWave: false,
     );
-    if (choice == 1) {
+    if (choice == 0) {
       final battle = widget.battle;
       battle.yellow.reset();
       battle.blue.reset();
-      audioController.stopSong(fadeDuration: const Duration(milliseconds: 800));
+      audioController.stopSong(fadeDuration: Durations.transitionToGame);
       Navigator.of(context).pushReplacement(buildFadeToBlackTransition(
         child: PlaySessionIntro(
           sessionCompleter: widget.sessionCompleter,
@@ -388,8 +388,8 @@ class _PlaySessionEndState extends State<PlaySessionEnd>
           showXpPopup: widget.showXpPopup,
         ),
         color: Palette.backgroundPlaySession,
-        transitionDuration: const Duration(milliseconds: 800),
-        reverseTransitionDuration: const Duration(milliseconds: 800),
+        transitionDuration: Durations.transitionToGame,
+        reverseTransitionDuration: Durations.transitionToGame,
       ));
       return;
     }
@@ -399,6 +399,8 @@ class _PlaySessionEndState extends State<PlaySessionEnd>
 
   Future<void> _runOverlays() async {
     if (!canProgressOverlays) return;
+    final audioController = AudioController();
+    await audioController.playSfx(SfxType.menuButtonPress);
     canProgressOverlays = false;
     if (widget.showXpPopup) {
       await showXpBarPopup(

@@ -7,6 +7,7 @@ import 'package:flutter/material.dart';
 class Durations {
   // misc
   static const fadeToBlackTransition = Duration(milliseconds: 400);
+  static const transitionToGame = Duration(milliseconds: 800);
 
   // game session
   static const _animateBattleScoreDiff = 1000;
@@ -23,12 +24,13 @@ class Durations {
   static const turnCounterBounceUp = Duration(milliseconds: 60);
 
   static const xpBarFill = Duration(milliseconds: 1000);
+  static const xpBarPause = Duration(milliseconds: 750);
 }
 
 class Palette {
   static const darkPen = const Color(0xFF0050bc);
   static const ink = const Color(0xee352b42);
-  static const backgroundMain = const Color(0xffffffd1);
+  static const backgroundMain = const Color(0xff404040);
   static const backgroundLevelSelection = const Color(0xffa2dcc7);
   static const backgroundCardList = const Color.fromRGBO(208, 220, 220, 1.0);
   static const backgroundDeckList = const Color.fromRGBO(213, 225, 213, 1.0);
@@ -42,9 +44,9 @@ class Palette {
   static const tileEdge = const Color.fromRGBO(80, 80, 80, 1);
   static const tileWall = const Color.fromRGBO(160, 160, 160, 1);
   static const tileYellow = const Color.fromRGBO(255, 255, 17, 1);
-  static const tileYellowSpecial = const Color.fromRGBO(245, 127, 11, 1.0);
+  static const tileYellowSpecial = const Color.fromRGBO(255, 149, 51, 1.0);
   static const tileYellowSpecialCenter = const Color.fromRGBO(225, 255, 17, 1);
-  static const tileYellowSpecialFlame = const Color.fromRGBO(255, 159, 4, 1);
+  static const tileYellowSpecialFlame = const Color.fromRGBO(255, 184, 54, 1.0);
   static const tileBlue = const Color.fromRGBO(71, 92, 255, 1);
   static const tileBlueSpecial = const Color.fromRGBO(21, 234, 234, 1.0);
   static const tileBlueSpecialCenter = const Color.fromRGBO(240, 255, 255, 1);

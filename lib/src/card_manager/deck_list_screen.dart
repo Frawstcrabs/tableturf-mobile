@@ -12,6 +12,7 @@ import '../style/constants.dart';
 
 enum DeckPopupActions {
   delete,
+  duplicate,
 }
 
 
@@ -116,12 +117,20 @@ class _DeckListScreenState extends State<DeckListScreen> {
                                                       settings.deleteDeck(deck.deckID);
                                                       setState(() {});
                                                       break;
+                                                    case DeckPopupActions.duplicate:
+                                                      settings.duplicateDeck(deck.deckID);
+                                                      setState(() {});
+                                                      break;
                                                   }
                                                 },
                                                 itemBuilder: (context) => [
                                                   PopupMenuItem(
                                                     child: Text("Delete"),
                                                     value: DeckPopupActions.delete,
+                                                  ),
+                                                  PopupMenuItem(
+                                                    child: Text("Duplicate"),
+                                                    value: DeckPopupActions.duplicate,
                                                   ),
                                                 ],
                                               )

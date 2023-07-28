@@ -7,13 +7,13 @@ void paintScoreBar({
   required Animation<double> waveAnimation,
   required AxisDirection direction,
   required Paint paint,
+  double waveWidth = 0.3,
+  double waveHeight = 0.4,
 }) {
-  const WAVE_WIDTH = 0.3;
-  const WAVE_HEIGHT = 0.4;
   const OVERPAINT = 5.0;
 
-  final waveWidth = (direction == AxisDirection.up || direction == AxisDirection.down ? size.width : size.height) * WAVE_WIDTH;
-  final waveHeight = waveWidth * WAVE_HEIGHT;
+  waveWidth *= (direction == AxisDirection.up || direction == AxisDirection.down ? size.width : size.height);
+  waveHeight *= waveWidth;
   final overpaint_offset = OVERPAINT + waveHeight;
   final path = Path();
 

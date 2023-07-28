@@ -7,6 +7,7 @@ import 'package:tableturf_mobile/src/audio/sounds.dart';
 import 'package:tableturf_mobile/src/player_progress/player_progress.dart';
 
 import '../components/paint_score_bar.dart';
+import '../settings/settings.dart';
 import '../style/constants.dart';
 
 class XpBarPainter extends CustomPainter {
@@ -20,25 +21,30 @@ class XpBarPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     canvas.drawColor(Colors.grey[900]!, BlendMode.srcOver);
-    paintScoreBar(
-      canvas: canvas,
-      size: size,
-      length: length,
-      waveAnimation: waveAnimation,
-      direction: AxisDirection.left,
-      paint: Paint()..shader = LinearGradient(
-        colors: [
-          const Color.fromRGBO(129, 51, 201, 1.0),
-          const Color.fromRGBO(78, 105, 136, 1.0),
-          const Color.fromRGBO(71, 164, 90, 1.0),
+    final paint = Paint()
+      ..shader = LinearGradient(
+        colors: const [
+          Color.fromRGBO(129, 51, 201, 1.0),
+          Color.fromRGBO(78, 105, 136, 1.0),
+          Color.fromRGBO(71, 164, 90, 1.0),
         ],
-        stops: [
-          0.0,
-          0.5,
-          1.0,
-        ],
-      ).createShader(Offset(-size.width * (1.0 - length.value), 0) & size),
-    );
+      ).createShader(
+        Offset(-size.width * (1.0 - length.value), 0) & size
+      );
+    if (length.value >= 1.0) {
+      canvas.drawRect(Offset.zero & size, paint);
+    } else {
+      paintScoreBar(
+        canvas: canvas,
+        size: size,
+        length: length,
+        waveAnimation: waveAnimation,
+        direction: AxisDirection.left,
+        waveWidth: 0.5,
+        waveHeight: 0.25 + (length.value * 0.10),
+        paint: paint,
+      );
+    }
   }
 
   @override
@@ -58,11 +64,9 @@ class XpBarAnimationEntry {
 }
 
 class XpBarPopup extends StatefulWidget {
-  final Completer<void> popupExited;
   final int beforeXp, afterXp;
   const XpBarPopup({
     super.key,
-    required this.popupExited,
     required this.beforeXp,
     required this.afterXp,
   });
@@ -227,8 +231,8 @@ class _XpBarPopupState extends State<XpBarPopup>
     ]).animate(rankUpController);
 
     barWaveController = AnimationController(
-        duration: const Duration(milliseconds: 1000),
-        vsync: this
+      duration: const Duration(milliseconds: 2000),
+      vsync: this
     );
 
     barLengthController = AnimationController(
@@ -241,8 +245,10 @@ class _XpBarPopupState extends State<XpBarPopup>
   }
 
   Future<void> startAnimation() async {
-    final transitionFuture = transitionController.animateTo(0.5);
-    barWaveController.repeat();
+    final settings = Settings();
+    if (settings.continuousAnimation.value) {
+      barWaveController.repeat();
+    }
 
     final beforeRank = calculateXpToRank(widget.beforeXp);
     final afterRank = calculateXpToRank(widget.afterXp);
@@ -287,13 +293,14 @@ class _XpBarPopupState extends State<XpBarPopup>
           audioController.playSfx(SfxType.rankUp);
           rankUpController.forward(from: 0.0);
         } else {
+          await transitionController.animateTo(0.5);
           firstTween = false;
         }
         await barLengthController.forward(from: 0.0);
       }
     }
-    await transitionFuture;
-    finishedAnimation = true;
+    await Future<void>.delayed(Durations.xpBarPause);
+    await onExit();
   }
 
   @override
@@ -301,16 +308,14 @@ class _XpBarPopupState extends State<XpBarPopup>
     transitionController..stop()..dispose();
     barLengthController..stop()..dispose();
     barWaveController..stop()..dispose();
+    rankUpController..stop()..dispose();
     super.dispose();
   }
 
   Future<void> onExit() async {
-    if (!finishedAnimation) return;
-
     await transitionController.forward();
     barWaveController.stop();
     Navigator.of(context).pop();
-    widget.popupExited.complete();
   }
 
   @override
@@ -482,14 +487,8 @@ class _XpBarPopupState extends State<XpBarPopup>
                               mainAxisAlignment: MainAxisAlignment.center,
                               children: [
                                 Text(
-                                  "Tableturf",
-                                  style: TextStyle(
-                                    fontSize: 12 * designRatio,
-                                    height: 1.0,
-                                  ),
-                                ),
-                                Text(
-                                  "points",
+                                  "Tableturf\npoints",
+                                  textAlign: TextAlign.center,
                                   style: TextStyle(
                                     fontSize: 12 * designRatio,
                                     height: 1.0,
@@ -543,30 +542,24 @@ class _XpBarPopupState extends State<XpBarPopup>
       ),
     );
     return WillPopScope(
-      onWillPop: () async {
-        onExit();
-        return false;
-      },
-      child: GestureDetector(
-        onTap: onExit,
-        child: FadeTransition(
-          opacity: transitionOpacity,
-          child: DecoratedBox(
-            decoration: BoxDecoration(
-              gradient: RadialGradient(
-                colors: [
-                  Colors.black38,
-                  Colors.black54,
-                ],
-                radius: 1.3,
-              )
-            ),
-            child: Align(
-              alignment: Alignment.center,
-              child: promptBox,
+      onWillPop: () async => false,
+      child: FadeTransition(
+        opacity: transitionOpacity,
+        child: DecoratedBox(
+          decoration: BoxDecoration(
+            gradient: RadialGradient(
+              colors: [
+                Colors.black38,
+                Colors.black54,
+              ],
+              radius: 1.3,
             )
+          ),
+          child: Align(
+            alignment: Alignment.center,
+            child: promptBox,
           )
-        ),
+        )
       ),
     );
   }
@@ -577,16 +570,13 @@ Future<void> showXpBarPopup(BuildContext context, {
   required int beforeXp,
   required int afterXp,
 }) async {
-  final Completer<void> popupExited = Completer();
-  Navigator.of(context).push(PageRouteBuilder(
+  await Navigator.of(context).push(PageRouteBuilder(
     opaque: false,
     pageBuilder: (_, __, ___) {
       return XpBarPopup(
         beforeXp: beforeXp,
         afterXp: afterXp,
-        popupExited: popupExited
       );
     }
   ));
-  await popupExited.future;
 }

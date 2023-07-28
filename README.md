@@ -8,7 +8,7 @@ Use `flutter run` to run on a device.
 
 ## Todo list
 
-- [ ] Implement XP from battles
+- [x] Implement XP from battles
 - [ ] Implement unlocking opponents via ranks
 - [ ] Implement card bit rewards
 - [ ] Implement card packs

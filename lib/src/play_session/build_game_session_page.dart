@@ -75,8 +75,8 @@ PageRouteBuilder<T> _buildGameSessionPage<T>({
       showXpPopup: showXpPopup,
     ),
     color: Palette.backgroundPlaySession,
-    transitionDuration: const Duration(milliseconds: 800),
-    reverseTransitionDuration: const Duration(milliseconds: 800),
+    transitionDuration: Durations.transitionToGame,
+    reverseTransitionDuration: Durations.transitionToGame,
   );
 }
 
@@ -113,5 +113,5 @@ Future<void> startGame({
     showXpPopup: showXpPopup,
   ));
   await sessionCompleter.future;
-  AudioController().stopSong(fadeDuration: Durations.fadeToBlackTransition);
+  AudioController().stopSong(fadeDuration: Durations.transitionToGame);
 }
