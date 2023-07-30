@@ -19,12 +19,16 @@ class BoardPainter extends CustomPainter {
   final Listenable? repaint;
   final double? tileSideLength;
   final ValueListenable<bool>? specialButtonOn;
+  final ui.Image? normalInk, specialInk, wallTile;
 
   BoardPainter({
     required this.board,
     this.repaint,
     this.specialButtonOn,
     this.tileSideLength,
+    this.normalInk,
+    this.specialInk,
+    this.wallTile,
   }): super(repaint: Listenable.merge([specialButtonOn, repaint]));
 
   @override
@@ -43,32 +47,108 @@ class BoardPainter extends CustomPainter {
       size.height / board.length,
       size.width / board[0].length,
     );
+    final specialButtonOn = this.specialButtonOn?.value ?? false;
     for (var y = 0; y < board.length; y++) {
       for (var x = 0; x < board[0].length; x++) {
         final state = board[y][x];
-        if (state == TileState.empty) continue;
-
-        bodyPaint.color = state == TileState.unfilled ? Palette.tileUnfilled
-            : state == TileState.wall ? Palette.tileWall
-            : state == TileState.yellow ? Palette.tileYellow
-            : state == TileState.yellowSpecial ? Palette.tileYellowSpecial
-            : state == TileState.blue ? Palette.tileBlue
-            : state == TileState.blueSpecial ? Palette.tileBlueSpecial
-            : Color.fromRGBO(0, 0, 0, 0);
-        if ((specialButtonOn?.value ?? false) && !state.isSpecial && state != TileState.empty) {
-          bodyPaint.color = Color.alphaBlend(
-            const Color.fromRGBO(0, 0, 0, 0.4),
-            bodyPaint.color,
-          );
-        }
         final tileRect = Rect.fromLTWH(
-          x * tileSideLength,
-          y * tileSideLength,
-          tileSideLength,
-          tileSideLength
+            x * tileSideLength,
+            y * tileSideLength,
+            tileSideLength,
+            tileSideLength
         );
-        canvas.drawRect(tileRect, bodyPaint);
-        canvas.drawRect(tileRect, edgePaint);
+
+        switch (state) {
+          case TileState.empty:
+            // draw nothing
+            break;
+          case TileState.unfilled:
+            bodyPaint.color = Palette.tileUnfilled;
+            if (specialButtonOn) {
+              bodyPaint.color = Color.alphaBlend(
+                const Color.fromRGBO(0, 0, 0, 0.4),
+                bodyPaint.color,
+              );
+            }
+            canvas.drawRect(tileRect, bodyPaint);
+            canvas.drawRect(tileRect, edgePaint);
+            break;
+          case TileState.wall:
+            final wallImage = wallTile;
+            if (wallImage == null) {
+              bodyPaint.color = Palette.tileWall;
+              if (specialButtonOn) {
+                bodyPaint.color = Color.alphaBlend(
+                  const Color.fromRGBO(0, 0, 0, 0.4),
+                  bodyPaint.color,
+                );
+              }
+              canvas.drawRect(tileRect, bodyPaint);
+              canvas.drawRect(tileRect, edgePaint);
+            } else {
+              paintImage(
+                canvas: canvas,
+                rect: tileRect,
+                image: wallImage,
+                colorFilter: specialButtonOn ? null : ColorFilter.mode(
+                  const Color.fromRGBO(0, 0, 0, 0.4),
+                  BlendMode.srcATop,
+                )
+              );
+            }
+            break;
+          case TileState.yellow:
+          case TileState.blue:
+            final normalImage = normalInk;
+            bodyPaint.color = state.isYellow
+                ? const Color.fromRGBO(238, 249, 2, 1.0)
+                : Palette.tileBlue;
+            if (normalImage == null) {
+              if (specialButtonOn) {
+                bodyPaint.color = Color.alphaBlend(
+                  const Color.fromRGBO(0, 0, 0, 0.4),
+                  bodyPaint.color,
+                );
+              }
+              canvas.drawRect(tileRect, bodyPaint);
+              canvas.drawRect(tileRect, edgePaint);
+            } else {
+              paintImage(
+                canvas: canvas,
+                rect: tileRect,
+                image: normalImage,
+                colorFilter: ColorFilter.mode(
+                  bodyPaint.color,
+                  BlendMode.dstOver,
+                )
+              );
+              if (specialButtonOn) {
+                canvas.drawRect(tileRect, bodyPaint..color = const Color.fromRGBO(0, 0, 0, 0.4));
+              }
+            }
+            break;
+          case TileState.yellowSpecial:
+          case TileState.blueSpecial:
+            final specialImage = specialInk;
+            bodyPaint.color = state.isYellow
+                ? Palette.tileYellowSpecial
+                : Palette.tileBlueSpecial;
+            if (specialImage == null) {
+              canvas.drawRect(tileRect, bodyPaint);
+              canvas.drawRect(tileRect, edgePaint);
+            } else {
+              paintImage(
+                canvas: canvas,
+                rect: tileRect,
+                image: specialImage,
+                colorFilter: ColorFilter.mode(
+                  bodyPaint.color,
+                  BlendMode.dstOver,
+                )
+              );
+            }
+            break;
+        }
       }
     }
   }
@@ -80,6 +160,9 @@ class BoardPainter extends CustomPainter {
         || this.tileSideLength != oldDelegate.tileSideLength
         || this.specialButtonOn != oldDelegate.specialButtonOn
         || this.repaint != oldDelegate.repaint
+        || this.normalInk != oldDelegate.normalInk
+        || this.specialInk != oldDelegate.specialInk
+        || this.wallTile != oldDelegate.wallTile
     );
   }
 }
@@ -230,13 +313,16 @@ class _BoardWidgetState extends State<BoardWidget>
   late final AnimationController _flameController;
   late final Animation<double> flashOpacity;
   final ValueNotifier<bool> showSpecialDarken = ValueNotifier(false);
-  late AssetImage _maskImage, _effectImage;
-  ImageStream? _maskStream, _effectStream;
-  ImageInfo? _maskInfo, _effectInfo;
+  late AssetImage _normalInkImage, _specialInkImage, _wallTileImage, _maskImage, _effectImage;
+  ImageStream? _normalInkStream, _specialInkStream, _wallTileStream, _maskStream, _effectStream;
+  ImageInfo? _normalInkInfo, _specialInkInfo, _wallTileInfo, _maskInfo, _effectInfo;
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
+    _normalInkImage = AssetImage("assets/images/normal_ink.png");
+    _specialInkImage = AssetImage("assets/images/special_ink.png");
+    _wallTileImage = AssetImage("assets/images/wall.png");
     _maskImage = AssetImage("assets/images/fire_mask3.png");
     _effectImage = AssetImage("assets/images/fire_noise.jpg");
     // We call _getImage here because createLocalImageConfiguration() needs to
@@ -271,6 +357,36 @@ class _BoardWidgetState extends State<BoardWidget>
       oldEffectStream?.removeListener(listener);
       _effectStream!.addListener(listener);
     }
+    final ImageStream? oldNormalInkStream = _normalInkStream;
+    _normalInkStream = _normalInkImage.resolve(createLocalImageConfiguration(context));
+    if (_normalInkStream!.key != oldNormalInkStream?.key) {
+      // If the keys are the same, then we got the same image back, and so we don't
+      // need to update the listeners. If the key changed, though, we must make sure
+      // to switch our listeners to the new image stream.
+      final ImageStreamListener listener = ImageStreamListener(_updateNormalInkImage);
+      oldNormalInkStream?.removeListener(listener);
+      _normalInkStream!.addListener(listener);
+    }
+    final ImageStream? oldSpecialInkStream = _specialInkStream;
+    _specialInkStream = _specialInkImage.resolve(createLocalImageConfiguration(context));
+    if (_specialInkStream!.key != oldSpecialInkStream?.key) {
+      // If the keys are the same, then we got the same image back, and so we don't
+      // need to update the listeners. If the key changed, though, we must make sure
+      // to switch our listeners to the new image stream.
+      final ImageStreamListener listener = ImageStreamListener(_updateSpecialInkImage);
+      oldSpecialInkStream?.removeListener(listener);
+      _specialInkStream!.addListener(listener);
+    }
+    final ImageStream? oldWallTileStream = _wallTileStream;
+    _wallTileStream = _wallTileImage.resolve(createLocalImageConfiguration(context));
+    if (_wallTileStream!.key != oldWallTileStream?.key) {
+      // If the keys are the same, then we got the same image back, and so we don't
+      // need to update the listeners. If the key changed, though, we must make sure
+      // to switch our listeners to the new image stream.
+      final ImageStreamListener listener = ImageStreamListener(_updateWallTileImage);
+      oldWallTileStream?.removeListener(listener);
+      _wallTileStream!.addListener(listener);
+    }
   }
 
   void _updateMaskImage(ImageInfo imageInfo, bool synchronousCall) {
@@ -286,6 +402,30 @@ class _BoardWidgetState extends State<BoardWidget>
       // Trigger a build whenever the image changes.
       _effectInfo?.dispose();
       _effectInfo = imageInfo;
+    });
+  }
+
+  void _updateNormalInkImage(ImageInfo imageInfo, bool synchronousCall) {
+    setState(() {
+      // Trigger a build whenever the image changes.
+      _normalInkInfo?.dispose();
+      _normalInkInfo = imageInfo;
+    });
+  }
+
+  void _updateSpecialInkImage(ImageInfo imageInfo, bool synchronousCall) {
+    setState(() {
+      // Trigger a build whenever the image changes.
+      _specialInkInfo?.dispose();
+      _specialInkInfo = imageInfo;
+    });
+  }
+
+  void _updateWallTileImage(ImageInfo imageInfo, bool synchronousCall) {
+    setState(() {
+      // Trigger a build whenever the image changes.
+      _wallTileInfo?.dispose();
+      _wallTileInfo = imageInfo;
     });
   }
 
@@ -350,6 +490,15 @@ class _BoardWidgetState extends State<BoardWidget>
     _effectStream?.removeListener(ImageStreamListener(_updateEffectImage));
     _effectInfo?.dispose();
     _effectInfo = null;
+    _normalInkStream?.removeListener(ImageStreamListener(_updateNormalInkImage));
+    _normalInkInfo?.dispose();
+    _normalInkInfo = null;
+    _specialInkStream?.removeListener(ImageStreamListener(_updateSpecialInkImage));
+    _specialInkInfo?.dispose();
+    _specialInkInfo = null;
+    _wallTileStream?.removeListener(ImageStreamListener(_updateWallTileImage));
+    _wallTileInfo?.dispose();
+    _wallTileInfo = null;
     super.dispose();
   }
 
@@ -365,6 +514,9 @@ class _BoardWidgetState extends State<BoardWidget>
               tileSideLength: widget.tileSize,
               specialButtonOn: showSpecialDarken,
               repaint: widget.battle.boardChangeNotifier,
+              //normalInk: _normalInkInfo?.image,
+              //specialInk: _specialInkInfo?.image,
+              //wallTile: _wallTileInfo?.image,
             ),
             child: Container(),
             isComplex: true,

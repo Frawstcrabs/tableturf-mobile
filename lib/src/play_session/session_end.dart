@@ -163,6 +163,7 @@ class PlaySessionEnd extends StatefulWidget {
   final String boardHeroTag;
   final TableturfBattle battle;
   final void Function()? onWin, onLose;
+  final Future<void> Function(BuildContext)? onPostGame;
   final Completer sessionCompleter;
   final bool showXpPopup;
 
@@ -174,6 +175,7 @@ class PlaySessionEnd extends StatefulWidget {
     required this.showXpPopup,
     this.onWin,
     this.onLose,
+    this.onPostGame,
   });
 
   @override
@@ -385,6 +387,7 @@ class _PlaySessionEndState extends State<PlaySessionEnd>
           playerAI: battle.playerAI,
           onWin: widget.onWin,
           onLose: widget.onLose,
+          onPostGame: widget.onPostGame,
           showXpPopup: widget.showXpPopup,
         ),
         color: Palette.backgroundPlaySession,
@@ -402,14 +405,7 @@ class _PlaySessionEndState extends State<PlaySessionEnd>
     final audioController = AudioController();
     await audioController.playSfx(SfxType.menuButtonPress);
     canProgressOverlays = false;
-    if (widget.showXpPopup) {
-      await showXpBarPopup(
-        context,
-        beforeXp: beforeXp,
-        afterXp: afterXp,
-      );
-      await Future<void>.delayed(const Duration(milliseconds: 100));
-    }
+    await widget.onPostGame?.call(context);
     await _checkRematch();
   }
 

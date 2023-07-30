@@ -257,6 +257,7 @@ class _XpBarPopupState extends State<XpBarPopup>
       currentRank.value = afterRank;
       currentXpRequirement = rankBrackets[0];
       barLength = AlwaysStoppedAnimation(widget.afterXp / rankBrackets[0]);
+      await transitionController.animateTo(0.5);
     } else {
       int clearedXp = rankRequirements.sublist(0, beforeRank - 1).fold<int>(
           0, (a, b) => a + b);

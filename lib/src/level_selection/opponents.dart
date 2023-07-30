@@ -61,4 +61,5 @@ const Map<int, String> deckIcons = {
   -23: "spyke",
   -1000: "randomiser",
   -1001: "randomiser",
+  -2000: "clonejelly",
 };

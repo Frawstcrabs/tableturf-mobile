@@ -30,6 +30,7 @@ PageRouteBuilder<T> _buildGameSessionPage<T>({
   AILevel? playerAI,
   void Function()? onWin,
   void Function()? onLose,
+  Future<void> Function(BuildContext)? onPostGame,
   required bool showXpPopup,
 }) {
   final settings = Settings();
@@ -72,6 +73,7 @@ PageRouteBuilder<T> _buildGameSessionPage<T>({
       playerAI: playerAI,
       onWin: onWin,
       onLose: onLose,
+      onPostGame: onPostGame,
       showXpPopup: showXpPopup,
     ),
     color: Palette.backgroundPlaySession,
@@ -93,6 +95,7 @@ Future<void> startGame({
   AILevel? playerAI,
   void Function()? onWin,
   void Function()? onLose,
+  Future<void> Function(BuildContext)? onPostGame,
   bool showXpPopup = false,
 }) async {
   final sessionCompleter = Completer();
@@ -110,6 +113,7 @@ Future<void> startGame({
     playerAI: playerAI,
     onWin: onWin,
     onLose: onLose,
+    onPostGame: onPostGame,
     showXpPopup: showXpPopup,
   ));
   await sessionCompleter.future;

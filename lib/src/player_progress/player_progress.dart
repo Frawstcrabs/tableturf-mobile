@@ -47,9 +47,10 @@ class PlayerProgress {
 
   late Map<String, Map<AILevel, int>> _winCounts;
 
-  late Map<String, Set<AILevel>> _unlockedDifficulties;
   late int _xp;
   late List<TableturfCardIdentifier> _unlockedCards;
+  late List<String> _unlockedCardSleeves;
+  late List<int> _unlockedOpponents;
 
   int get xp => _xp;
   set xp(int value) {
@@ -59,9 +60,9 @@ class PlayerProgress {
     }
   }
 
-  int get rank => calculateXpToRank(_xp);
+  List<int> get unlockedOpponents => _unlockedOpponents;
 
-  List<int> get remainingRankRequirements => rankRequirements.sublist(rank - 1);
+  int get rank => calculateXpToRank(_xp);
 
   /// Asynchronously loads values from the injected persistence store.
   Future<void> loadStateFromPersistence(SharedPreferences prefs) async {
@@ -82,16 +83,12 @@ class PlayerProgress {
     }));
     _xp = _prefs.getInt("tableturf-xp") ?? 0;
 
-    final Map<String, dynamic> unlockedDifficultiesJson = jsonDecode(
-      _prefs.getString("tableturf-unlocked_difficulties") ?? "{}"
+    final List unlockedOpponentsJson = jsonDecode(
+      _prefs.getString("tableturf-unlocked_opponents") ?? "[-1]"
     );
-    _unlockedDifficulties = Map.fromEntries(unlockedDifficultiesJson.entries.map((entry) {
-      final List<dynamic> difficulties = entry.value;
-      return MapEntry(
-        entry.key,
-        Set.from(difficulties.map((i) => AILevel.values[i])),
-      );
-    }));
+    _unlockedOpponents = unlockedOpponentsJson.map(
+        (i) => i as int
+    ).toList();
   }
 
   Future<void> _writeWinCounts() async {
@@ -103,7 +100,6 @@ class PlayerProgress {
               winEntry.key.index.toString(): winEntry.value
           }
       });
-      print(encodedJson);
       _prefs.setString("tableturf-wins", encodedJson);
     }
   }
@@ -125,40 +121,22 @@ class PlayerProgress {
     } else {
       difficultyMap[difficulty] = difficultyMap[difficulty]! + 1;
     }
-    if (difficultyMap[difficulty] == DIFFICULTY_UNLOCK_THRESHOLD) {
-      if (!_unlockedDifficulties.containsKey(key)) {
-        _unlockedDifficulties[key] = Set.from([AILevel.level1, AILevel.level2]);
-      } else if (difficulty.index < AILevel.values.length - 1){
-        _unlockedDifficulties[key]!.add(AILevel.values[difficulty.index + 1]);
-      }
-    }
     _writeWinCounts();
-    _writeUnlockedDifficulties();
     return difficultyMap[difficulty]!;
   }
 
-  Future<void> _writeUnlockedDifficulties() async {
+  Future<void> _writeUnlockedOpponents() async {
     if (_commitChanges) {
-      final encodedJson = jsonEncode({
-        for (final entry in _unlockedDifficulties.entries)
-          entry.key: List.from(entry.value.map((level) => level.index))
-      });
-      print(encodedJson);
-      _prefs.setString("tableturf-unlocked_difficulties", encodedJson);
+      await _prefs.setString(
+        "tableturf-unlocked_opponents",
+        jsonEncode(_unlockedOpponents)
+      );
     }
   }
 
-  Set<AILevel> getDifficulties(String key) {
-    return _unlockedDifficulties[key] ?? Set.from([AILevel.level1]);
-  }
-
-  void unlockDifficulty(String key, AILevel newDifficulty) {
-    if (!_unlockedDifficulties.containsKey(key)) {
-      _unlockedDifficulties[key] = Set.from([newDifficulty]);
-    } else {
-      _unlockedDifficulties[key]!.add(newDifficulty);
-    }
-    _writeUnlockedDifficulties();
+  void unlockOpponent(int opponentID) {
+    _unlockedOpponents.add(opponentID);
+    _writeUnlockedOpponents();
   }
 
   Future<void> reset() async {
@@ -167,11 +145,9 @@ class PlayerProgress {
         entry.value[winEntry.key] = 0;
       }
     }
-    for (final key in _unlockedDifficulties.keys) {
-      _unlockedDifficulties[key] = Set.from([AILevel.level1]);
-    }
+    _unlockedOpponents = [-1];
     xp = 0;
     _writeWinCounts();
-    _writeUnlockedDifficulties();
+    _writeUnlockedOpponents();
   }
 }

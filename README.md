@@ -9,7 +9,7 @@ Use `flutter run` to run on a device.
 ## Todo list
 
 - [x] Implement XP from battles
-- [ ] Implement unlocking opponents via ranks
+- [x] Implement unlocking opponents via ranks
 - [ ] Implement card bit rewards
 - [ ] Implement card packs
 - [ ] Make the UI less shit/better able to handle different screen sizes

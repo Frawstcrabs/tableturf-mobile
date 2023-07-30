@@ -25,6 +25,7 @@ class PlaySessionIntro extends StatefulWidget {
   final AILevel? playerAI;
   final String boardHeroTag;
   final void Function()? onWin, onLose;
+  final Future<void> Function(BuildContext)? onPostGame;
   final Completer sessionCompleter;
   final bool showXpPopup;
 
@@ -40,6 +41,7 @@ class PlaySessionIntro extends StatefulWidget {
     this.playerAI,
     this.onWin,
     this.onLose,
+    this.onPostGame,
   });
 
   @override
@@ -456,6 +458,7 @@ class _PlaySessionIntroState extends State<PlaySessionIntro>
           boardHeroTag: widget.boardHeroTag,
           onWin: widget.onWin,
           onLose: widget.onLose,
+          onPostGame: widget.onPostGame,
           showXpPopup: widget.showXpPopup,
         );
       },

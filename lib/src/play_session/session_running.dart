@@ -199,6 +199,7 @@ class PlaySessionScreen extends StatefulWidget {
   final String boardHeroTag;
   final TableturfBattle battle;
   final void Function()? onWin, onLose;
+  final Future<void> Function(BuildContext)? onPostGame;
   final Completer sessionCompleter;
   final bool showXpPopup;
 
@@ -210,6 +211,7 @@ class PlaySessionScreen extends StatefulWidget {
     required this.showXpPopup,
     this.onWin,
     this.onLose,
+    this.onPostGame,
   });
 
   @override
@@ -894,6 +896,7 @@ class _PlaySessionScreenState extends State<PlaySessionScreen>
           boardHeroTag: widget.boardHeroTag,
           onWin: widget.onWin,
           onLose: widget.onLose,
+          onPostGame: widget.onPostGame,
           showXpPopup: widget.showXpPopup,
         );
       },

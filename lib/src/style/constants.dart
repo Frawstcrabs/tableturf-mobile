@@ -24,7 +24,7 @@ class Durations {
   static const turnCounterBounceUp = Duration(milliseconds: 60);
 
   static const xpBarFill = Duration(milliseconds: 1000);
-  static const xpBarPause = Duration(milliseconds: 750);
+  static const xpBarPause = Duration(milliseconds: 1000);
 }
 
 class Palette {

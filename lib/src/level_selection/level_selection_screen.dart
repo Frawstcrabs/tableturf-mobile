@@ -6,6 +6,7 @@ import 'dart:math';
 
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:tableturf_mobile/src/components/alert_base.dart';
 import 'package:tableturf_mobile/src/components/selection_button.dart';
 import 'package:tableturf_mobile/src/game_internals/opponentAI.dart';
 import 'package:tableturf_mobile/src/game_internals/player.dart';
@@ -14,11 +15,12 @@ import 'package:tableturf_mobile/src/player_progress/player_progress.dart';
 import 'package:tableturf_mobile/src/settings/settings.dart';
 
 import '../components/list_select_prompt.dart';
+import '../components/xp_bar_popup.dart';
 import '../game_internals/card.dart';
 import '../game_internals/deck.dart';
 import '../game_internals/map.dart';
 import '../game_internals/tile.dart';
-import '../play_session/build_game_session_page.dart';
+import '../play_session/start_game.dart';
 import '../style/constants.dart';
 import '../style/responsive_screen.dart';
 import '../components/deck_thumbnail.dart';
@@ -144,6 +146,14 @@ List<TableturfCardData> createPureRandomCards() {
 
 
 const BATTLE_LOSS_XP = 40;
+
+const OPPONENT_LIST = [
+  -1, -2, -3, -4, -5,
+  -6, -7, -8, -9, -10,
+  -11, -12, -13, -14, -15,
+  -16, -17, -18, -19, -20,
+  -21, -22, -23, -2000, -1000,
+];
 
 class LevelSelectionEntry extends StatefulWidget {
   final String name;
@@ -286,7 +296,6 @@ class _LevelSelectionEntryState extends State<LevelSelectionEntry>
     final settings = Settings();
     final playerProgress = PlayerProgress();
     final winCountMap = playerProgress.getWins(widget.entryID);
-    final difficultySet = playerProgress.getDifficulties(widget.entryID);
     return Padding(
       padding: const EdgeInsets.all(3.0),
       child: LayoutBuilder(
@@ -324,18 +333,13 @@ class _LevelSelectionEntryState extends State<LevelSelectionEntry>
                       );
                       return GestureDetector(
                         onTap: () {
-                          if (!difficultySet.contains(level)) {
-                            return;
-                          }
                           difficultyNotifier.value = level;
                         },
                         child: DecoratedBox(
                           decoration: BoxDecoration(
                             color: currentDifficulty == level
                               ? Colors.white
-                              : !difficultySet.contains(level)
-                                ? Colors.grey[850]
-                                : Colors.grey[650]
+                              : Colors.grey[650]
                           ),
                           child: Row(
                             mainAxisAlignment: MainAxisAlignment.spaceAround,
@@ -561,11 +565,124 @@ class LevelSelectionScreen extends StatefulWidget {
 
 class _LevelSelectionScreenState extends State<LevelSelectionScreen> {
   final ValueNotifier<String?> openedEntryNotifier = ValueNotifier(null);
+
+  void _checkRankUpRewards(int beforeRank, int afterRank) {
+    final playerProgress = PlayerProgress();
+    print("var i = $beforeRank; i < min($afterRank, ${OPPONENT_LIST.length - 1}); i++");
+    for (var i = beforeRank; i < min(afterRank, OPPONENT_LIST.length - 1); i++) {
+      final newOpponentID = OPPONENT_LIST[i];
+      print("unlocking opponent $newOpponentID at rank ${i + 1}");
+      playerProgress.unlockOpponent(newOpponentID);
+    }
+  }
+
+  Future<void> Function(TableturfDeck, AILevel) _runBattle(TableturfOpponent opponent) {
+    final settings = Settings();
+    final playerProgress = PlayerProgress();
+    return (yellowDeck, difficulty) async {
+      int beforeXp = playerProgress.xp;
+      int beforeRank = playerProgress.rank;
+      final onWin = () async {
+        playerProgress.incrementWins("deck:${opponent.deck.deckID}", difficulty);
+        playerProgress.xp += difficulty.xpAmount;
+        final afterRank = playerProgress.rank;
+        _checkRankUpRewards(beforeRank, afterRank);
+      };
+      final onLose = () async {
+        playerProgress.xp += BATTLE_LOSS_XP;
+        final afterRank = playerProgress.rank;
+        _checkRankUpRewards(beforeRank, afterRank);
+      };
+      final onPostGame = (BuildContext context) async {
+        await showXpBarPopup(
+          context,
+          beforeXp: beforeXp,
+          afterXp: playerProgress.xp,
+        );
+        await Future<void>.delayed(const Duration(milliseconds: 100));
+        final afterRank = playerProgress.rank;
+        for (var i = beforeRank; i < min(afterRank, OPPONENT_LIST.length - 1); i++) {
+          final newOpponentID = OPPONENT_LIST[i];
+          final newOpponent = opponents.firstWhere((op) => op.deck.deckID == newOpponentID);
+          await showAlert(context, builder: (context, designRatio) {
+            return NewOpponentPopup(
+              newOpponent: newOpponent,
+              designRatio: designRatio,
+            );
+          });
+          await Future<void>.delayed(const Duration(milliseconds: 100));
+        }
+        beforeXp = playerProgress.xp;
+        beforeRank = afterRank;
+      };
+
+      List<TableturfCardData>? tempCards = null;
+      late final TableturfDeck blueDeck;
+      late final int mapID;
+      switch (opponent.deck.deckID) {
+        case -1000:
+          // pure randomiser
+          tempCards = createPureRandomCards();
+          for (final card in tempCards) {
+            settings.registerTempCard(card);
+          }
+          blueDeck = TableturfDeck(
+            deckID: opponent.deck.deckID,
+            name: opponent.name,
+            cardSleeve: opponent.deck.cardSleeve,
+            cards: [for (final card in tempCards) card.ident]
+          );
+          mapID = officialMaps.random().mapID;
+          break;
+        case -1001:
+          // official randomiser
+          blueDeck = TableturfDeck(
+            deckID: opponent.deck.deckID,
+            name: opponent.name,
+            cardSleeve: opponent.deck.cardSleeve,
+            cards: [for (final card in officialCards.randomSample(15)) card.ident]
+          );
+          mapID = officialMaps.random().mapID;
+          break;
+        case -2000:
+          // clone jelly
+          blueDeck = yellowDeck;
+          mapID = opponent.mapID;
+          break;
+        default:
+          blueDeck = opponent.deck;
+          mapID = opponent.mapID;
+          break;
+      }
+      await startGame(
+        context: context,
+        map: settings.getMap(mapID),
+        yellowDeck: yellowDeck,
+        yellowName: settings.playerName.value,
+        blueDeck: blueDeck,
+        blueName: opponent.name,
+        blueIcon: deckIcons[opponent.deck.deckID],
+        aiLevel: difficulty,
+        onWin: onWin,
+        onLose: onLose,
+        onPostGame: onPostGame,
+        showXpPopup: true,
+      );
+      if (tempCards != null) {
+        for (final card in tempCards) {
+          settings.removeTempCard(card.ident);
+        }
+      }
+      // refresh the opponent list in case anything was unlocked
+      setState(() {});
+    };
+  }
+
   @override
   Widget build(BuildContext context) {
-    final settings = Settings();
-    final playerProgress = context.watch<PlayerProgress>();
-
+    final playerProgress = PlayerProgress();
+    final unlockedOpponents = playerProgress.unlockedOpponents;
+    final opponentList = opponents.where((o) => unlockedOpponents.contains(o.deck.deckID));
     return Scaffold(
       backgroundColor: Palette.backgroundLevelSelection,
       body: ResponsiveScreen(
@@ -592,7 +709,7 @@ class _LevelSelectionScreenState extends State<LevelSelectionScreen> {
                   builder: (context, _) => ListView(
                     padding: const EdgeInsets.all(10),
                     children: [
-                      for (final opponent in opponents)
+                      for (final opponent in opponentList)
                         GestureDetector(
                           onTap: () {
                             final entryID = "deck:${opponent.deck.deckID}";
@@ -607,107 +724,9 @@ class _LevelSelectionScreenState extends State<LevelSelectionScreen> {
                             openedEntryID: openedEntryNotifier.value,
                             entryID: "deck:${opponent.deck.deckID}",
                             icon: deckIcons[opponent.deck.deckID],
-                            onStart: (yellowDeck, difficulty) async {
-                              await startGame(
-                                context: context,
-                                map: settings.getMap(opponent.mapID),
-                                yellowDeck: yellowDeck,
-                                yellowName: settings.playerName.value,
-                                blueDeck: opponent.deck,
-                                blueName: opponent.name,
-                                blueIcon: deckIcons[opponent.deck.deckID],
-                                aiLevel: difficulty,
-                                onWin: () async {
-                                  playerProgress.incrementWins(
-                                    "deck:${opponent.deck.deckID}",
-                                    difficulty
-                                  );
-                                  playerProgress.xp += difficulty.xpAmount;
-                                },
-                                onLose: () async {
-                                  playerProgress.xp += BATTLE_LOSS_XP;
-                                },
-                                showXpPopup: true,
-                              );
-                            },
+                            onStart: _runBattle(opponent),
                           ),
                         ),
-                      GestureDetector(
-                        onTap: () {
-                          openedEntryNotifier.value = "clonejelly";
-                        },
-                        child: LevelSelectionEntry(
-                          name: "Clone Jelly",
-                          openedEntryID: openedEntryNotifier.value,
-                          entryID: "clonejelly",
-                          icon: "clonejelly",
-                          onStart: (yellowDeck, difficulty) async {
-                            await startGame(
-                              context: context,
-                              map: settings.getMap(-1),
-                              yellowDeck: yellowDeck,
-                              yellowName: settings.playerName.value,
-                              blueDeck: yellowDeck,
-                              blueName: "Clone Jelly",
-                              blueIcon: "clonejelly",
-                              aiLevel: difficulty,
-                              onWin: () async {
-                                playerProgress.incrementWins(
-                                    "clonejelly", difficulty);
-                                playerProgress.xp += difficulty.xpAmount;
-                              },
-                              onLose: () async {
-                                playerProgress.xp += BATTLE_LOSS_XP;
-                              },
-                              showXpPopup: true,
-                            );
-                          },
-                        ),
-                      ),
-                      GestureDetector(
-                        onTap: () {
-                          openedEntryNotifier.value = "randomiser";
-                        },
-                        child: LevelSelectionEntry(
-                          name: "Randomiser",
-                          openedEntryID: openedEntryNotifier.value,
-                          entryID: "randomiser",
-                          icon: "randomiser",
-                          onStart: (yellowDeck, difficulty) async {
-                            final randomCards = createPureRandomCards();
-                            for (final card in randomCards) {
-                              settings.registerTempCard(card);
-                            }
-                            final blueDeck = TableturfDeck(
-                                deckID: -1000,
-                                name: "Randomiser",
-                                cardSleeve: "randomiser",
-                                cards: [for (final card in randomCards) card.ident]
-                            );
-                            await startGame(
-                              context: context,
-                              map: officialMaps.random(),
-                              yellowDeck: yellowDeck,
-                              yellowName: settings.playerName.value,
-                              blueDeck: blueDeck,
-                              blueName: "Randomiser",
-                              blueIcon: "randomiser",
-                              aiLevel: difficulty,
-                              onWin: () async {
-                                playerProgress.incrementWins("randomiser", difficulty);
-                                playerProgress.xp += difficulty.xpAmount;
-                              },
-                              onLose: () async {
-                                playerProgress.xp += BATTLE_LOSS_XP;
-                              },
-                              showXpPopup: true,
-                            );
-                            for (final card in randomCards) {
-                              settings.removeTempCard(card.ident);
-                            }
-                          },
-                        ),
-                      ),
                     ],
                   )
                 ),
@@ -722,6 +741,60 @@ class _LevelSelectionScreenState extends State<LevelSelectionScreen> {
           child: const Text('Back'),
         ),
       ),
+    );
+  }
+}
+
+class NewOpponentPopup extends StatelessWidget {
+  final TableturfOpponent newOpponent;
+  final double designRatio;
+  const NewOpponentPopup({
+    super.key,
+    required this.newOpponent,
+    required this.designRatio,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+      children: [
+        const Spacer(flex: 1),
+        Expanded(
+          flex: 3,
+          child: FractionallySizedBox(
+            widthFactor: 0.6,
+            child: FittedBox(
+              fit: BoxFit.fitWidth,
+              child: Text(
+                "New rival on deck!",
+                style: TextStyle(
+                  fontFamily: "Splatfont1"
+                )
+              ),
+            ),
+          ),
+        ),
+        Expanded(
+          flex: 6,
+          child: FractionallySizedBox(
+            heightFactor: 0.8,
+            child: Image.asset("assets/images/character_icons/${deckIcons[newOpponent.deck.deckID]}.png"),
+          ),
+        ),
+        Expanded(
+          flex: 3,
+          child: FractionallySizedBox(
+            widthFactor: 0.7,
+            child: Text(
+              "You can now challenge ${newOpponent.name} to Tableturf Battles!",
+              textAlign: TextAlign.center,
+              style: TextStyle(fontSize: 24 * designRatio),
+            ),
+          )
+        ),
+        const Spacer(flex: 1),
+      ],
     );
   }
 }

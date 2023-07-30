@@ -14,7 +14,7 @@ import 'package:tableturf_mobile/src/settings/settings.dart';
 import '../game_internals/card.dart';
 import '../game_internals/deck.dart';
 import '../game_internals/map.dart';
-import '../play_session/build_game_session_page.dart';
+import '../play_session/start_game.dart';
 import '../style/constants.dart';
 import '../style/responsive_screen.dart';
 
