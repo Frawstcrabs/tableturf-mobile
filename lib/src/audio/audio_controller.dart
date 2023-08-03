@@ -22,8 +22,6 @@ class AudioController {
   final AudioPlayer musicStartPlayer, musicLoopPlayer;
   Timer? _musicFadeTimer;
 
-  final List<AudioPlayer> _sfxPlayers;
-  int _nextSfxPlayer = 0;
   final AudioCache _sfxCache = AudioCache(prefix: "assets/sfx/");
   final Map<SfxType, List<String>> _sfxSources;
 
@@ -42,7 +40,6 @@ class AudioController {
   AudioController._internal():
     musicStartPlayer = AudioPlayer(),
     musicLoopPlayer = AudioPlayer(),
-    _sfxPlayers = List.generate(kMaxSfxPlayers, (_) => AudioPlayer()),
     _sfxSources = {}
   {}
 
@@ -81,9 +78,6 @@ class AudioController {
     _stopAllSound();
     musicLoopPlayer.dispose();
     musicStartPlayer.dispose();
-    for (final player in _sfxPlayers) {
-      player.dispose();
-    }
   }
 
   /// Preloads all sound effects.
@@ -101,22 +95,9 @@ class AudioController {
         ]);
       }()
     ]);
-    for (final player in _sfxPlayers) {
-      player.audioCache = _sfxCache;
-      //await player.setPlayerMode(PlayerMode.lowLatency);
-    }
     musicStartPlayer.onPlayerComplete.listen((_) {
       musicLoopPlayer.resume();
     });
-  }
-
-  Future<void> _rebuildSfxPlayer(int index) async {
-    final player = AudioPlayer();
-    final oldPlayer = _sfxPlayers[index];
-    player.audioCache = _sfxCache;
-    await player.setPlayerMode(PlayerMode.lowLatency);
-    _sfxPlayers[index] = player;
-    oldPlayer.dispose();
   }
 
   Future<void> playSfx(SfxType type) async {
@@ -281,16 +262,11 @@ class AudioController {
 
   Future<void> _muteSfx() async {
     _log.info("muting sfx");
-    for (final player in _sfxPlayers) {
-      await player.setVolume(0.0);
-    }
+    // TODO: make muting sfx work
   }
 
   Future<void> _unmuteSfx() async {
     _log.info("unmuting sfx");
-    for (final player in _sfxPlayers) {
-      await player.setVolume(1.0);
-    }
   }
 
   void _soundsOnHandler() {
