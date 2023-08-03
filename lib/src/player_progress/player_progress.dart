@@ -48,6 +48,7 @@ class PlayerProgress {
   late Map<String, Map<AILevel, int>> _winCounts;
 
   late int _xp;
+  late int _cardBits;
   late List<TableturfCardIdentifier> _unlockedCards;
   late List<String> _unlockedCardSleeves;
   late List<int> _unlockedOpponents;
@@ -57,6 +58,14 @@ class PlayerProgress {
     _xp = value;
     if (_commitChanges) {
       _prefs.setInt("tableturf-xp", value);
+    }
+  }
+
+  int get cardBits => _cardBits;
+  set cardBits(int value) {
+    _cardBits = value;
+    if (_commitChanges) {
+      _prefs.setInt("tableturf-card_bits", value);
     }
   }
 
@@ -82,13 +91,12 @@ class PlayerProgress {
       );
     }));
     _xp = _prefs.getInt("tableturf-xp") ?? 0;
+    _cardBits = _prefs.getInt("tableturf-card_bits") ?? 0;
 
-    final List unlockedOpponentsJson = jsonDecode(
+    final List<dynamic> unlockedOpponentsJson = jsonDecode(
       _prefs.getString("tableturf-unlocked_opponents") ?? "[-1]"
     );
-    _unlockedOpponents = unlockedOpponentsJson.map(
-        (i) => i as int
-    ).toList();
+    _unlockedOpponents = unlockedOpponentsJson.map((i) => i as int).toList();
   }
 
   Future<void> _writeWinCounts() async {
@@ -147,6 +155,7 @@ class PlayerProgress {
     }
     _unlockedOpponents = [-1];
     xp = 0;
+    cardBits = 0;
     _writeWinCounts();
     _writeUnlockedOpponents();
   }

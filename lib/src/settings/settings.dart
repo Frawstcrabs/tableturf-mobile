@@ -12,6 +12,8 @@ import '../game_internals/deck.dart';
 import '../game_internals/map.dart';
 import '../game_internals/tile.dart';
 
+
+
 /// An class that holds settings like [playerName] or [musicOn],
 /// and saves them to an injected persistence store.
 class Settings {
@@ -60,7 +62,7 @@ class Settings {
       final deckDefault = '''{
         "name": "Deck ${deckID+1}",
         "cardSleeve": "default",
-        "deckID": ${deckID},
+        "deckID": $deckID,
         "cards": ${jsonEncode([
           for (final cardID in [0, 12, 21, 27, 97, 98, 44, 51, 54, 55, 91, 102, 136, 140, 158])
             officialCards[cardID].ident.toJson()

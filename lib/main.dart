@@ -28,10 +28,13 @@ import 'src/style/snack_bar.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await loadCards();
-  await loadMaps();
-  await loadOpponents();
-  await Shaders.loadPrograms();
+  print("loading assets");
+  await Future.wait([
+    loadMaps(),
+    loadCards(),
+    loadOpponents(),
+    Shaders.loadPrograms(),
+  ]);
   await guardedMain();
 }
 

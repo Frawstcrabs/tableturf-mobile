@@ -5,7 +5,6 @@ import 'dart:ui';
 import 'package:collection/collection.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:just_audio/just_audio.dart';
 import 'package:tableturf_mobile/src/audio/sounds.dart';
 import 'package:logging/logging.dart' hide Level;
 import 'package:provider/provider.dart';
