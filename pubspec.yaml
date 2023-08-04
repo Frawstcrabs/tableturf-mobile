@@ -13,8 +13,8 @@ dependencies:
   flutter:
     sdk: flutter
 
-  # just_audio: ^0.9.30
-  # soundpool: ^2.3.0
+  just_audio: ^0.9.30
+  soundpool: ^2.3.0
   audioplayers: ^5.0.0
   cupertino_icons: ^1.0.2
   logging: ^1.1.0

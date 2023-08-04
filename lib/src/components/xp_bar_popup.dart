@@ -280,7 +280,6 @@ class _XpBarPopupState extends State<XpBarPopup>
       currentRank.value = beforeRank;
       currentXpRequirement = rankBrackets[0];
       final audioController = AudioController();
-      audioController.playSfx(SfxType.xpGaugeFill);
       for (final entry in entries) {
         currentXpRequirement = entry.range;
         barLengthController.duration =
@@ -295,6 +294,7 @@ class _XpBarPopupState extends State<XpBarPopup>
           rankUpController.forward(from: 0.0);
         } else {
           await transitionController.animateTo(0.5);
+          audioController.playSfx(SfxType.xpGaugeFill);
           firstTween = false;
         }
         await barLengthController.forward(from: 0.0);
