@@ -262,15 +262,13 @@ double _rateMove({
 
   switch (aiLevel) {
     case AILevel.level1:
-      /*
       moveScore = (
         (areaScore * 1.0)
-          + (distanceScore * 0.5)
-          + (reachabilityScore * 0.4)
+          + (distanceScore * 0.4)
+          + (reachabilityScore * 0.6)
           + (specialScore * 0.8)
       );
       break;
-        */
     case AILevel.level2:
       /*
       final specialScoreDesire = 1.0 + ((12 - turnsLeft) / 8);

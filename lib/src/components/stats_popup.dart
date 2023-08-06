@@ -63,6 +63,170 @@ class XpBarAnimationEntry {
   });
 }
 
+class CardBitCounter extends StatefulWidget {
+  final int cardBits;
+  final double designRatio;
+  const CardBitCounter({
+    super.key,
+    required this.cardBits,
+    required this.designRatio
+  });
+
+  @override
+  State<CardBitCounter> createState() => _CardBitCounterState();
+}
+
+class _CardBitCounterState extends State<CardBitCounter>
+    with SingleTickerProviderStateMixin {
+  int? oldCardBits = null;
+  late final AnimationController tickController = AnimationController(
+    duration: const Duration(milliseconds: 100),
+    vsync: this,
+  );
+
+  @override
+  void didUpdateWidget(CardBitCounter oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.cardBits != oldWidget.cardBits) {
+      _animateTicks(oldWidget.cardBits);
+    }
+  }
+
+  Future<void> _animateTicks(int start) async {
+    if (start < widget.cardBits) {
+      for (var i = start; i < widget.cardBits; i++) {
+        setState(() {
+          oldCardBits = i;
+        });
+        await tickController.forward(from: 0.0);
+      }
+    } else {
+      for (var i = start - 1; i >= widget.cardBits; i--) {
+        setState(() {
+          oldCardBits = i;
+        });
+        await tickController.reverse(from: 1.0);
+      }
+    }
+    setState(() {
+      oldCardBits = null;
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final designRatio = widget.designRatio;
+    final oldCardBits = this.oldCardBits;
+    final charHeight = 40 * designRatio;
+    if (oldCardBits == null) {
+      return SizedBox(
+          height: charHeight,
+          child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              children: [
+                FractionalTranslation(
+                  translation: Offset(0, -0.15),
+                  child: AspectRatio(
+                    aspectRatio: 1.0,
+                    child: Image.asset(
+                        "assets/images/card_bit.png"
+                    ),
+                  ),
+                ),
+                SizedBox(
+                  width: 5 * designRatio,
+                ),
+                for (final char in widget.cardBits
+                    .toString()
+                    .padLeft(4, "0")
+                    .characters)
+                  buildTickerDigit(designRatio, char)
+              ]
+          )
+      );
+    }
+    final digits = oldCardBits
+        .toString()
+        .padLeft(4, "0")
+        .characters
+        .map(int.parse)
+        .toList();
+    int changedDigits = digits.length - 1;
+    for (final digit in digits.reversed) {
+      if (digit == 9) {
+        changedDigits -= 1;
+      } else {
+        break;
+      }
+    }
+    return SizedBox(
+      height: 40 * designRatio,
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+        children: [
+          FractionalTranslation(
+            translation: Offset(0, -0.15),
+            child: AspectRatio(
+              aspectRatio: 1.0,
+              child: Image.asset(
+                  "assets/images/card_bit.png"
+              ),
+            ),
+          ),
+          SizedBox(
+            width: 5 * designRatio,
+          ),
+          for (final char in digits.sublist(0, changedDigits))
+            buildTickerDigit(designRatio, char.toString()),
+          for (final char in digits.sublist(changedDigits))
+            AnimatedBuilder(
+              animation: tickController,
+              child: SizedBox(
+                height: charHeight * 2,
+                width: 20 * designRatio,
+                child: Stack(
+                  clipBehavior: Clip.none,
+                  fit: StackFit.expand,
+                  children: [
+                    Transform.translate(
+                      offset: Offset(0, -charHeight),
+                      child: buildTickerDigit(designRatio, ((char + 1) % 10).toString())
+                    ),
+                    buildTickerDigit(designRatio, char.toString()),
+                  ]
+                )
+              ),
+              builder: (_, child) {
+                return ClipRect(
+                  child: Transform.translate(
+                    offset: Offset(0, (tickController.value) * charHeight),
+                    child: child,
+                  )
+                );
+              }
+            )
+        ]
+      )
+    );
+  }
+
+  SizedBox buildTickerDigit(double designRatio, String char) {
+    return SizedBox(
+      width: 20 * designRatio,
+      child: Center(
+        child: Text(
+          char,
+          style: TextStyle(
+            fontSize: 32 * designRatio,
+            height: 1.0,
+          )
+        ),
+      )
+    );
+  }
+}
+
+
 class XpBarPopup extends StatefulWidget {
   final int beforeXp, afterXp;
   final int beforeCardBits, afterCardBits;
@@ -98,6 +262,8 @@ class _XpBarPopupState extends State<XpBarPopup>
   final ValueNotifier<int> currentRank = ValueNotifier(1);
   int currentXpRequirement = 100;
   int xpDiff = 0;
+
+  late final ValueNotifier<int> cardBitsNotifier;
 
   @override
   void initState() {
@@ -243,6 +409,8 @@ class _XpBarPopupState extends State<XpBarPopup>
       vsync: this
     );
 
+    cardBitsNotifier = ValueNotifier(widget.beforeCardBits);
+
     xpDiff = widget.afterXp - widget.beforeXp;
     startAnimation();
   }
@@ -297,6 +465,7 @@ class _XpBarPopupState extends State<XpBarPopup>
           rankUpController.forward(from: 0.0);
         } else {
           await transitionController.animateTo(0.5);
+          cardBitsNotifier.value = widget.afterCardBits;
           audioController.playSfx(SfxType.xpGaugeFill);
           firstTween = false;
         }
@@ -523,26 +692,14 @@ class _XpBarPopupState extends State<XpBarPopup>
                 Positioned(
                   top: 40 * designRatio,
                   right: 50 * designRatio,
-                  child: SizedBox(
-                    height: 40 * designRatio,
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                      children: [
-                        for (final char in widget.afterCardBits.toString().padLeft(4, "0").characters)
-                          SizedBox(
-                            width: 20 * designRatio,
-                            child: Center(
-                              child: Text(
-                                char,
-                                style: TextStyle(
-                                  fontSize: 32 * designRatio,
-                                  height: 1.0,
-                                )
-                              ),
-                            )
-                          )
-                      ]
-                    )
+                  child: RepaintBoundary(
+                    child: ValueListenableBuilder(
+                      valueListenable: cardBitsNotifier,
+                      builder: (_, int cardBits, __) => CardBitCounter(
+                        cardBits: cardBits,
+                        designRatio: designRatio
+                      ),
+                    ),
                   )
                 )
               ]
