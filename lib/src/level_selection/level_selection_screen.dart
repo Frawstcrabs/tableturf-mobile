@@ -157,8 +157,8 @@ const OPPONENT_LIST = [
 
 // being able to change this number
 // is the only reason i made this
-const CARD_SLEEVE_UNLOCK_REQ = 1;
-const CARD_SLEEVE_UNLOCK_DIFFICULTY = AILevel.level1;
+const CARD_SLEEVE_UNLOCK_REQ = 10;
+const CARD_SLEEVE_UNLOCK_DIFFICULTY = AILevel.level3;
 
 class LevelSelectionEntry extends StatefulWidget {
   final String name;

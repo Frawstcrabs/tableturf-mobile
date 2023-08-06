@@ -120,12 +120,21 @@ class PlayerProgress {
     _winCounts = Map.fromEntries(winCountJson.entries.map((entry) {
       final opponentID = entry.key;
       final winCounts = entry.value as Map<String, dynamic>;
+
       return MapEntry(
         opponentID,
-        {
-          for (final winEntry in winCounts.entries)
-            AILevel.values[int.parse(winEntry.key)]: winEntry.value as int
-        }
+        Map.fromEntries(winCounts.entries
+          .where((winEntry) {
+            final key = int.parse(winEntry.key);
+            return key >= 0 && key < AILevel.values.length;
+          })
+          .map((winEntry) {
+            return MapEntry(
+              AILevel.values[int.parse(winEntry.key)],
+              winEntry.value as int
+            );
+          })
+        )
       );
     }));
     _xp = _prefs.getInt("tableturf-xp") ?? 0;

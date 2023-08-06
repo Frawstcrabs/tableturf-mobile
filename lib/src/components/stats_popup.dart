@@ -304,7 +304,7 @@ class _XpBarPopupState extends State<XpBarPopup>
       }
     }
     await Future<void>.delayed(Durations.xpBarPause);
-    //await onExit();
+    await onExit();
   }
 
   @override

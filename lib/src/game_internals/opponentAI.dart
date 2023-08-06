@@ -9,8 +9,7 @@ import 'tile.dart';
 enum AILevel {
   level1(xpAmount: 100, cardBitReward: 1),
   level2(xpAmount: 115, cardBitReward: 2),
-  level3(xpAmount: 130, cardBitReward: 3),
-  level4(xpAmount: 150, cardBitReward: 5);
+  level3(xpAmount: 130, cardBitReward: 3);
 
   final int xpAmount;
   final int cardBitReward;
@@ -266,24 +265,13 @@ double _rateMove({
       /*
       moveScore = (
         (areaScore * 1.0)
-          + (distanceScore * 0.2)
-          + (reachabilityScore * 0.1)
-          + (specialScore * 0.5)
-      );
-      break;
-
-       */
-    case AILevel.level2:
-      /*
-      moveScore = (
-        (areaScore * 1.0)
           + (distanceScore * 0.5)
           + (reachabilityScore * 0.4)
           + (specialScore * 0.8)
       );
       break;
         */
-    case AILevel.level3:
+    case AILevel.level2:
       /*
       final specialScoreDesire = 1.0 + ((12 - turnsLeft) / 8);
       if (move.special) {
@@ -303,7 +291,7 @@ double _rateMove({
       }
       break;
        */
-    case AILevel.level4:
+    case AILevel.level3:
       final specialScoreDesire = 1.0 + ((12 - turnsLeft) / 8);
       if (turnsLeft == 1) {
         moveScore = areaScore;
@@ -419,24 +407,18 @@ RatedMove findBestMove({
 
   switch (aiLevel) {
     case AILevel.level1:
-      const lowerBound = 0.5;
-      const upperBound = 1.0;
-      final selection = lowerBound + (Random().nextDouble() * (upperBound - lowerBound));
-      return ratedMoves[(ratedMoves.length * selection).floor()];
-
-    case AILevel.level2:
       const lowerBound = 0.7;
       const upperBound = 1.0;
       final selection = lowerBound + (Random().nextDouble() * (upperBound - lowerBound));
       return ratedMoves[(ratedMoves.length * selection).floor()];
 
-    case AILevel.level3:
+    case AILevel.level2:
       const lowerBound = 0.9;
       const upperBound = 1.0;
       final selection = lowerBound + (Random().nextDouble() * (upperBound - lowerBound));
       return ratedMoves[(ratedMoves.length * selection).floor()];
 
-    case AILevel.level4:
+    case AILevel.level3:
       /*
       const lowerBound = 0.98;
       const upperBound = 1.0;
