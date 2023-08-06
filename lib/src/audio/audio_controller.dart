@@ -380,11 +380,11 @@ class AudioController {
   }
 
   Future<void> stopSong({Duration? fadeDuration}) async {
-    _musicPlayer.stopSong(fadeDuration: fadeDuration);
+    await _musicPlayer.stopSong(fadeDuration: fadeDuration);
   }
 
   Future<void> setVolume(double value, {Duration? fadeDuration}) async {
-    _musicPlayer.setVolume(value, fadeDuration: fadeDuration);
+    await _musicPlayer.setVolume(value, fadeDuration: fadeDuration);
   }
 
   void _handleAppLifecycle() {
