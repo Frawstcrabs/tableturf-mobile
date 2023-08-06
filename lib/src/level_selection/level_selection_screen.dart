@@ -597,7 +597,7 @@ class _LevelSelectionScreenState extends State<LevelSelectionScreen> {
         if (difficulty == CARD_SLEEVE_UNLOCK_DIFFICULTY
             && winCount == CARD_SLEEVE_UNLOCK_REQ) {
           switch (opponent.deck.deckID) {
-            case -1001:
+            case -1000:
               // pure randomiser
               // TODO: unlock playable randomiser deck
               break;
