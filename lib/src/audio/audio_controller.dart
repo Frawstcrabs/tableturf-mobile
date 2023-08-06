@@ -76,11 +76,7 @@ class _MobileMusicPlayer extends _MusicPlayer {
   Soundpool _sfxPlayer = Soundpool.fromOptions(options: SoundpoolOptions(maxStreams: 8));
   Map<SfxType, List<int>> _sfxSources = {};
 
-  _MobileMusicPlayer() {
-    musicPlayer.playbackEventStream.listen(print);
-    musicPlayer.playerStateStream.listen(print);
-    musicPlayer.processingStateStream.listen(print);
-  }
+  _MobileMusicPlayer() {}
 
   Future<void> initialize() async {
     await Future.wait([

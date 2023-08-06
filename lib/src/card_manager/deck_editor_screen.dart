@@ -3,14 +3,13 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
 import 'package:tableturf_mobile/src/components/selection_button.dart';
+import 'package:tableturf_mobile/src/player_progress/player_progress.dart';
 
 import '../components/list_select_prompt.dart';
 import '../game_internals/card.dart';
 import '../game_internals/deck.dart';
 import '../components/card_widget.dart';
-import '../settings/settings.dart';
 import '../style/constants.dart';
 
 
@@ -139,9 +138,9 @@ class _DeckEditorScreenState extends State<DeckEditorScreen>
   }
 
   void _computeTileCount() {
-    final settings = Settings();
+    final playerProgress = PlayerProgress();
     _deckTileCount.value = deckCards
-        .map((i) => i.value != null ? settings.identToCard(i.value!) : null)
+        .map((i) => i.value != null ? playerProgress.identToCard(i.value!) : null)
         .fold(0, (a, c) => a + (c?.count ?? 0));
   }
 
@@ -209,10 +208,11 @@ class _DeckEditorScreenState extends State<DeckEditorScreen>
 
   Future<void> _showCardSleevePopup(BuildContext context) async {
     final ScrollController scrollController = ScrollController();
+    final playerProgress = PlayerProgress();
     const popupBorderWidth = 1.0;
     const cardListPadding = 10.0;
     const interCardPadding = 5.0;
-    const allCardSleeves = [
+    final cardSleeves = [
       "default",
       "cool",
       "supercool",
@@ -238,7 +238,7 @@ class _DeckEditorScreenState extends State<DeckEditorScreen>
       "jelonzo",
       "fredcrumbs",
       "spyke",
-    ];
+    ].where((element) => playerProgress.unlockedCardSleeves.contains(element)).toList();
 
     final String? selectedCard = await showListSelectPrompt(
       context,
@@ -262,17 +262,14 @@ class _DeckEditorScreenState extends State<DeckEditorScreen>
             crossAxisCount: 3,
             childAspectRatio: CardWidget.CARD_RATIO
           ),
-          itemCount: allCardSleeves.length,
+          itemCount: cardSleeves.length,
           padding: const EdgeInsets.all(cardListPadding),
           itemBuilder: (_, i) => GestureDetector(
             onTap: () {
-              exitPopup(allCardSleeves[i]);
+              exitPopup(cardSleeves[i]);
             },
-            child: Padding(
-              padding: const EdgeInsets.all(0),
-              child: FittedBox(child: Image.asset(
-                "assets/images/card_sleeves/sleeve_${allCardSleeves[i]}.png"
-              )),
+            child: Image.asset(
+              "assets/images/card_sleeves/sleeve_${cardSleeves[i]}.png"
             )
           ),
         ),
@@ -286,7 +283,7 @@ class _DeckEditorScreenState extends State<DeckEditorScreen>
 
   @override
   Widget build(BuildContext context) {
-    final settings = context.watch<Settings>();
+    final playerProgress = PlayerProgress();
     final mediaQuery = MediaQuery.of(context);
     final screen = Column(
       children: [
@@ -375,7 +372,7 @@ class _DeckEditorScreenState extends State<DeckEditorScreen>
                           valueListenable: cardNotifier,
                           builder: (_, TableturfCardIdentifier? cardIdent, child) {
                             final card = cardIdent != null
-                                ? settings.identToCard(cardIdent)
+                                ? playerProgress.identToCard(cardIdent)
                                 : null;
                             final textStyle = DefaultTextStyle.of(context).style;
                             final cardWidget = SizedBox(
@@ -457,13 +454,13 @@ class _DeckEditorScreenState extends State<DeckEditorScreen>
                           },
                           onPressEnd: () async {
                             if (widget.deck == null) {
-                              settings.createDeck(
+                              playerProgress.createDeck(
                                 cards: deckCards.map((v) => v.value!).toList(),
                                 name: _textEditingController.text,
                                 cardSleeve: cardSleeve.value
                               );
                             } else {
-                              settings.updateDeck(
+                              playerProgress.updateDeck(
                                 deckID: widget.deck!.deckID,
                                 cards: deckCards.map((v) => v.value!).toList(),
                                 name: _textEditingController.text,

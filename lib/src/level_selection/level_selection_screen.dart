@@ -15,7 +15,7 @@ import 'package:tableturf_mobile/src/player_progress/player_progress.dart';
 import 'package:tableturf_mobile/src/settings/settings.dart';
 
 import '../components/list_select_prompt.dart';
-import '../components/xp_bar_popup.dart';
+import '../components/stats_popup.dart';
 import '../game_internals/card.dart';
 import '../game_internals/deck.dart';
 import '../game_internals/map.dart';
@@ -155,6 +155,11 @@ const OPPONENT_LIST = [
   -21, -22, -23, -2000, -1000,
 ];
 
+// being able to change this number
+// is the only reason i made this
+const CARD_SLEEVE_UNLOCK_REQ = 1;
+const CARD_SLEEVE_UNLOCK_DIFFICULTY = AILevel.level1;
+
 class LevelSelectionEntry extends StatefulWidget {
   final String name;
   final String entryID;
@@ -247,7 +252,7 @@ class _LevelSelectionEntryState extends State<LevelSelectionEntry>
   }
 
   Future<void> _showSelectDeckPrompt() async {
-    final settings = Settings();
+    final playerProgress = PlayerProgress();
     final ScrollController scrollController = ScrollController();
     const popupBorderWidth = 1.0;
     const itemListPadding = 10.0;
@@ -269,16 +274,16 @@ class _LevelSelectionEntryState extends State<LevelSelectionEntry>
         radius: Radius.circular(6),
         child: ListView.builder(
           controller: scrollController,
-          itemCount: settings.decks.length,
+          itemCount: playerProgress.decks.length,
           padding: const EdgeInsets.all(itemListPadding),
           itemBuilder: (_, i) => GestureDetector(
             onTap: () {
-              exitPopup(settings.decks[i].value);
+              exitPopup(playerProgress.decks[i].value);
             },
             child: AspectRatio(
               aspectRatio: DeckThumbnail.THUMBNAIL_RATIO,
               child: DeckThumbnail(
-                deck: settings.decks[i].value
+                deck: playerProgress.decks[i].value
               ),
             )
           ),
@@ -293,7 +298,6 @@ class _LevelSelectionEntryState extends State<LevelSelectionEntry>
 
   @override
   Widget build(BuildContext context) {
-    final settings = Settings();
     final playerProgress = PlayerProgress();
     final winCountMap = playerProgress.getWins(widget.entryID);
     return Padding(
@@ -488,7 +492,7 @@ class _LevelSelectionEntryState extends State<LevelSelectionEntry>
                                       if (chosenDeck.deckID == -1000) {
                                         randomCards = createPureRandomCards();
                                         for (final card in randomCards) {
-                                          settings.registerTempCard(card);
+                                          playerProgress.registerTempCard(card);
                                         }
                                         yellowDeck = TableturfDeck(
                                             deckID: -1000,
@@ -507,7 +511,7 @@ class _LevelSelectionEntryState extends State<LevelSelectionEntry>
                                       setState(() {});
                                       if (randomCards != null) {
                                         for (final card in randomCards) {
-                                          settings.removeTempCard(card.ident);
+                                          playerProgress.removeTempCard(card.ident);
                                         }
                                       }
                                     },
@@ -582,10 +586,38 @@ class _LevelSelectionScreenState extends State<LevelSelectionScreen> {
     return (yellowDeck, difficulty) async {
       int beforeXp = playerProgress.xp;
       int beforeRank = playerProgress.rank;
+      int beforeCardBits = playerProgress.cardBits;
+      int winCount = 0;
+      String? unlockedCardSleeve = null;
       final onWin = () async {
-        playerProgress.incrementWins("deck:${opponent.deck.deckID}", difficulty);
+        winCount = playerProgress.incrementWins("deck:${opponent.deck.deckID}", difficulty);
         playerProgress.xp += difficulty.xpAmount;
+        playerProgress.cardBits += difficulty.cardBitReward;
         final afterRank = playerProgress.rank;
+        if (difficulty == CARD_SLEEVE_UNLOCK_DIFFICULTY
+            && winCount == CARD_SLEEVE_UNLOCK_REQ) {
+          switch (opponent.deck.deckID) {
+            case -1001:
+              // pure randomiser
+              // TODO: unlock playable randomiser deck
+              break;
+            default:
+              switch (opponent.deck.cardSleeve) {
+                case "default":
+                case "cool":
+                case "supercool":
+                case "ultracool":
+                case "crustysean":
+                case "randomiser":
+                  // not unlockable via wins
+                  break;
+                default:
+                  final sleeve = opponent.deck.cardSleeve;
+                  unlockedCardSleeve = sleeve;
+                  playerProgress.unlockCardSleeve(sleeve);
+              }
+          }
+        }
         _checkRankUpRewards(beforeRank, afterRank);
       };
       final onLose = () async {
@@ -594,10 +626,12 @@ class _LevelSelectionScreenState extends State<LevelSelectionScreen> {
         _checkRankUpRewards(beforeRank, afterRank);
       };
       final onPostGame = (BuildContext context) async {
-        await showXpBarPopup(
+        await showStatsPopup(
           context,
           beforeXp: beforeXp,
           afterXp: playerProgress.xp,
+          beforeCardBits: beforeCardBits,
+          afterCardBits: playerProgress.cardBits,
         );
         await Future<void>.delayed(const Duration(milliseconds: 100));
         final afterRank = playerProgress.rank;
@@ -612,6 +646,16 @@ class _LevelSelectionScreenState extends State<LevelSelectionScreen> {
           });
           await Future<void>.delayed(const Duration(milliseconds: 100));
         }
+        if (unlockedCardSleeve != null) {
+          await showAlert(context, builder: (context, designRatio) {
+            return NewCardSleevePopup(
+              cardSleeve: unlockedCardSleeve!,
+              designRatio: designRatio,
+            );
+          });
+          unlockedCardSleeve = null;
+          await Future<void>.delayed(const Duration(milliseconds: 100));
+        }
         beforeXp = playerProgress.xp;
         beforeRank = afterRank;
       };
@@ -624,7 +668,7 @@ class _LevelSelectionScreenState extends State<LevelSelectionScreen> {
           // pure randomiser
           tempCards = createPureRandomCards();
           for (final card in tempCards) {
-            settings.registerTempCard(card);
+            playerProgress.registerTempCard(card);
           }
           blueDeck = TableturfDeck(
             deckID: opponent.deck.deckID,
@@ -656,7 +700,7 @@ class _LevelSelectionScreenState extends State<LevelSelectionScreen> {
       }
       await startGame(
         context: context,
-        map: settings.getMap(mapID),
+        map: playerProgress.getMap(mapID),
         yellowDeck: yellowDeck,
         yellowName: settings.playerName.value,
         blueDeck: blueDeck,
@@ -670,7 +714,7 @@ class _LevelSelectionScreenState extends State<LevelSelectionScreen> {
       );
       if (tempCards != null) {
         for (final card in tempCards) {
-          settings.removeTempCard(card.ident);
+          playerProgress.removeTempCard(card.ident);
         }
       }
       // refresh the opponent list in case anything was unlocked
@@ -767,10 +811,10 @@ class NewOpponentPopup extends StatelessWidget {
             child: FittedBox(
               fit: BoxFit.fitWidth,
               child: Text(
-                "New rival on deck!",
-                style: TextStyle(
-                  fontFamily: "Splatfont1"
-                )
+                  "New rival on deck!",
+                  style: TextStyle(
+                      fontFamily: "Splatfont1"
+                  )
               ),
             ),
           ),
@@ -783,17 +827,107 @@ class NewOpponentPopup extends StatelessWidget {
           ),
         ),
         Expanded(
-          flex: 3,
-          child: FractionallySizedBox(
-            widthFactor: 0.7,
-            child: Text(
-              "You can now challenge ${newOpponent.name} to Tableturf Battles!",
-              textAlign: TextAlign.center,
-              style: TextStyle(fontSize: 24 * designRatio),
-            ),
-          )
+            flex: 3,
+            child: FractionallySizedBox(
+              widthFactor: 0.7,
+              child: Text(
+                "You can now challenge ${newOpponent.name} to Tableturf Battles!",
+                textAlign: TextAlign.center,
+                style: TextStyle(fontSize: 24 * designRatio),
+              ),
+            )
         ),
         const Spacer(flex: 1),
+      ],
+    );
+  }
+}
+
+class NewCardSleevePopup extends StatelessWidget {
+  final String cardSleeve;
+  final double designRatio;
+  const NewCardSleevePopup({
+    super.key,
+    required this.cardSleeve,
+    required this.designRatio,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final frontCardSleeve = Image.asset("assets/images/card_sleeves/sleeve_$cardSleeve.png");
+    final backCardSleeve = Image.asset(
+      "assets/images/card_sleeves/sleeve_$cardSleeve.png",
+      color: const Color.fromRGBO(0, 0, 0, 0.25),
+      colorBlendMode: BlendMode.srcATop,
+    );
+    return Column(
+      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+      children: [
+        const Spacer(flex: 1),
+        Expanded(
+          flex: 3,
+          child: FractionallySizedBox(
+            widthFactor: 0.6,
+            child: FittedBox(
+              fit: BoxFit.fitWidth,
+              child: Text(
+                  "You got card sleeves!",
+                  style: TextStyle(
+                      fontFamily: "Splatfont1"
+                  )
+              ),
+            ),
+          ),
+        ),
+        Expanded(
+          flex: 6,
+          child: FractionallySizedBox(
+            heightFactor: 0.9,
+            child: AspectRatio(
+              aspectRatio: 1.0,
+              child: Stack(
+                children: [
+                  Align(
+                    alignment: Alignment.bottomRight,
+                    child: FractionallySizedBox(
+                      heightFactor: 0.9,
+                      child: Transform.rotate(
+                        angle: 0.04 * pi,
+                        child: backCardSleeve,
+                      ),
+                    ),
+                  ),
+                  Align(
+                    alignment: Alignment(0.5, 1.0),
+                    child: FractionallySizedBox(
+                      heightFactor: 0.9,
+                      child: backCardSleeve,
+                    ),
+                  ),
+                  Align(
+                    alignment: Alignment.topLeft,
+                    child: Transform.rotate(
+                      angle: -0.04 * pi,
+                      child: frontCardSleeve,
+                    ),
+                  ),
+                ]
+              ),
+            ),
+          ),
+        ),
+        const Spacer(flex: 1),
+        Expanded(
+            flex: 3,
+            child: FractionallySizedBox(
+              widthFactor: 0.9,
+              child: Text(
+                "Go to Edit Deck in your Card List and try them out!",
+                textAlign: TextAlign.center,
+                style: TextStyle(fontSize: 24 * designRatio),
+              ),
+            )
+        ),
       ],
     );
   }

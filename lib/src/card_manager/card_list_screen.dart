@@ -11,6 +11,7 @@ import 'package:tableturf_mobile/src/settings/settings.dart';
 
 import '../game_internals/card.dart';
 import '../components/card_widget.dart';
+import '../player_progress/player_progress.dart';
 import '../style/constants.dart';
 import 'deck_list_screen.dart';
 
@@ -235,11 +236,11 @@ class _CardListItemState extends State<CardListItem> {
 
   @override
   Widget build(BuildContext context) {
-    final settings = Settings();
+    final playerProgress = PlayerProgress();
     return CardFrontWidget(
-      card: settings.identToCard(widget.ident),
+      card: playerProgress.identToCard(widget.ident),
       traits: const YellowTraits(),
-      isHidden: false,
+      isHidden: !playerProgress.unlockedCards.contains(widget.ident),
     );
   }
 }

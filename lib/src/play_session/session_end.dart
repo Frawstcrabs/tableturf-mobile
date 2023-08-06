@@ -15,7 +15,7 @@ import 'package:tableturf_mobile/src/player_progress/player_progress.dart';
 import 'package:tableturf_mobile/src/settings/settings.dart';
 import 'package:tableturf_mobile/src/style/constants.dart';
 
-import '../components/xp_bar_popup.dart';
+import '../components/stats_popup.dart';
 import '../style/my_transition.dart';
 import '../components/build_board_widget.dart';
 import '../components/multi_choice_prompt.dart';

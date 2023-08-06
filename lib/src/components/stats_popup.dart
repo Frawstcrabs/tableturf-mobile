@@ -65,10 +65,13 @@ class XpBarAnimationEntry {
 
 class XpBarPopup extends StatefulWidget {
   final int beforeXp, afterXp;
+  final int beforeCardBits, afterCardBits;
   const XpBarPopup({
     super.key,
     required this.beforeXp,
     required this.afterXp,
+    required this.beforeCardBits,
+    required this.afterCardBits,
   });
 
   @override
@@ -301,7 +304,7 @@ class _XpBarPopupState extends State<XpBarPopup>
       }
     }
     await Future<void>.delayed(Durations.xpBarPause);
-    await onExit();
+    //await onExit();
   }
 
   @override
@@ -334,80 +337,76 @@ class _XpBarPopupState extends State<XpBarPopup>
             const designWidth = 646;
             final designRatio = constraints.maxWidth / designWidth;
             final xpBarRounding = 30 * designRatio;
-            final content = FractionallySizedBox(
-              widthFactor: 0.7,
-              child: Stack(
-                fit: StackFit.expand,
-                children: [
-                  Column(
-                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                    children: [
-                      const Spacer(flex: 7),
-                      Expanded(
-                        flex: 3,
-                        child: Padding(
-                          padding: EdgeInsets.fromLTRB(xpBarRounding, 0, 0, 0),
-                          child: SizedBox.expand(
-                            child: FittedBox(
-                              fit: BoxFit.fitHeight,
-                              alignment: Alignment.centerLeft,
-                              child: Text(
-                                "Tableturf Rank",
-                                style: TextStyle(
-                                  fontFamily: "Splatfont1",
-                                  color: Palette.xpTitleText,
-                                  shadows: [
-                                    Shadow(offset: Offset(1, 1) * designRatio)
-                                  ]
-                                )
-                              ),
+            final xpBar = Stack(
+              fit: StackFit.expand,
+              children: [
+                Column(
+                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                  children: [
+                    const Spacer(flex: 7),
+                    Expanded(
+                      flex: 3,
+                      child: Padding(
+                        padding: EdgeInsets.fromLTRB(xpBarRounding, 0, 0, 0),
+                        child: SizedBox.expand(
+                          child: FittedBox(
+                            fit: BoxFit.fitHeight,
+                            alignment: Alignment.centerLeft,
+                            child: Text(
+                              "Tableturf Rank",
+                              style: TextStyle(
+                                fontFamily: "Splatfont1",
+                                color: Palette.xpTitleText,
+                              )
                             ),
-                          )
-                        )
-                      ),
-                      Expanded(
-                        flex: 4,
-                        child: Container(
-                          decoration: BoxDecoration(
-                            color: Colors.black,
-                            borderRadius: BorderRadius.circular(xpBarRounding),
                           ),
-                          padding: EdgeInsets.symmetric(horizontal: xpBarRounding),
-                          child: Row(
-                            children: [
-                              const Spacer(flex: 1),
-                              Expanded(
-                                flex: 1,
-                                child: ScaleTransition(
-                                  scale: rankUpRankScale,
-                                  child: FadeTransition(
-                                    opacity: rankUpRankOpacity,
-                                    child: FittedBox(
-                                      fit: BoxFit.fitHeight,
-                                      child: ValueListenableBuilder(
-                                        valueListenable: currentRank,
-                                        builder: (context, int currentRank, child) {
-                                          return Text(
-                                            currentRank.toString(),
-                                            style: TextStyle(
-                                              fontFamily: "Splatfont1",
-                                              shadows: [
-                                                Shadow(offset: Offset(2, 2) * designRatio)
-                                              ]
-                                            )
-                                          );
-                                        }
-                                      )
-                                    ),
+                        )
+                      )
+                    ),
+                    Expanded(
+                      flex: 4,
+                      child: Container(
+                        decoration: BoxDecoration(
+                          color: Colors.black,
+                          borderRadius: BorderRadius.circular(xpBarRounding),
+                        ),
+                        padding: EdgeInsets.symmetric(horizontal: xpBarRounding),
+                        child: Row(
+                          children: [
+                            const Spacer(flex: 1),
+                            Expanded(
+                              flex: 1,
+                              child: ScaleTransition(
+                                scale: rankUpRankScale,
+                                child: FadeTransition(
+                                  opacity: rankUpRankOpacity,
+                                  child: FittedBox(
+                                    fit: BoxFit.fitHeight,
+                                    child: ValueListenableBuilder(
+                                      valueListenable: currentRank,
+                                      builder: (context, int currentRank, child) {
+                                        return Text(
+                                          currentRank.toString(),
+                                          style: TextStyle(
+                                            fontFamily: "Splatfont1",
+                                            shadows: [
+                                              Shadow(offset: Offset(2, 2) * designRatio)
+                                            ]
+                                          )
+                                        );
+                                      }
+                                    )
                                   ),
                                 ),
                               ),
-                              Expanded(
-                                flex: 6,
-                                child: FractionallySizedBox(
-                                  heightFactor: 0.75,
-                                  child: ClipRect(
-                                    clipBehavior: Clip.antiAlias,
+                            ),
+                            Expanded(
+                              flex: 6,
+                              child: FractionallySizedBox(
+                                heightFactor: 0.75,
+                                child: ClipRect(
+                                  clipBehavior: Clip.antiAlias,
+                                  child: RepaintBoundary(
                                     child: AnimatedBuilder(
                                       animation: barLengthController,
                                       builder: (context, child) {
@@ -425,9 +424,6 @@ class _XpBarPopupState extends State<XpBarPopup>
                                                 "$currentXp/$currentXpRequirement",
                                                 style: TextStyle(
                                                   fontFamily: "Splatfont2",
-                                                  shadows: [
-                                                    Shadow(offset: Offset(1, 1) * designRatio)
-                                                  ]
                                                 )
                                               )
                                             ),
@@ -438,86 +434,127 @@ class _XpBarPopupState extends State<XpBarPopup>
                                   ),
                                 ),
                               ),
-                            ],
-                          ),
+                            ),
+                          ],
                         ),
                       ),
-                      const Spacer(flex: 7),
-                    ]
-                  ),
-                  Align(
-                    alignment: Alignment(-0.425, -0.05),
-                    child: ScaleTransition(
-                      scale: rankUpTextScale,
-                      child: FadeTransition(
-                        opacity: rankUpTextOpacity,
-                        child: Text(
-                          "Rank Up!",
-                          style: TextStyle(
-                            fontFamily: "Splatfont1",
-                            color: Palette.xpRankUpText,
-                            shadows: [
-                              Shadow(offset: Offset(1, 1) * designRatio)
-                            ]
-                          )
+                    ),
+                    const Spacer(flex: 7),
+                  ]
+                ),
+                Align(
+                  alignment: Alignment(-0.425, -0.05),
+                  child: ScaleTransition(
+                    scale: rankUpTextScale,
+                    child: FadeTransition(
+                      opacity: rankUpTextOpacity,
+                      child: Text(
+                        "Rank Up!",
+                        style: TextStyle(
+                          fontFamily: "Splatfont1",
+                          color: Palette.xpRankUpText,
+                          shadows: [
+                            Shadow(offset: Offset(1, 1) * designRatio)
+                          ]
                         )
                       )
                     )
-                  ),
-                  if (xpDiff > 0) Align(
-                    alignment: Alignment(0.9, -0.25),
-                    child: FractionallySizedBox(
-                      widthFactor: 0.15,
-                      child: AspectRatio(
-                        aspectRatio: 1.0,
-                        child: DecoratedBox(
-                          decoration: BoxDecoration(
-                            gradient: LinearGradient(
-                              colors: [
-                                Palette.xpAddedPointsGradientStart,
-                                Palette.xpAddedPointsGradientEnd,
-                              ],
-                              begin: Alignment.topCenter,
-                              end: Alignment.bottomCenter,
-                            ),
-                            shape: BoxShape.circle
+                  )
+                ),
+                if (xpDiff > 0) Align(
+                  alignment: Alignment(0.9, -0.25),
+                  child: FractionallySizedBox(
+                    widthFactor: 0.15,
+                    child: AspectRatio(
+                      aspectRatio: 1.0,
+                      child: DecoratedBox(
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            colors: [
+                              Palette.xpAddedPointsGradientStart,
+                              Palette.xpAddedPointsGradientEnd,
+                            ],
+                            begin: Alignment.topCenter,
+                            end: Alignment.bottomCenter,
                           ),
-                          child: Transform.translate(
-                            offset: Offset(0, 6) * designRatio,
-                            child: Column(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Text(
-                                  "Tableturf\npoints",
-                                  textAlign: TextAlign.center,
-                                  style: TextStyle(
-                                    fontSize: 12 * designRatio,
-                                    height: 1.0,
-                                  ),
-                                ),
-                                Text(
-                                  "+$xpDiff",
-                                  style: TextStyle(
-                                    fontFamily: "Splatfont1",
-                                    fontSize: 18 * designRatio,
-                                    height: 1.25,
-                                  ),
-                                )
-                              ],
-                            ),
-                          )
+                          shape: BoxShape.circle
                         ),
-                      )
+                        child: Transform.translate(
+                          offset: Offset(0, 6) * designRatio,
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Text(
+                                "Tableturf\npoints",
+                                textAlign: TextAlign.center,
+                                style: TextStyle(
+                                  fontSize: 12 * designRatio,
+                                  height: 1.0,
+                                ),
+                              ),
+                              Text(
+                                "+$xpDiff",
+                                textAlign: TextAlign.center,
+                                style: TextStyle(
+                                  fontFamily: "Splatfont1",
+                                  fontSize: 18 * designRatio,
+                                  height: 1.25,
+                                  letterSpacing: 0.5 * designRatio,
+                                ),
+                              )
+                            ],
+                          ),
+                        )
+                      ),
                     )
                   )
-                ],
-              ),
+                ),
+              ],
+            );
+
+
+            final content = Stack(
+              fit: StackFit.expand,
+              children: [
+                FractionallySizedBox(
+                  widthFactor: 0.7,
+                  child: xpBar
+                ),
+                Positioned(
+                  top: 40 * designRatio,
+                  right: 50 * designRatio,
+                  child: SizedBox(
+                    height: 40 * designRatio,
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                      children: [
+                        for (final char in widget.afterCardBits.toString().padLeft(4, "0").characters)
+                          SizedBox(
+                            width: 20 * designRatio,
+                            child: Center(
+                              child: Text(
+                                char,
+                                style: TextStyle(
+                                  fontSize: 32 * designRatio,
+                                  height: 1.0,
+                                )
+                              ),
+                            )
+                          )
+                      ]
+                    )
+                  )
+                )
+              ]
             );
             return DefaultTextStyle(
               style: TextStyle(
                 fontFamily: "Splatfont2",
                 color: Colors.white,
                 fontSize: 25 * designRatio,
+                shadows: [
+                  Shadow(offset: Offset(1, 1) * designRatio)
+                ]
               ),
               child: SlideTransition(
                 position: transitionOffset,
@@ -567,9 +604,11 @@ class _XpBarPopupState extends State<XpBarPopup>
 }
 
 
-Future<void> showXpBarPopup(BuildContext context, {
+Future<void> showStatsPopup(BuildContext context, {
   required int beforeXp,
   required int afterXp,
+  required int beforeCardBits,
+  required int afterCardBits,
 }) async {
   await Navigator.of(context).push(PageRouteBuilder(
     opaque: false,
@@ -577,6 +616,8 @@ Future<void> showXpBarPopup(BuildContext context, {
       return XpBarPopup(
         beforeXp: beforeXp,
         afterXp: afterXp,
+        beforeCardBits: beforeCardBits,
+        afterCardBits: afterCardBits,
       );
     }
   ));

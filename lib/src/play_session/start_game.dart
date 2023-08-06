@@ -8,12 +8,12 @@ import 'package:tableturf_mobile/src/game_internals/player.dart';
 import 'package:tableturf_mobile/src/game_internals/card.dart';
 import 'package:tableturf_mobile/src/game_internals/map.dart';
 import 'package:tableturf_mobile/src/game_internals/tile.dart';
+import 'package:tableturf_mobile/src/player_progress/player_progress.dart';
 import 'package:tableturf_mobile/src/style/my_transition.dart';
 import 'package:tableturf_mobile/src/style/constants.dart';
 
 import '../game_internals/deck.dart';
 import '../game_internals/opponentAI.dart';
-import '../settings/settings.dart';
 import 'session_intro.dart';
 
 PageRouteBuilder<T> _buildGameSessionPage<T>({
@@ -33,14 +33,14 @@ PageRouteBuilder<T> _buildGameSessionPage<T>({
   Future<void> Function(BuildContext)? onPostGame,
   required bool showXpPopup,
 }) {
-  final settings = Settings();
+  final playerProgress = PlayerProgress();
 
   final yellowDeckCards = yellowDeck.cards
-      .map((ident) => TableturfCard(settings.identToCard(ident)))
+      .map((ident) => TableturfCard(playerProgress.identToCard(ident)))
       .toList();
 
   final blueDeckCards = blueDeck.cards
-      .map((ident) => TableturfCard(settings.identToCard(ident)))
+      .map((ident) => TableturfCard(playerProgress.identToCard(ident)))
       .toList();
 
   final yellowPlayer = TableturfPlayer(

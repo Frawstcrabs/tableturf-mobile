@@ -10,7 +10,8 @@ Use `flutter run` to run on a device.
 
 - [x] Implement XP from battles
 - [x] Implement unlocking opponents via ranks
-- [ ] Implement card bit rewards
+- [x] Implement card bit rewards
+- [ ] Animate card bit rewards
 - [ ] Implement card packs
 - [ ] Make the UI less shit/better able to handle different screen sizes
 - [ ] Add special tile distance awareness to AI alongside normal tile distance awareness (different calculations per level?)

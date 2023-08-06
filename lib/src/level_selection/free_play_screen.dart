@@ -9,6 +9,7 @@ import 'package:tableturf_mobile/src/game_internals/opponentAI.dart';
 import 'package:tableturf_mobile/src/game_internals/player.dart';
 import 'package:tableturf_mobile/src/level_selection/level_selection_screen.dart';
 import 'package:tableturf_mobile/src/level_selection/opponents.dart';
+import 'package:tableturf_mobile/src/player_progress/player_progress.dart';
 import 'package:tableturf_mobile/src/settings/settings.dart';
 
 import '../game_internals/card.dart';
@@ -35,6 +36,7 @@ class _FreePlayScreenState extends State<FreePlayScreen> {
   @override
   Widget build(BuildContext context) {
     final settings = Settings();
+    final playerProgress = PlayerProgress();
     //final playerProgress = context.watch<PlayerProgress>();
     const officialRandomiser = TableturfDeck(
       deckID: -1000,
@@ -50,7 +52,7 @@ class _FreePlayScreenState extends State<FreePlayScreen> {
     );
 
     final deckList = [
-      for (final deck in settings.decks)
+      for (final deck in playerProgress.decks)
         deck.value,
       //officialRandomiser,
       pureRandomiser,
@@ -111,7 +113,7 @@ class _FreePlayScreenState extends State<FreePlayScreen> {
                 });
               },
               items: [
-                for (final map in officialMaps + settings.maps.map((m) => m.value).toList())
+                for (final map in officialMaps + playerProgress.maps.map((m) => m.value).toList())
                   DropdownMenuItem(
                     value: map,
                     child: Text(map.name)
@@ -176,7 +178,7 @@ class _FreePlayScreenState extends State<FreePlayScreen> {
                   // pure randomiser
                   yellowRandomiser = createPureRandomCards();
                   for (final card in yellowRandomiser) {
-                    settings.registerTempCard(card);
+                    playerProgress.registerTempCard(card);
                   }
                   tempPlayerDeck = TableturfDeck(
                     deckID: -1001,
@@ -199,7 +201,7 @@ class _FreePlayScreenState extends State<FreePlayScreen> {
                   // pure randomiser
                   blueRandomiser = createPureRandomCards();
                   for (final card in blueRandomiser) {
-                    settings.registerTempCard(card);
+                    playerProgress.registerTempCard(card);
                   }
                   tempOpponentDeck = TableturfDeck(
                     deckID: -1001,
@@ -227,12 +229,12 @@ class _FreePlayScreenState extends State<FreePlayScreen> {
                 );
                 if (yellowRandomiser != null) {
                   for (final card in yellowRandomiser) {
-                    settings.removeTempCard(card.ident);
+                    playerProgress.removeTempCard(card.ident);
                   }
                 }
                 if (blueRandomiser != null) {
                   for (final card in blueRandomiser) {
-                    settings.removeTempCard(card.ident);
+                    playerProgress.removeTempCard(card.ident);
                   }
                 }
               },

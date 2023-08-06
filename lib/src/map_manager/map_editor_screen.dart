@@ -6,6 +6,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:collection/collection.dart';
 import 'package:tableturf_mobile/src/card_manager/deck_editor_screen.dart';
+import 'package:tableturf_mobile/src/player_progress/player_progress.dart';
 import 'package:tableturf_mobile/src/settings/settings.dart';
 import 'package:tableturf_mobile/src/style/shaders.dart';
 
@@ -666,7 +667,7 @@ class _MapEditorScreenState extends State<MapEditorScreen> {
   @override
   Widget build(BuildContext context) {
     final mediaQuery = MediaQuery.of(context);
-    final settings = Settings();
+    final playerProgress = PlayerProgress();
 
     final screen = Column(
       children: [
@@ -1104,12 +1105,12 @@ class _MapEditorScreenState extends State<MapEditorScreen> {
                   },
                   onPressEnd: () async {
                     if (widget.map == null) {
-                      settings.createMap(
+                      playerProgress.createMap(
                         name: _textEditingController.text,
                         board: boardNotifier.value.copy(),
                       );
                     } else {
-                      settings.updateMap(
+                      playerProgress.updateMap(
                         mapID: widget.map!.mapID,
                         name: _textEditingController.text,
                         board: boardNotifier.value.copy(),

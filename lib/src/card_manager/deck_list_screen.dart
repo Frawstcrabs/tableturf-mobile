@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:tableturf_mobile/src/card_manager/deck_editor_screen.dart';
 import 'package:tableturf_mobile/src/components/selection_button.dart';
+import 'package:tableturf_mobile/src/player_progress/player_progress.dart';
 
 import '../game_internals/deck.dart';
 import '../components/deck_thumbnail.dart';
@@ -28,8 +29,8 @@ class _DeckListScreenState extends State<DeckListScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final settings = context.watch<Settings>();
-    final decks = settings.decks;
+    final playerProgress = PlayerProgress();
+    final decks = playerProgress.decks;
     final mediaQuery = MediaQuery.of(context);
     final screen = Column(
       children: [
@@ -114,11 +115,11 @@ class _DeckListScreenState extends State<DeckListScreen> {
                                                 onSelected: (val) {
                                                   switch (val) {
                                                     case DeckPopupActions.delete:
-                                                      settings.deleteDeck(deck.deckID);
+                                                      playerProgress.deleteDeck(deck.deckID);
                                                       setState(() {});
                                                       break;
                                                     case DeckPopupActions.duplicate:
-                                                      settings.duplicateDeck(deck.deckID);
+                                                      playerProgress.duplicateDeck(deck.deckID);
                                                       setState(() {});
                                                       break;
                                                   }
@@ -142,7 +143,7 @@ class _DeckListScreenState extends State<DeckListScreen> {
                                 },
                                 onWillAccept: (newDeck) => !identical(deckNotifier, newDeck),
                                 onAccept: (newDeck) {
-                                  settings.swapDecks(deckNotifier.value.deckID, newDeck.value.deckID);
+                                  playerProgress.swapDecks(deckNotifier.value.deckID, newDeck.value.deckID);
                                 },
                               )
                             );

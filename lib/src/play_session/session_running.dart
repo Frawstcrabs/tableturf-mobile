@@ -880,7 +880,7 @@ class _PlaySessionScreenState extends State<PlaySessionScreen>
     await AudioController().stopSong(
       fadeDuration: const Duration(milliseconds: 700)
     );
-    await Future<void>.delayed(const Duration(milliseconds: 900));
+    await Future<void>.delayed(const Duration(milliseconds: 1500));
     await _outroController.forward(from: 0.5);
     animationLayer.remove();
     widget.battle.updateScores();

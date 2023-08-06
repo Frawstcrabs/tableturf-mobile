@@ -8,6 +8,7 @@ import 'package:tableturf_mobile/src/settings/settings.dart';
 import '../game_internals/map.dart';
 import '../components/card_widget.dart';
 import '../components/map_thumbnail.dart';
+import '../player_progress/player_progress.dart';
 import '../style/constants.dart';
 import 'map_editor_screen.dart';
 
@@ -41,8 +42,8 @@ class _MapListScreenState extends State<MapListScreen>
   @override
   Widget build(BuildContext context) {
     final mediaQuery = MediaQuery.of(context);
-    final settings = Settings();
-    final mapList = settings.maps;
+    final playerProgress = PlayerProgress();
+    final mapList = playerProgress.maps;
     final screen = Column(
         children: [
           Expanded(
@@ -176,11 +177,11 @@ class _MapListScreenState extends State<MapListScreen>
                                               onSelected: (val) {
                                                 switch (val) {
                                                   case MapPopupActions.delete:
-                                                    settings.deleteMap(mapNotifier.value.mapID);
+                                                    playerProgress.deleteMap(mapNotifier.value.mapID);
                                                     setState(() {});
                                                     break;
                                                   case MapPopupActions.duplicate:
-                                                    settings.duplicateMap(mapNotifier.value.mapID);
+                                                    playerProgress.duplicateMap(mapNotifier.value.mapID);
                                                     setState(() {});
                                                     break;
                                                 }
@@ -204,7 +205,7 @@ class _MapListScreenState extends State<MapListScreen>
                                 },
                                 onWillAccept: (newMap) => !identical(mapNotifier, newMap),
                                 onAccept: (newMap) {
-                                  settings.swapMaps(mapNotifier.value.mapID, newMap.value.mapID);
+                                  playerProgress.swapMaps(mapNotifier.value.mapID, newMap.value.mapID);
                                 },
                               )
                             );
