@@ -107,7 +107,7 @@ class _CardBitCounterState extends State<CardBitCounter>
                 height: charHeight,
                 width: 20 * designRatio,
                 child: ClipRect(
-                  clipBehavior: Clip.antiAlias,
+                  clipBehavior: Clip.hardEdge,
                   child: buildTickerColumn(designRatio, i),
                 ),
               ),
@@ -132,6 +132,8 @@ class _CardBitCounterState extends State<CardBitCounter>
             for (final (i, char) in digits.characters.indexed)
               Positioned(
                 bottom: charHeight * i,
+                left: 0,
+                right: 0,
                 child: buildTickerDigit(designRatio, char),
               ),
           ],

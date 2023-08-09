@@ -131,8 +131,7 @@ class PlayerProgress {
     }));
     _xp = _prefs.getInt("tableturf-xp") ?? 0;
     cardBits = ValueNotifier(
-      //_prefs.getInt("tableturf-card_bits") ?? 0,
-      9000,
+      _prefs.getInt("tableturf-card_bits") ?? 0,
     );
     cardBits.addListener(() {
       if (_commitChanges) {
@@ -197,10 +196,10 @@ class PlayerProgress {
         for (final entry in _winCounts.entries)
           entry.key: {
             for (final winEntry in entry.value.entries)
-              winEntry.key.index.toString(): winEntry.value
-          }
+              winEntry.key.index.toString(): winEntry.value,
+          },
       });
-      _prefs.setString("tableturf-wins", encodedJson);
+      await _prefs.setString("tableturf-wins", encodedJson);
     }
   }
 
@@ -208,7 +207,7 @@ class PlayerProgress {
     if (!_winCounts.containsKey(key)) {
       _winCounts[key] = {
         for (final level in AILevel.values)
-          level: 0
+          level: 0,
       };
     }
     return _winCounts[key]!;
@@ -229,7 +228,7 @@ class PlayerProgress {
     if (_commitChanges) {
       await _prefs.setString(
         "tableturf-unlocked_opponents",
-        jsonEncode(_unlockedOpponents)
+        jsonEncode(_unlockedOpponents),
       );
     }
   }
@@ -243,7 +242,7 @@ class PlayerProgress {
     if (_commitChanges) {
       await _prefs.setString(
         "tableturf-unlocked_card_sleeves",
-        jsonEncode(_unlockedCardSleeves)
+        jsonEncode(_unlockedCardSleeves),
       );
     }
   }
@@ -251,6 +250,20 @@ class PlayerProgress {
   void unlockCardSleeve(String cardSleeve) {
     _unlockedCardSleeves.add(cardSleeve);
     _writeUnlockedCardSleeves();
+  }
+
+  Future<void> _writeUnlockedCards() async {
+    if (_commitChanges) {
+      await _prefs.setString(
+        "tableturf-unlocked_cards",
+        jsonEncode(_unlockedCards),
+      );
+    }
+  }
+
+  void unlockCard(TableturfCardIdentifier ident) {
+    _unlockedCards.add(ident);
+    _writeUnlockedCards();
   }
 
   void swapDecks(int deck1, int deck2) {
@@ -284,6 +297,15 @@ class PlayerProgress {
         jsonEncode([for (final deck in _decks) deck.value.deckID]),
       );
     }
+  }
+
+  Future<void> _writeDecks() async {
+    await Future.wait([
+      _writeNextDeckID(),
+      _writeDeckIndexes(),
+      for (final deck in _decks)
+        _writeDeck(deck.value),
+    ]);
   }
 
   Future<void> _deleteDeck(int deckID) async {
@@ -491,11 +513,22 @@ class PlayerProgress {
       }
     }
     _unlockedOpponents = Set.from([-1]);
+    _unlockedCards = Set.from([...starterDeck.cards]);
     _unlockedCardSleeves = Set.from(["default"]);
     xp = 0;
     cardBits.value = 0;
-    _writeWinCounts();
-    _writeUnlockedOpponents();
-    _writeUnlockedCardSleeves();
+    _decks = [ValueNotifier(starterDeck)];
+    _nextDeckID = 1;
+    await Future.wait([
+      for (final deck in _decks)
+        _deleteDeck(deck.value.deckID),
+    ]);
+    await Future.wait([
+      _writeWinCounts(),
+      _writeUnlockedOpponents(),
+      _writeUnlockedCards(),
+      _writeUnlockedCardSleeves(),
+      _writeDecks(),
+    ]);
   }
 }

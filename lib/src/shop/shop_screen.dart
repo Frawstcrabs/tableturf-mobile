@@ -6,9 +6,9 @@ import 'package:tableturf_mobile/src/components/card_selection.dart';
 import 'package:tableturf_mobile/src/components/card_widget.dart';
 import 'package:tableturf_mobile/src/components/card_bit_counter.dart';
 import 'package:tableturf_mobile/src/game_internals/card.dart';
-import 'package:tableturf_mobile/src/game_internals/player.dart';
 import 'package:tableturf_mobile/src/player_progress/player_progress.dart';
 import 'package:tableturf_mobile/src/shop/shop_buy_prompt.dart';
+import 'package:tableturf_mobile/src/style/constants.dart';
 
 import '../components/flip_card.dart';
 import '../components/selection_button.dart';
@@ -88,6 +88,15 @@ class _ShopScreenState extends State<ShopScreen>
       }
     ));
     await animCompleter.future;
+    int cardBitsTotal = 0;
+    for (final entry in selectedCards) {
+      if (entry.isDupe) {
+        cardBitsTotal += entry.card.cardBitsValue;
+      } else {
+        playerProgress.unlockCard(entry.card.ident);
+      }
+    }
+    playerProgress.cardBits.value += cardBitsTotal;
     return completer.future;
   }
 
@@ -98,133 +107,136 @@ class _ShopScreenState extends State<ShopScreen>
     final screen = Stack(
       fit: StackFit.passthrough,
       children: [
-        Column(
-          children: [
-            Expanded(
-              flex: 1,
-              child: Row(
-                children: [
-                  Expanded(
-                    flex: 1,
-                    child: Center(
-                      child: FractionallySizedBox(
-                        heightFactor: 0.5,
-                        child: FittedBox(
-                          child: ValueListenableBuilder(
-                            valueListenable: cardBits,
-                            builder: (_, cardBits, __) => CardBitCounter(
-                              cardBits: cardBits,
-                              designRatio: 1,
+        Padding(
+          padding: mediaQuery.padding,
+          child: Column(
+            children: [
+              Expanded(
+                flex: 1,
+                child: Row(
+                  children: [
+                    Expanded(
+                      flex: 1,
+                      child: Center(
+                        child: FractionallySizedBox(
+                          heightFactor: 0.5,
+                          child: FittedBox(
+                            child: ValueListenableBuilder(
+                              valueListenable: cardBits,
+                              builder: (_, cardBits, __) => CardBitCounter(
+                                cardBits: cardBits,
+                                designRatio: 1,
+                              ),
                             ),
                           ),
                         ),
                       ),
                     ),
-                  ),
-                  Expanded(
-                    flex: 2,
-                    child: Center(
-                      child: Text(
-                        "Hotlantis",
-                        style: TextStyle(
-                          fontFamily: "Splatfont1",
-                        ),
-                      ),
-                    ),
-                  ),
-                  const Spacer(flex: 1),
-                ],
-              ),
-            ),
-            const Divider(color: Colors.black),
-            Expanded(
-              flex: 9,
-              child: Stack(
-                fit: StackFit.passthrough,
-                children: [
-                  Padding(
-                    padding: const EdgeInsets.all(20.0),
-                    child: Opacity(
-                      opacity: 0.25,
-                      child: Align(
-                        alignment: Alignment.bottomLeft,
-                        child: Transform.scale(
-                          scale: 0.75,
-                          alignment: Alignment.bottomLeft,
-                          child: Row(
-                            children: [
-                              Image.asset("assets/images/character_icons/harmony.png"),
-                              Text("the fuck you want", style: TextStyle(shadows: []))
-                            ],
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-                  GridView.count(
-                    crossAxisCount: 3,
-                    childAspectRatio: CardWidget.CARD_RATIO,
-                    children: [
-                      ShopItemThumbnail(
-                        cost: 1000,
-                        name: "Card Pack",
-                        backgroundController: _popupBackgroundController,
-                        child: Transform.scale(
-                          scale: 0.9,
-                          child: Transform.rotate(
-                            angle: 0.05 * pi,
-                            child: Image.asset(
-                              "assets/images/card_pack_common.png",
-                            ),
-                          ),
-                        ),
-                        onPurchase: () async {
-                          await _runCardPack();
-                        },
-                      ),
-                      ShopItemThumbnail(
-                        cost: 10,
-                        backgroundController: _popupBackgroundController,
-                        name: "Custom Card",
+                    Expanded(
+                      flex: 2,
+                      child: Center(
                         child: Text(
-                          "not done",
+                          "Hotlantis",
                           style: TextStyle(
-                            color: Colors.white,
+                            fontFamily: "Splatfont1",
                           ),
                         ),
                       ),
-                    ],
-                  ),
-                ],
+                    ),
+                    const Spacer(flex: 1),
+                  ],
+                ),
               ),
-            ),
-            const Divider(color: Colors.black),
-            Expanded(
-              flex: 1,
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                children: [
-                  const Spacer(flex: 1),
-                  Expanded(
-                    flex: 2,
-                    child: Padding(
-                      padding: const EdgeInsets.all(10),
-                      child: SelectionButton(
-                        child: Text("Back"),
-                        designRatio: 0.5,
-                        onPressEnd: () async {
-                          Navigator.of(context).pop();
-                          return Future<void>.delayed(
-                              const Duration(milliseconds: 100));
-                        },
+              const Divider(color: Colors.black),
+              Expanded(
+                flex: 9,
+                child: Stack(
+                  fit: StackFit.passthrough,
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.all(20.0),
+                      child: Opacity(
+                        opacity: 0.25,
+                        child: Align(
+                          alignment: Alignment.bottomLeft,
+                          child: Transform.scale(
+                            scale: 0.75,
+                            alignment: Alignment.bottomLeft,
+                            child: Row(
+                              children: [
+                                Image.asset("assets/images/character_icons/harmony.png"),
+                                Text("the fuck you want", style: TextStyle(shadows: []))
+                              ],
+                            ),
+                          ),
+                        ),
                       ),
                     ),
-                  ),
-                  const Spacer(flex: 1),
-                ],
+                    GridView.count(
+                      crossAxisCount: 3,
+                      childAspectRatio: CardWidget.CARD_RATIO,
+                      children: [
+                        ShopItemThumbnail(
+                          cost: 10,
+                          name: "Card Pack",
+                          backgroundController: _popupBackgroundController,
+                          child: Transform.scale(
+                            scale: 0.9,
+                            child: Transform.rotate(
+                              angle: 0.05 * pi,
+                              child: Image.asset(
+                                "assets/images/card_pack_common.png",
+                              ),
+                            ),
+                          ),
+                          onPurchase: () async {
+                            await _runCardPack();
+                          },
+                        ),
+                        ShopItemThumbnail(
+                          cost: 20,
+                          backgroundController: _popupBackgroundController,
+                          name: "Custom Card",
+                          child: Text(
+                            "not done",
+                            style: TextStyle(
+                              color: Colors.white,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
               ),
-            ),
-          ],
+              const Divider(color: Colors.black),
+              Expanded(
+                flex: 1,
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                  children: [
+                    const Spacer(flex: 1),
+                    Expanded(
+                      flex: 2,
+                      child: Padding(
+                        padding: const EdgeInsets.all(10),
+                        child: SelectionButton(
+                          child: Text("Back"),
+                          designRatio: 0.5,
+                          onPressEnd: () async {
+                            Navigator.of(context).pop();
+                            return Future<void>.delayed(
+                                const Duration(milliseconds: 100));
+                          },
+                        ),
+                      ),
+                    ),
+                    const Spacer(flex: 1),
+                  ],
+                ),
+              ),
+            ],
+          ),
         ),
         IgnorePointer(
           child: FadeTransition(
@@ -266,10 +278,7 @@ class _ShopScreenState extends State<ShopScreen>
               ),
             ],
           ),
-          child: Padding(
-            padding: mediaQuery.padding,
-            child: screen,
-          ),
+          child: screen,
         ),
       ),
     );
@@ -299,6 +308,13 @@ class _CardPackDisplayState extends State<CardPackDisplay>
 
   late final AnimationController cardController;
   late final Animation<double> cardRotate, cardFlip;
+
+  late final AnimationController cardBitsController;
+  late final Animation<double> cardBitsOpacity, cardBitsScale, cardShrink, cardFade;
+
+  late final AnimationController cardBitsArrowController;
+  late final Animation<double> cardBitsArrowOpacity;
+  late final Animation<Offset> cardBitsArrowOffset;
 
   @override
   void initState() {
@@ -353,7 +369,7 @@ class _CardPackDisplayState extends State<CardPackDisplay>
     ]).animate(transitionController);
     popupRotate = TweenSequence([
       TweenSequenceItem(
-          tween: Tween(begin: 0.005, end: 0.0),
+          tween: Tween(begin: 0.01, end: 0.0),
           weight: 50
       ),
       TweenSequenceItem(
@@ -371,9 +387,9 @@ class _CardPackDisplayState extends State<CardPackDisplay>
     cardRotate = TweenSequence([
       TweenSequenceItem(
         tween: Tween(
-          begin: 0.02,
+          begin: 0.05,
           end: 0.0,
-        ).chain(CurveTween(curve: ElasticOutCurve(2/3))),
+        ).chain(CurveTween(curve: const ElasticOutCurve(2/3))),
         weight: timeUntilFlip.toDouble(),
       ),
       TweenSequenceItem(
@@ -383,17 +399,111 @@ class _CardPackDisplayState extends State<CardPackDisplay>
     ]).animate(cardController);
     cardFlip = TweenSequence([
       TweenSequenceItem(
-        tween: ConstantTween(0.0),
+        tween: ConstantTween(1.0),
         weight: timeUntilFlip.toDouble(),
+      ),
+      TweenSequenceItem(
+        tween: Tween(
+          begin: 1.0,
+          end: 0.0,
+        ),
+        weight: flipTime.toDouble(),
+      ),
+    ]).animate(cardController);
+
+    cardBitsController = AnimationController(
+      duration: const Duration(milliseconds: 300),
+      vsync: this,
+    );
+    const cardShrinkAmount = 0.55;
+    cardShrink = TweenSequence<double>([
+      TweenSequenceItem(
+        tween: Tween(
+          begin: 1.0,
+          end: cardShrinkAmount,
+        ),
+        weight: 50,
+      ),
+      TweenSequenceItem(
+        tween: ConstantTween(cardShrinkAmount),
+        weight: 50,
+      ),
+    ]).animate(cardBitsController);
+    cardFade = TweenSequence<double>([
+      TweenSequenceItem(
+        tween: ConstantTween(1.0),
+        weight: 50,
+      ),
+      TweenSequenceItem(
+        tween: Tween(
+          begin: 1.0,
+          end: 0.7,
+        ),
+        weight: 50,
+      ),
+    ]).animate(cardBitsController);
+    cardBitsScale = TweenSequence<double>([
+      TweenSequenceItem(
+        tween: ConstantTween(0.0),
+        weight: 50,
       ),
       TweenSequenceItem(
         tween: Tween(
           begin: 0.0,
           end: 1.0,
         ),
-        weight: flipTime.toDouble(),
+        weight: 50,
       ),
-    ]).animate(cardController);
+    ]).animate(cardBitsController);
+    cardBitsOpacity = TweenSequence<double>([
+      TweenSequenceItem(
+        tween: ConstantTween(0.7),
+        weight: 50,
+      ),
+      TweenSequenceItem(
+        tween: Tween(
+          begin: 0.7,
+          end: 1.0,
+        ).chain(CurveTween(curve: Curves.easeOutBack)),
+        weight: 50,
+      ),
+    ]).animate(cardBitsController);
+
+    cardBitsArrowController = AnimationController(
+      duration: const Duration(milliseconds: 1000),
+      vsync: this,
+    );
+    cardBitsArrowController.value = 1.0;
+    cardBitsArrowOpacity = TweenSequence<double>([
+      TweenSequenceItem(
+        tween: ConstantTween(1.0),
+        weight: 60,
+      ),
+      TweenSequenceItem(
+        tween: Tween(
+          begin: 1.0,
+          end: 0.0,
+        ),
+        weight: 25,
+      ),
+      TweenSequenceItem(
+        tween: ConstantTween(0.0),
+        weight: 15,
+      ),
+    ]).animate(cardBitsArrowController);
+    cardBitsArrowOffset = TweenSequence<Offset>([
+      TweenSequenceItem(
+        tween: Tween(
+          begin: Offset(0, -0.05),
+          end: Offset(0, 0.35),
+        ),
+        weight: 55,
+      ),
+      TweenSequenceItem(
+        tween: ConstantTween(Offset(0, 0.35)),
+        weight: 45,
+      ),
+    ]).animate(cardBitsArrowController);
 
     playAnimation();
   }
@@ -403,24 +513,98 @@ class _CardPackDisplayState extends State<CardPackDisplay>
   void dispose() {
     transitionController.dispose();
     cardController.dispose();
+    cardBitsController.dispose();
+    cardBitsArrowController.dispose();
     super.dispose();
   }
 
   Future<void> playAnimation() async {
     transitionController.animateTo(0.5);
     await cardController.forward();
+    if (widget.cards.any((e) => e.isDupe)) {
+      await cardBitsController.forward();
+      await Future.delayed(const Duration(milliseconds: 200));
+      cardBitsArrowController.repeat();
+    }
     widget.animCompleter.complete();
   }
 
+  Future<void> onExit() async {
+    if (!widget.animCompleter.isCompleted) {
+      return;
+    }
+    widget.completer.complete();
+    await transitionController.forward();
+    Navigator.of(context).pop();
+  }
+
   Widget _buildCard(CardPackEntry entry) {
-    return AnimatedBuilder(
-      animation: cardFlip,
-      child: CardFrontWidget(card: entry.card),
-      builder: (_, child) => FlipCard(
-        skew: cardFlip.value,
-        front: child!,
-        back: Image.asset(
-          "assets/images/card_sleeves/sleeve_default.png",
+    Widget cardFront = CardFrontWidget(card: entry.card);
+    if (entry.isDupe) {
+      cardFront = Stack(
+        children: [
+          FadeTransition(
+            opacity: cardFade,
+            child: ScaleTransition(
+              scale: cardShrink,
+              alignment: Alignment.topCenter,
+              child: cardFront,
+            )
+          ),
+          Positioned.fill(
+            child: Column(
+              children: [
+                const Spacer(flex: 20),
+                Expanded(
+                  flex: 8,
+                  child: SlideTransition(
+                    position: cardBitsArrowOffset,
+                    child: FadeTransition(
+                      opacity: cardBitsArrowOpacity,
+                      child: Center(
+                        child: Transform.scale(
+                          scale: 0.75,
+                          child: Icon(
+                            Icons.arrow_downward,
+                            color: Palette.tileYellow,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+                Expanded(
+                  flex: 12,
+                  child: FadeTransition(
+                    opacity: cardBitsOpacity,
+                    child: ScaleTransition(
+                      scale: cardBitsScale,
+                      child: Center(
+                        child: ShopItemPrice(cost: "x ${entry.card.cardBitsValue}"),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      );
+    }
+    return RepaintBoundary(
+      child: RotationTransition(
+        turns: cardRotate,
+        alignment: Alignment(0, -0.75),
+        child: AnimatedBuilder(
+          animation: cardFlip,
+          child: cardFront,
+          builder: (_, child) => FlipCard(
+            skew: cardFlip.value,
+            front: child!,
+            back: Image.asset(
+              "assets/images/card_sleeves/sleeve_default.png",
+            ),
+          ),
         ),
       ),
     );
@@ -439,6 +623,9 @@ class _CardPackDisplayState extends State<CardPackDisplay>
           builder: (context, constraints) {
             const designWidth = 646;
             final designRatio = constraints.maxWidth / designWidth;
+            final divider = SizedBox(
+              width: 40 * designRatio,
+            );
             final cards = Center(
               child: FractionallySizedBox(
                 heightFactor: 0.9,
@@ -451,12 +638,12 @@ class _CardPackDisplayState extends State<CardPackDisplay>
                         child: FractionallySizedBox(
                           heightFactor: 0.9,
                           child: Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                            mainAxisAlignment: MainAxisAlignment.center,
                             children: [
                               _buildCard(widget.cards[0]),
-                              SizedBox(),
+                              divider,
                               _buildCard(widget.cards[1]),
-                              SizedBox(),
+                              divider,
                               _buildCard(widget.cards[2]),
                             ],
                           ),
@@ -468,12 +655,11 @@ class _CardPackDisplayState extends State<CardPackDisplay>
                         child: FractionallySizedBox(
                           heightFactor: 0.9,
                           child: Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                            mainAxisAlignment: MainAxisAlignment.center,
                             children: [
-                              SizedBox(),
                               _buildCard(widget.cards[3]),
+                              divider,
                               _buildCard(widget.cards[4]),
-                              SizedBox(),
                             ],
                           ),
                         ),
@@ -495,12 +681,15 @@ class _CardPackDisplayState extends State<CardPackDisplay>
                   scale: popupScale,
                   child: RotationTransition(
                     turns: popupRotate,
-                    child: DecoratedBox(
-                      decoration: BoxDecoration(
-                        color: Colors.grey[850],
-                        borderRadius: BorderRadius.circular(60 * designRatio),
+                    child: FadeTransition(
+                      opacity: popupOpacity,
+                      child: DecoratedBox(
+                        decoration: BoxDecoration(
+                          color: Colors.grey[850],
+                          borderRadius: BorderRadius.circular(60 * designRatio),
+                        ),
+                        child: cards,
                       ),
-                      child: cards,
                     ),
                   ),
                 ),
@@ -510,20 +699,18 @@ class _CardPackDisplayState extends State<CardPackDisplay>
         ),
       ),
     );
-    return FadeTransition(
-      opacity: popupOpacity,
-      child: DecoratedBox(
-        decoration: BoxDecoration(
-          gradient: RadialGradient(
-            colors: [
-              Colors.black38,
-              Colors.black54,
-            ],
-            radius: 1.3,
-          ),
-        ),
+    return WillPopScope(
+      onWillPop: () async {
+        onExit();
+        return false;
+      },
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: onExit,
         child: Center(
-          child: displayBox,
+          child: RepaintBoundary(
+            child: displayBox,
+          ),
         ),
       ),
     );
@@ -568,7 +755,7 @@ class ShopItemThumbnail extends StatelessWidget {
                   padding: EdgeInsets.all(30 * designRatio),
                   child: FractionallySizedBox(
                     heightFactor: 0.15,
-                    child: ShopItemPrice(cost: cost),
+                    child: ShopItemPrice(cost: cost.toString()),
                   ),
                 ),
                 Align(
@@ -618,7 +805,7 @@ class ShopItemThumbnail extends StatelessWidget {
               flex: 1,
               child: cost == null ? SizedBox() : Align(
                 alignment: Alignment.centerLeft,
-                child: ShopItemPrice(cost: cost ?? 0),
+                child: ShopItemPrice(cost: (cost ?? 0).toString()),
               ),
             ),
             Expanded(
@@ -651,7 +838,7 @@ class ShopItemPrice extends StatelessWidget {
     required this.cost,
   });
 
-  final int cost;
+  final String cost;
 
   @override
   Widget build(BuildContext context) {
@@ -666,7 +853,7 @@ class ShopItemPrice extends StatelessWidget {
             ),
           ),
           Text(
-            cost.toString(),
+            cost,
             style: TextStyle(
               color: Colors.white,
               fontFamily: "Splatfont2",

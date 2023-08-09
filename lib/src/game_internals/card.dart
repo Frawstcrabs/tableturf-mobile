@@ -177,6 +177,11 @@ class TableturfCardIdentifier {
   Map<String, dynamic> toJson() => _$TableturfCardIdentifierToJson(this);
 }
 
+const Map<String, int> cardBitExchangeRates = {
+  "fresh": 20,
+  "rare": 5,
+};
+
 @JsonSerializable()
 class TableturfCardData {
   final TableturfCardIdentifier ident;
@@ -220,6 +225,7 @@ class TableturfCardData {
 
   int get hashCode => ident.hashCode;
   int get num => ident.num;
+  int get cardBitsValue => cardBitExchangeRates[rarity] ?? 1;
   TableturfCardType get type => ident.type;
 
   Map<String, dynamic> toJson() => _$TableturfCardDataToJson(this);
@@ -286,6 +292,7 @@ class TableturfCard {
   int get count => data.count;
   Coords get selectPoint => data.selectPoint;
   String get designSprite => data.designSprite;
+  int get cardBitsValue => data.cardBitsValue;
   TableturfCardIdentifier get ident => data.ident;
   TableturfCardType get type => data.type;
 }
