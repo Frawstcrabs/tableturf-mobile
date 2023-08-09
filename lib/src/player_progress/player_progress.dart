@@ -228,7 +228,7 @@ class PlayerProgress {
     if (_commitChanges) {
       await _prefs.setString(
         "tableturf-unlocked_opponents",
-        jsonEncode(_unlockedOpponents),
+        jsonEncode(_unlockedOpponents.toList()),
       );
     }
   }
@@ -242,7 +242,7 @@ class PlayerProgress {
     if (_commitChanges) {
       await _prefs.setString(
         "tableturf-unlocked_card_sleeves",
-        jsonEncode(_unlockedCardSleeves),
+        jsonEncode(_unlockedCardSleeves.toList()),
       );
     }
   }
