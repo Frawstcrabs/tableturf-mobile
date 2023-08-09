@@ -63,7 +63,7 @@ const starterDeck = TableturfDeck(
 class PlayerProgress {
   late final SharedPreferences _prefs;
   static const DIFFICULTY_UNLOCK_THRESHOLD = 3;
-  static const _commitChanges = !kDebugMode;
+  static const _commitChanges = kReleaseMode;
 
   static final PlayerProgress _controller = PlayerProgress._internal();
 
