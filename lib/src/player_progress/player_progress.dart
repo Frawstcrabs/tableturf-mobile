@@ -256,7 +256,7 @@ class PlayerProgress {
     if (_commitChanges) {
       await _prefs.setString(
         "tableturf-unlocked_cards",
-        jsonEncode(_unlockedCards),
+        jsonEncode(_unlockedCards.toList()),
       );
     }
   }
