@@ -586,13 +586,13 @@ class _LevelSelectionScreenState extends State<LevelSelectionScreen> {
     return (yellowDeck, difficulty) async {
       int beforeXp = playerProgress.xp;
       int beforeRank = playerProgress.rank;
-      int beforeCardBits = playerProgress.cardBits;
+      int beforeCardBits = playerProgress.cardBits.value;
       int winCount = 0;
       String? unlockedCardSleeve = null;
       final onWin = () async {
         winCount = playerProgress.incrementWins("deck:${opponent.deck.deckID}", difficulty);
         playerProgress.xp += difficulty.xpAmount;
-        playerProgress.cardBits += difficulty.cardBitReward;
+        playerProgress.cardBits.value += difficulty.cardBitReward;
         final afterRank = playerProgress.rank;
         if (difficulty == CARD_SLEEVE_UNLOCK_DIFFICULTY
             && winCount == CARD_SLEEVE_UNLOCK_REQ) {
@@ -631,7 +631,7 @@ class _LevelSelectionScreenState extends State<LevelSelectionScreen> {
           beforeXp: beforeXp,
           afterXp: playerProgress.xp,
           beforeCardBits: beforeCardBits,
-          afterCardBits: playerProgress.cardBits,
+          afterCardBits: playerProgress.cardBits.value,
         );
         await Future<void>.delayed(const Duration(milliseconds: 100));
         final afterRank = playerProgress.rank;

@@ -38,6 +38,7 @@ class Palette {
   static const backgroundMapList = const Color.fromRGBO(43, 43, 73, 1.0);
   static const backgroundMapEditor = const Color.fromRGBO(40, 40, 44, 1.0);
   static const backgroundPlaySession = const Color(0xff3f2f93);
+  static const backgroundPlaySessionHeader = const Color.fromRGBO(0, 0, 0, 0.2);
   static const backgroundSettings = const Color(0xffbfc8e3);
 
   static const tileUnfilled = const Color.fromRGBO(0, 0, 0, 0.8);

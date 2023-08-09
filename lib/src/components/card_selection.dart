@@ -64,7 +64,7 @@ class CardFrontWidget extends StatelessWidget {
 
   const CardFrontWidget({
     required this.card,
-    required this.traits,
+    this.traits = const YellowTraits(),
     this.isHidden = false,
     super.key
   });
@@ -538,15 +538,14 @@ class _CardSelectionWidgetState extends State<CardSelectionWidget>
       back: _buildCardBack(context),
     );
     */
-    final front = _buildCardFront(context);
-    final back = _buildCardBack(context);
     return AnimatedBuilder(
       animation: _flipController,
-      builder: (_, __) => FlipCard(
+      child: _buildCardFront(context),
+      builder: (_, child) => FlipCard(
         skew: (1 - _flipController.value),
-        front: front,
-        back: back,
-      )
+        front: child!,
+        back: _buildCardBack(context),
+      ),
     );
   }
 

@@ -2,9 +2,9 @@ import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 
-class CardPopupTransitionPainter extends SnapshotPainter {
+class PopupTransitionPainter extends SnapshotPainter {
   final Animation<double> popupScale, popupOpacity;
-  CardPopupTransitionPainter({
+  PopupTransitionPainter({
     required this.popupScale,
     required this.popupOpacity
   }) {
@@ -63,7 +63,7 @@ class CardPopupTransitionPainter extends SnapshotPainter {
   }
 
   @override
-  bool shouldRepaint(CardPopupTransitionPainter other) {
+  bool shouldRepaint(PopupTransitionPainter other) {
     return popupScale != other.popupScale
         || popupOpacity != other.popupOpacity;
   }

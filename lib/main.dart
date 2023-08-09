@@ -54,6 +54,16 @@ Future<void> guardedMain() async {
   SystemChrome.setEnabledSystemUIMode(
     SystemUiMode.edgeToEdge,
   );
+  /*
+  SystemChrome.setSystemUIOverlayStyle(
+    SystemUiOverlayStyle(
+      systemNavigationBarContrastEnforced: false,
+      statusBarColor: Colors.transparent,
+      statusBarBrightness: Brightness.light,
+      statusBarIconBrightness: Brightness.light,
+    ),
+  );
+  */
 
   final SharedPreferences prefs = await SharedPreferences.getInstance();
   /*

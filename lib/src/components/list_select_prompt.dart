@@ -3,7 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:tableturf_mobile/src/components/selection_button.dart';
 
-import '../card_manager/card_popup_transition_painter.dart';
+import 'popup_transition_painter.dart';
 
 typedef ListSelectBuilder<T> = Widget Function(BuildContext, void Function(T?));
 
@@ -171,7 +171,7 @@ class _ListSelectOverlayState<T> extends State<_ListSelectOverlay<T>> {
                 ),
                 SnapshotWidget(
                   controller: snapshotController,
-                  painter: CardPopupTransitionPainter(
+                  painter: PopupTransitionPainter(
                     popupScale: _popupScale,
                     popupOpacity: _popupOpacity,
                   ),

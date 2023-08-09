@@ -66,6 +66,7 @@ class CardPainter extends CustomPainter {
   final ui.Image? cardImage;
   final Color? background;
   final Color? overlayColor;
+  final Color? borderColor;
 
   const CardPainter({
     required this.card,
@@ -73,6 +74,7 @@ class CardPainter extends CustomPainter {
     this.cardImage,
     this.background,
     this.overlayColor,
+    this.borderColor,
   });
 
   @override
@@ -86,11 +88,16 @@ class CardPainter extends CustomPainter {
     final edgePaint = Paint()
       ..style = PaintingStyle.stroke
       ..strokeJoin = StrokeJoin.miter
-      ..strokeWidth = EDGE_WIDTH
       ..color = Palette.cardTileEdge;
     final background = this.background ?? Palette.cardBackgroundSelectable;
     canvas.drawRect(cardRect, bodyPaint..color = background);
-    canvas.drawRect(cardRect, edgePaint..color = Palette.cardEdge);
+    canvas.drawRect(
+      cardRect,
+      edgePaint
+        ..strokeWidth = 2.0
+        ..color = borderColor ?? Palette.cardEdge,
+    );
+    edgePaint.strokeWidth = EDGE_WIDTH;
 
     // draw card image
     if (cardImage != null) {
@@ -256,11 +263,13 @@ class HandCardWidget extends StatefulWidget {
   final TableturfCardData card;
   final Color? background;
   final Color? overlayColor;
+  final Color? borderColor;
   const HandCardWidget({
     super.key,
     required this.card,
     this.background,
     this.overlayColor,
+    this.borderColor,
   });
 
   @override
@@ -330,6 +339,7 @@ class _HandCardWidgetState extends State<HandCardWidget> {
           traits: const YellowTraits(),
           background: widget.background ?? Palette.cardBackgroundSelectable,
           overlayColor: widget.overlayColor,
+          borderColor: widget.borderColor,
         ),
         child: LayoutBuilder(
           builder: (_, constraints) {
@@ -505,21 +515,27 @@ class _CardWidgetState extends State<CardWidget>
         }
       ),
       onTapDown: (details) {
-        final card = widget.cardNotifier.value!;
+        final card = widget.cardNotifier.value;
+        if (card == null) {
+          return;
+        }
         final battle = widget.battle;
         if (!battle.playerControlLock.value) {
           return;
         }
-        if (moveCardNotifier.value != card) {
-          final audioController = AudioController();
-          if (!_cardIsSelectable(card)) {
-            return;
-          }
-          if (battle.moveSpecialNotifier.value) {
-            audioController.playSfx(SfxType.selectCardNormal);
-          } else {
-            audioController.playSfx(SfxType.selectCardNormal);
-          }
+        final audioController = AudioController();
+        if (!_cardIsSelectable(card)) {
+          return;
+        }
+        if (battle.moveSpecialNotifier.value) {
+          audioController.playSfx(SfxType.selectCardNormal);
+        } else {
+          audioController.playSfx(SfxType.selectCardNormal);
+        }
+
+        if (moveCardNotifier.value?.ident == card.ident) {
+          moveCardNotifier.value = null;
+        } else {
           moveCardNotifier.value = card;
         }
         if (details.kind == ui.PointerDeviceKind.touch

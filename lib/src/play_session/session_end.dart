@@ -368,7 +368,6 @@ class _PlaySessionEndState extends State<PlaySessionEnd>
       context,
       title: widget.battle.playerAI == null ? "Keep playing?" : "Go again?",
       options: ["Yes!", "Nah"],
-      useWave: false,
     );
     if (choice == 0) {
       final battle = widget.battle;

@@ -108,7 +108,7 @@ class _AlertPopupState extends State<AlertPopup>
                   ),
                 ),
               );
-            }
+            },
         ),
       ),
     );
@@ -120,22 +120,22 @@ class _AlertPopupState extends State<AlertPopup>
       child: GestureDetector(
         onTap: onExit,
         child: FadeTransition(
-            opacity: transitionOpacity,
-            child: DecoratedBox(
-                decoration: BoxDecoration(
-                    gradient: RadialGradient(
-                      colors: [
-                        Colors.black38,
-                        Colors.black54,
-                      ],
-                      radius: 1.3,
-                    )
-                ),
-                child: Align(
-                  alignment: Alignment.center,
-                  child: promptBox,
-                )
-            )
+          opacity: transitionOpacity,
+          child: DecoratedBox(
+            decoration: BoxDecoration(
+              gradient: RadialGradient(
+                colors: [
+                  Colors.black38,
+                  Colors.black54,
+                ],
+                radius: 1.3,
+              ),
+            ),
+            child: Align(
+              alignment: Alignment.center,
+              child: promptBox,
+            ),
+          ),
         ),
       ),
     );

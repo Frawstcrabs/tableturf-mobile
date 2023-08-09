@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:tableturf_mobile/src/level_selection/free_play_screen.dart';
 import 'package:tableturf_mobile/src/map_manager/map_list_screen.dart';
+import 'package:tableturf_mobile/src/shop/shop_screen.dart';
 
 import '../level_selection/level_selection_screen.dart';
 import '../card_manager/card_list_screen.dart';
@@ -54,7 +55,6 @@ class MainMenuScreen extends StatelessWidget {
               },
               child: const Text('Continue'),
             ),
-            _gap,
             ElevatedButton(
               onPressed: () {
                 //audioController.playSfx(SfxType.buttonTap);
@@ -63,35 +63,41 @@ class MainMenuScreen extends StatelessWidget {
                   color: Palette.backgroundLevelSelection,
                 ));
               },
-              child: const Text('Free play'),
+              child: const Text('Free Play'),
             ),
-            _gap,
             ElevatedButton(
-              onPressed: () {
-                Navigator.of(context).push(buildFadeToBlackTransition<void>(
-                  child: const CardListScreen(),
-                  color: Palette.backgroundCardList,
-                ));
-              },
-              child: const Text("Manage Cards")
+                onPressed: () {
+                  Navigator.of(context).push(buildFadeToBlackTransition<void>(
+                    child: const CardListScreen(),
+                    color: Palette.backgroundCardList,
+                  ));
+                },
+                child: const Text("Card List")
             ),
-            _gap,
             ElevatedButton(
-              onPressed: () {
-                Navigator.of(context).push(buildFadeToBlackTransition<void>(
-                  child: const MapListScreen(),
-                  color: Palette.backgroundCardList,
-                ));
-              },
-              child: const Text("Manage Maps")
+                onPressed: () {
+                  Navigator.of(context).push(buildFadeToBlackTransition<void>(
+                    child: const MapListScreen(),
+                    color: Palette.backgroundCardList,
+                  ));
+                },
+                child: const Text("Map Editor")
             ),
-            _gap,
+            ElevatedButton(
+                onPressed: () {
+                  Navigator.of(context).push(buildFadeToBlackTransition<void>(
+                    child: const ShopScreen(),
+                    color: Palette.backgroundCardList,
+                  ));
+                },
+                child: const Text("Hotlantis")
+            ),
             ElevatedButton(
               onPressed: () {
                 Navigator.of(context).push(
-                  MaterialPageRoute(builder: (context) {
-                    return const SettingsScreen(key: Key('settings'));
-                  })
+                    MaterialPageRoute(builder: (context) {
+                      return const SettingsScreen(key: Key('settings'));
+                    })
                 );
               },
               child: const Text('Settings'),

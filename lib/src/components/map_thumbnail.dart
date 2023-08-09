@@ -14,29 +14,29 @@ class MapThumbnail extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return DecoratedBox(
-        decoration: BoxDecoration(
-          border: Border.all(
-            color: Palette.mapThumbnailBorder,
-            width: 3.0,
-          ),
-          borderRadius: BorderRadius.circular(15.0),
-          color: Palette.mapThumbnailBackground,
+      decoration: BoxDecoration(
+        border: Border.all(
+          color: Palette.mapThumbnailBorder,
+          width: 3.0,
         ),
-        child: FractionallySizedBox(
-          heightFactor: 0.9,
-          widthFactor: 0.9,
-          child: Center(
-              child: CustomPaint(
-                painter: BoardPainter(
-                  board: map.board,
-                ),
-                child: AspectRatio(
-                  aspectRatio: map.board[0].length / map.board.length,
-                ),
-                isComplex: true,
-              )
+        borderRadius: BorderRadius.circular(15.0),
+        color: Palette.mapThumbnailBackground,
+      ),
+      child: FractionallySizedBox(
+        heightFactor: 0.9,
+        widthFactor: 0.9,
+        child: Center(
+          child: CustomPaint(
+            painter: BoardPainter(
+              board: map.board,
+            ),
+            child: AspectRatio(
+              aspectRatio: map.board[0].length / map.board.length,
+            ),
+            isComplex: true,
           ),
-        )
+        ),
+      ),
     );
   }
 }

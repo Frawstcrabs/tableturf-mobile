@@ -42,6 +42,9 @@ double soundTypeToVolume(SfxType type) {
 enum SfxType {
   menuButtonPress,
 
+  cardPackOpen,
+  cardPackBits,
+
   dealHand,
   selectCardNormal,
   cardFlip,
