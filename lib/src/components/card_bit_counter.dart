@@ -20,7 +20,7 @@ class CardBitCounter extends StatefulWidget {
 class _CardBitCounterState extends State<CardBitCounter>
     with SingleTickerProviderStateMixin {
   late final AnimationController tickController;
-  late Animation<double> digitTickerDriver;
+  late ProxyAnimation digitTickerDriver;
   late List<Animation<double>> digitTickers;
 
   @override
@@ -30,8 +30,10 @@ class _CardBitCounterState extends State<CardBitCounter>
       // duration is calculated dynamically
       vsync: this,
     );
-    digitTickerDriver = tickController.drive(
-      ConstantTween(widget.cardBits.toDouble())
+    digitTickerDriver = ProxyAnimation(
+      tickController.drive(
+        ConstantTween(widget.cardBits.toDouble()),
+      ),
     );
 
     _buildDigitTickers();
@@ -65,15 +67,17 @@ class _CardBitCounterState extends State<CardBitCounter>
   void didUpdateWidget(CardBitCounter oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (widget.cardBits != oldWidget.cardBits) {
-      digitTickerDriver = tickController.drive(
+      digitTickerDriver.parent = tickController.drive(
         Tween(
           begin: oldWidget.cardBits.toDouble(),
           end: widget.cardBits.toDouble(),
         ),
       );
-      _buildDigitTickers();
+      if (widget.digits != oldWidget.digits) {
+        _buildDigitTickers();
+      }
       final cardBitsDiff = widget.cardBits - oldWidget.cardBits;
-      final durationTime = 100 * log(cardBitsDiff.abs() + 1);
+      final durationTime = 120 * log(cardBitsDiff.abs() + 1);
       tickController.duration = Duration(
         milliseconds: durationTime.floor(),
       );
