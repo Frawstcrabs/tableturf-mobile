@@ -265,11 +265,7 @@ class _CardListScreenState extends State<CardListScreen>
   Widget build(BuildContext context) {
     final mediaQuery = MediaQuery.of(context);
     final playerProgress = PlayerProgress();
-    const divider = Divider(
-      color: Colors.black,
-      height: 1.0,
-      thickness: 1.0,
-    );
+
     final screen = Column(
       children: [
         Expanded(

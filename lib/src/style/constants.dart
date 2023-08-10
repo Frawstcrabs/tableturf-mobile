@@ -73,3 +73,9 @@ class Palette {
   static const xpAddedPointsGradientStart = const Color.fromRGBO(107, 213, 2, 1.0);
   static const xpAddedPointsGradientEnd = const Color.fromRGBO(31, 169, 7, 1.0);
 }
+
+const divider = Divider(
+  color: Colors.black,
+  height: 1.0,
+  thickness: 1.0,
+);

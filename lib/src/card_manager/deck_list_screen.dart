@@ -36,18 +36,14 @@ class _DeckListScreenState extends State<DeckListScreen> {
       children: [
         Expanded(
             flex: 1,
-            child: Container(
-              decoration: BoxDecoration(
-                border: Border(bottom: BorderSide())
-              ),
-              child: Center(
-                child: Text("Edit Deck", style: TextStyle(
-                  fontFamily: "Splatfont1",
-                  color: Colors.black
-                ))
-              ),
+            child: Center(
+              child: Text("Edit Deck", style: TextStyle(
+                fontFamily: "Splatfont1",
+                color: Colors.black
+              ))
             )
         ),
+        divider,
         Expanded(
           flex: 9,
           child: ListView(
@@ -187,33 +183,29 @@ class _DeckListScreenState extends State<DeckListScreen> {
             ]
           )
         ),
+        divider,
         Expanded(
-          child: Container(
-            decoration: BoxDecoration(
-              border: Border(top: BorderSide())
-            ),
-            child: Row(
-              children: [
-                Expanded(
-                  child: Container(
-                    padding: const EdgeInsets.all(10),
-                    child: SelectionButton(
-                      child: Text("Back"),
-                      designRatio: 0.5,
-                      onPressStart: () async {
-                        if (_lockButtons) return false;
-                        _lockButtons = true;
-                        return true;
-                      },
-                      onPressEnd: () async {
-                        Navigator.of(context).pop();
-                        return Future<void>.delayed(const Duration(milliseconds: 100));
-                      },
-                    ),
+          child: Row(
+            children: [
+              Expanded(
+                child: Container(
+                  padding: const EdgeInsets.all(10),
+                  child: SelectionButton(
+                    child: Text("Back"),
+                    designRatio: 0.5,
+                    onPressStart: () async {
+                      if (_lockButtons) return false;
+                      _lockButtons = true;
+                      return true;
+                    },
+                    onPressEnd: () async {
+                      Navigator.of(context).pop();
+                      return Future<void>.delayed(const Duration(milliseconds: 100));
+                    },
                   ),
-                )
-              ]
-            )
+                ),
+              )
+            ]
           ),
         ),
       ]

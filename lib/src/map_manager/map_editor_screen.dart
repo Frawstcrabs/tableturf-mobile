@@ -293,12 +293,13 @@ class _MapEditorScreenState extends State<MapEditorScreen> {
   @override
   void initState() {
     super.initState();
+    final playerProgress = PlayerProgress();
     boardNotifier = ValueNotifier(
       widget.map?.board.copy() ?? [[TileState.empty]]
     );
     gridWidthNotifier = ValueNotifier(widget.map?.board[0].length ?? 15);
     gridHeightNotifier = ValueNotifier(widget.map?.board.length ?? 15);
-    final name = widget.map?.name ?? "New Map";
+    final name = widget.map?.name ?? "New Map ${playerProgress.maps.length}";
     _textEditingController = TextEditingController(text: name);
     operationStack = [BoardState(
       board: boardNotifier.value.copy(),
@@ -669,13 +670,228 @@ class _MapEditorScreenState extends State<MapEditorScreen> {
     final mediaQuery = MediaQuery.of(context);
     final playerProgress = PlayerProgress();
 
+    final boardGrid = GestureDetector(
+      onPanStart: _onPanStart,
+      onPanUpdate: _onPanUpdate,
+      onPanEnd: _onPanEnd,
+      child: RepaintBoundary(
+        child: ListenableBuilder(
+          key: boardKey,
+          listenable: Listenable.merge([gridHeightNotifier, gridWidthNotifier]),
+          builder: (_, __) {
+            return Stack(
+              children: [
+                CustomPaint(
+                  painter: GridPainter(
+                    height: gridHeightNotifier.value,
+                    width: gridWidthNotifier.value,
+                  ),
+                  child: AspectRatio(
+                    aspectRatio: gridWidthNotifier.value / gridHeightNotifier.value,
+                  ),
+                  isComplex: true,
+                ),
+                RepaintBoundary(
+                  child: ListenableBuilder(
+                    listenable: Listenable.merge([boardNotifier, boardPositionNotifier]),
+                    builder: (_, __) {
+                      final width = gridWidthNotifier.value;
+                      final height = gridHeightNotifier.value;
+                      final coords = boardPositionNotifier.value;
+                      return CustomPaint(
+                        painter: OffsetBoardPainter(
+                          boardNotifier: boardNotifier,
+                          coords: coords,
+                          gridHeight: height,
+                          gridWidth: width,
+                        ),
+                        child: AspectRatio(
+                          aspectRatio: gridWidthNotifier.value / gridHeightNotifier.value,
+                        ),
+                        isComplex: true,
+                      );
+                    }
+                  ),
+                ),
+                RepaintBoundary(
+                  child: ListenableBuilder(
+                    listenable: operationNotifier,
+                    builder: (_, __) {
+                      var sizedChild = AspectRatio(
+                        aspectRatio: gridWidthNotifier.value / gridHeightNotifier.value,
+                      );
+                      switch (operationNotifier.value) {
+                        case BoardOperationType.drawBlock:
+                          return CustomPaint(
+                            painter: BlockOperationPainter(
+                              startCoords: opStartCoords,
+                              endCoords: opEndCoords,
+                              tileNotifier: tileNotifier,
+                              gridHeight: gridHeightNotifier.value,
+                              gridWidth: gridWidthNotifier.value,
+                            ),
+                            child: sizedChild,
+                            willChange: false,
+                          );
+                        case BoardOperationType.drawPaint:
+                          return CustomPaint(
+                            painter: PaintOperationPainter(
+                              touchedCoords: opTouchedCoords,
+                              tileNotifier: tileNotifier,
+                              gridHeight: gridHeightNotifier.value,
+                              gridWidth: gridWidthNotifier.value,
+                            ),
+                            child: sizedChild,
+                            willChange: false,
+                          );
+                        default:
+                          return sizedChild;
+                      }
+                    }
+                  )
+                )
+              ],
+            );
+          }
+        ),
+      ),
+    );
+    final editor = Column(
+      children: [
+        Expanded(
+          flex: 1,
+          child: Row(
+            children: [
+              const Spacer(flex: 9),
+              Expanded(
+                flex: 1,
+                child: RepaintBoundary(
+                  child: ValueListenableBuilder(
+                    valueListenable: gridHeightNotifier,
+                    builder: (_, int height, __) {
+                      return Center(
+                        child: Text(
+                          height.toString(),
+                          //style: TextStyle(height: 1)
+                        ),
+                      );
+                    }
+                  ),
+                )
+              )
+            ]
+          )
+        ),
+        Expanded(
+          flex: 13,
+          child: Row(
+            children: [
+              const Spacer(flex: 1),
+              Expanded(
+                flex: 8,
+                child: Center(
+                  child: boardGrid
+                ),
+              ),
+              Expanded(
+                flex: 1,
+                child: RotatedBox(
+                  quarterTurns: 1,
+                  child: RepaintBoundary(
+                    child: ListenableBuilder(
+                      listenable: gridHeightNotifier,
+                      builder: (_, __) {
+                        final height = gridHeightNotifier.value;
+                        return Slider.adaptive(
+                          value: height.toDouble(),
+                          max: MAX_BOARD_HEIGHT.toDouble(),
+                          min: 1,
+                          divisions: MAX_BOARD_HEIGHT - 1,
+                          onChangeStart: (newHeight) {
+                            if (operationNotifier.value == null) {
+                              operationNotifier.value = BoardOperationType.changeHeight;
+                            }
+                          },
+                          onChanged: (newHeight) {
+                            _changeHeight(newHeight.floor());
+                          },
+                          onChangeEnd: (newHeight) {
+                            if (operationNotifier.value == BoardOperationType.changeHeight) {
+                              operationNotifier.value = null;
+                            }
+                          },
+                        );
+                      }
+                    ),
+                  )
+                )
+              ),
+            ],
+          ),
+        ),
+        Expanded(
+          flex: 1,
+          child: Row(
+            children: [
+              Expanded(
+                flex: 1,
+                child: RepaintBoundary(
+                  child: ValueListenableBuilder(
+                    valueListenable: gridWidthNotifier,
+                    builder: (_, int width, __) {
+                      return Center(
+                        child: Text(
+                          width.toString(),
+                          //style: TextStyle(height: 1.5)
+                        ),
+                      );
+                    }
+                  ),
+                )
+              ),
+              Expanded(
+                flex: 8,
+                child: RepaintBoundary(
+                  child: ListenableBuilder(
+                      listenable: gridWidthNotifier,
+                      builder: (_, __) {
+                        final width = gridWidthNotifier.value;
+                        return Slider(
+                          value: width.toDouble(),
+                          max: MAX_BOARD_WIDTH.toDouble(),
+                          min: 1,
+                          divisions: MAX_BOARD_WIDTH - 1,
+                          onChangeStart: (newWidth) {
+                            if (operationNotifier.value == null) {
+                              operationNotifier.value = BoardOperationType.changeWidth;
+                            }
+                          },
+                          onChanged: (newWidth) {
+                            _changeWidth(newWidth.floor());
+                          },
+                          onChangeEnd: (newWidth) {
+                            if (operationNotifier.value == BoardOperationType.changeWidth) {
+                              operationNotifier.value = null;
+                            }
+                          },
+                        );
+                      }
+                  ),
+                )
+              ),
+              const Spacer(flex: 1),
+            ]
+          )
+        ),
+      ],
+    );
     final screen = Column(
       children: [
         Expanded(
           flex: 1,
           child: Row(
             children: [
-              const Spacer(flex: 2),
+              const Spacer(flex: 4),
               Expanded(
                 flex: 4,
                 child: TextField(
@@ -693,237 +909,14 @@ class _MapEditorScreenState extends State<MapEditorScreen> {
                   ),
                 ),
               ),
-              const Spacer(flex: 2),
+              const Spacer(flex: 4),
             ],
           ),
         ),
-        const Divider(color: Colors.black),
+        divider,
         Expanded(
           flex: 9,
-          child: Column(
-            children: [
-              Expanded(
-                flex: 1,
-                child: Row(
-                  children: [
-                    const Spacer(flex: 9),
-                    Expanded(
-                      flex: 1,
-                      child: RepaintBoundary(
-                        child: ValueListenableBuilder(
-                          valueListenable: gridHeightNotifier,
-                          builder: (_, int height, __) {
-                            return Center(
-                              child: Text(
-                                height.toString(),
-                                //style: TextStyle(height: 1)
-                              ),
-                            );
-                          }
-                        ),
-                      )
-                    )
-                  ]
-                )
-              ),
-              Expanded(
-                flex: 13,
-                child: Row(
-                  children: [
-                    const Spacer(flex: 1),
-                    Expanded(
-                      flex: 8,
-                      child: DecoratedBox(
-                        decoration: BoxDecoration(
-                          //color: Colors.red,
-                        ),
-                        child: Center(
-                          child: GestureDetector(
-                            onPanStart: _onPanStart,
-                            onPanUpdate: _onPanUpdate,
-                            onPanEnd: _onPanEnd,
-                            child: RepaintBoundary(
-                              child: ListenableBuilder(
-                                key: boardKey,
-                                listenable: Listenable.merge([gridHeightNotifier, gridWidthNotifier]),
-                                builder: (_, __) {
-                                  print("rebuild grid, ${gridHeightNotifier.value}, ${gridWidthNotifier.value}");
-                                  return Stack(
-                                    children: [
-                                      CustomPaint(
-                                        painter: GridPainter(
-                                          height: gridHeightNotifier.value,
-                                          width: gridWidthNotifier.value,
-                                        ),
-                                        child: AspectRatio(
-                                          aspectRatio: gridWidthNotifier.value / gridHeightNotifier.value,
-                                        ),
-                                        isComplex: true,
-                                      ),
-                                      RepaintBoundary(
-                                        child: ListenableBuilder(
-                                          listenable: Listenable.merge([boardNotifier, boardPositionNotifier]),
-                                          builder: (_, __) {
-                                            final width = gridWidthNotifier.value;
-                                            final height = gridHeightNotifier.value;
-                                            final coords = boardPositionNotifier.value;
-                                            return CustomPaint(
-                                              painter: OffsetBoardPainter(
-                                                boardNotifier: boardNotifier,
-                                                coords: coords,
-                                                gridHeight: height,
-                                                gridWidth: width,
-                                              ),
-                                              child: AspectRatio(
-                                                aspectRatio: gridWidthNotifier.value / gridHeightNotifier.value,
-                                              ),
-                                              isComplex: true,
-                                            );
-                                          }
-                                        ),
-                                      ),
-                                      RepaintBoundary(
-                                        child: ListenableBuilder(
-                                          listenable: operationNotifier,
-                                          builder: (_, __) {
-                                            var sizedChild = AspectRatio(
-                                              aspectRatio: gridWidthNotifier.value / gridHeightNotifier.value,
-                                            );
-                                            switch (operationNotifier.value) {
-                                              case BoardOperationType.drawBlock:
-                                                return CustomPaint(
-                                                  painter: BlockOperationPainter(
-                                                    startCoords: opStartCoords,
-                                                    endCoords: opEndCoords,
-                                                    tileNotifier: tileNotifier,
-                                                    gridHeight: gridHeightNotifier.value,
-                                                    gridWidth: gridWidthNotifier.value,
-                                                  ),
-                                                  child: sizedChild,
-                                                  willChange: false,
-                                                );
-                                              case BoardOperationType.drawPaint:
-                                                return CustomPaint(
-                                                  painter: PaintOperationPainter(
-                                                    touchedCoords: opTouchedCoords,
-                                                    tileNotifier: tileNotifier,
-                                                    gridHeight: gridHeightNotifier.value,
-                                                    gridWidth: gridWidthNotifier.value,
-                                                  ),
-                                                  child: sizedChild,
-                                                  willChange: false,
-                                                );
-                                              default:
-                                                return sizedChild;
-                                            }
-                                          }
-                                        )
-                                      )
-                                    ],
-                                  );
-                                }
-                              ),
-                            ),
-                          )
-                        ),
-                      ),
-                    ),
-                    Expanded(
-                      flex: 1,
-                      child: RotatedBox(
-                        quarterTurns: 1,
-                        child: RepaintBoundary(
-                          child: ListenableBuilder(
-                            listenable: gridHeightNotifier,
-                            builder: (_, __) {
-                              final height = gridHeightNotifier.value;
-                              return Slider.adaptive(
-                                value: height.toDouble(),
-                                max: MAX_BOARD_HEIGHT.toDouble(),
-                                min: 1,
-                                divisions: MAX_BOARD_HEIGHT - 1,
-                                onChangeStart: (newHeight) {
-                                  if (operationNotifier.value == null) {
-                                    print("on change start, $newHeight");
-                                    operationNotifier.value = BoardOperationType.changeHeight;
-                                  }
-                                },
-                                onChanged: (newHeight) {
-                                  _changeHeight(newHeight.floor());
-                                },
-                                onChangeEnd: (newHeight) {
-                                  if (operationNotifier.value == BoardOperationType.changeHeight) {
-                                    print("on change end, $newHeight");
-                                    operationNotifier.value = null;
-                                  }
-                                },
-                              );
-                            }
-                          ),
-                        )
-                      )
-                    ),
-                  ],
-                ),
-              ),
-              Expanded(
-                flex: 1,
-                child: Row(
-                  children: [
-                    Expanded(
-                      flex: 1,
-                      child: RepaintBoundary(
-                        child: ValueListenableBuilder(
-                          valueListenable: gridWidthNotifier,
-                          builder: (_, int width, __) {
-                            return Center(
-                              child: Text(
-                                width.toString(),
-                                //style: TextStyle(height: 1.5)
-                              ),
-                            );
-                          }
-                        ),
-                      )
-                    ),
-                    Expanded(
-                      flex: 8,
-                      child: RepaintBoundary(
-                        child: ListenableBuilder(
-                            listenable: gridWidthNotifier,
-                            builder: (_, __) {
-                              final width = gridWidthNotifier.value;
-                              return Slider(
-                                value: width.toDouble(),
-                                max: MAX_BOARD_WIDTH.toDouble(),
-                                min: 1,
-                                divisions: MAX_BOARD_WIDTH - 1,
-                                onChangeStart: (newWidth) {
-                                  if (operationNotifier.value == null) {
-                                    print("on change start, $newWidth");
-                                    operationNotifier.value = BoardOperationType.changeWidth;
-                                  }
-                                },
-                                onChanged: (newWidth) {
-                                  _changeWidth(newWidth.floor());
-                                },
-                                onChangeEnd: (newWidth) {
-                                  if (operationNotifier.value == BoardOperationType.changeWidth) {
-                                    print("on change end, $newWidth");
-                                    operationNotifier.value = null;
-                                  }
-                                },
-                              );
-                            }
-                        ),
-                      )
-                    ),
-                    const Spacer(flex: 1),
-                  ]
-                )
-              ),
-            ],
-          )
+          child: editor,
         ),
         Expanded(
           flex: 2,
@@ -1059,7 +1052,7 @@ class _MapEditorScreenState extends State<MapEditorScreen> {
             ],
           )
         ),
-        const Divider(color: Colors.black),
+        divider,
         Expanded(
           flex: 1,
           child: Row(

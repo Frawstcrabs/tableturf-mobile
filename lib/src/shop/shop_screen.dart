@@ -118,7 +118,7 @@ class _ShopScreenState extends State<ShopScreen>
                 child: Row(
                   children: [
                     Expanded(
-                      flex: 1,
+                      flex: 4,
                       child: Center(
                         child: FractionallySizedBox(
                           heightFactor: 0.5,
@@ -136,7 +136,7 @@ class _ShopScreenState extends State<ShopScreen>
                       ),
                     ),
                     Expanded(
-                      flex: 2,
+                      flex: 4,
                       child: Center(
                         child: Text(
                           "Hotlantis",
@@ -146,11 +146,11 @@ class _ShopScreenState extends State<ShopScreen>
                         ),
                       ),
                     ),
-                    const Spacer(flex: 1),
+                    const Spacer(flex: 4),
                   ],
                 ),
               ),
-              const Divider(color: Colors.black),
+              divider,
               Expanded(
                 flex: 9,
                 child: Stack(
@@ -178,9 +178,10 @@ class _ShopScreenState extends State<ShopScreen>
                     GridView.count(
                       crossAxisCount: 3,
                       childAspectRatio: CardWidget.CARD_RATIO,
+                      padding: const EdgeInsets.symmetric(vertical: 5.0),
                       children: [
                         ShopItemThumbnail(
-                          cost: 10,
+                          cost: 1000,
                           name: "Card Pack",
                           backgroundController: _popupBackgroundController,
                           child: FittedBox(
@@ -216,7 +217,7 @@ class _ShopScreenState extends State<ShopScreen>
                   ],
                 ),
               ),
-              const Divider(color: Colors.black),
+              divider,
               Expanded(
                 flex: 1,
                 child: Row(
@@ -628,8 +629,8 @@ class _CardPackDisplayState extends State<CardPackDisplay>
     final mediaQuery = MediaQuery.of(context);
     final isLandscape = mediaQuery.orientation == Orientation.landscape;
     final displayBox = FractionallySizedBox(
-      heightFactor: isLandscape ? 0.5 : null,
-      widthFactor: isLandscape ? null : 0.8,
+      heightFactor: isLandscape ? 0.7 : null,
+      widthFactor: isLandscape ? null : 0.9,
       child: AspectRatio(
         aspectRatio: 4/3,
         child: LayoutBuilder(
@@ -731,17 +732,17 @@ class _CardPackDisplayState extends State<CardPackDisplay>
 }
 
 class ShopItemThumbnail extends StatelessWidget {
-  final int? cost;
-  final String? name;
-  final Widget? child;
+  final int cost;
+  final String name;
+  final Widget child;
   final Future<void> Function()? onPurchase;
   final AnimationController backgroundController;
   const ShopItemThumbnail({
     super.key,
     required this.backgroundController,
-    this.cost,
-    this.name,
-    this.child,
+    required this.cost,
+    required this.name,
+    required this.child,
     this.onPurchase,
   });
 
@@ -751,9 +752,6 @@ class ShopItemThumbnail extends StatelessWidget {
       onTap: () async {
         final playerProgress = PlayerProgress();
         final cost = this.cost;
-        if (cost == null) {
-          return;
-        }
         if (playerProgress.cardBits.value < cost) {
           return;
         }
@@ -815,24 +813,24 @@ class ShopItemThumbnail extends StatelessWidget {
         child: Stack(
           fit: StackFit.expand,
           children: [
-            if (child != null) child!,
-            if (cost != null) Align(
+            child,
+            Align(
               alignment: Alignment.topLeft,
               child: FractionallySizedBox(
                 heightFactor: 1/5,
                 child: ShopItemPrice(
-                  cost: (cost ?? 0).toString(),
+                  cost: cost.toString(),
                 ),
               ),
             ),
-            if (name != null) Align(
+            Align(
               alignment: Alignment.bottomCenter,
               child: FractionallySizedBox(
                 heightFactor: 1/5,
                 child: FittedBox(
                   fit: BoxFit.contain,
                   child: Text(
-                    name!,
+                    name,
                     style: TextStyle(
                       color: Colors.white,
                     ),

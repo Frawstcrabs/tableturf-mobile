@@ -48,20 +48,16 @@ class _MapListScreenState extends State<MapListScreen>
         children: [
           Expanded(
               flex: 1,
-              child: DecoratedBox(
-                decoration: BoxDecoration(
-                    border: Border(bottom: BorderSide())
-                ),
-                child: Center(
-                    child: Text(
-                        "Map List",
-                        style: TextStyle(
-                          fontFamily: "Splatfont1",
-                        )
-                    )
-                ),
-              )
+              child: Center(
+                  child: Text(
+                      "Map List",
+                      style: TextStyle(
+                        fontFamily: "Splatfont1",
+                      ),
+                  ),
+              ),
           ),
+          divider,
           Expanded(
               flex: 9,
               child: GridView.builder(
@@ -217,35 +213,31 @@ class _MapListScreenState extends State<MapListScreen>
                 },
               )
           ),
+          divider,
           Expanded(
               flex: 1,
-              child: DecoratedBox(
-                decoration: BoxDecoration(
-                    border: Border(top: BorderSide())
-                ),
-                child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                    children: [
-                      Expanded(
-                        child: Padding(
-                          padding: const EdgeInsets.all(10),
-                          child: SelectionButton(
-                            child: Text("Back"),
-                            designRatio: 0.5,
-                            onPressStart: () async {
-                              if (_lockButtons) return false;
-                              _lockButtons = true;
-                              return true;
-                            },
-                            onPressEnd: () async {
-                              Navigator.of(context).pop();
-                              return Future<void>.delayed(const Duration(milliseconds: 100));
-                            },
-                          ),
+              child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                  children: [
+                    Expanded(
+                      child: Padding(
+                        padding: const EdgeInsets.all(10),
+                        child: SelectionButton(
+                          child: Text("Back"),
+                          designRatio: 0.5,
+                          onPressStart: () async {
+                            if (_lockButtons) return false;
+                            _lockButtons = true;
+                            return true;
+                          },
+                          onPressEnd: () async {
+                            Navigator.of(context).pop();
+                            return Future<void>.delayed(const Duration(milliseconds: 100));
+                          },
                         ),
                       ),
-                    ]
-                ),
+                    ),
+                  ]
               )
           ),
         ]
