@@ -2,6 +2,8 @@ import 'dart:async';
 import 'dart:math';
 
 import 'package:flutter/material.dart';
+import 'package:tableturf_mobile/src/audio/audio_controller.dart';
+import 'package:tableturf_mobile/src/audio/sounds.dart';
 import 'package:tableturf_mobile/src/components/card_selection.dart';
 import 'package:tableturf_mobile/src/components/card_widget.dart';
 import 'package:tableturf_mobile/src/components/card_bit_counter.dart';
@@ -120,6 +122,7 @@ class _ShopScreenState extends State<ShopScreen>
                       child: Center(
                         child: FractionallySizedBox(
                           heightFactor: 0.5,
+                          widthFactor: 0.9,
                           child: FittedBox(
                             child: ValueListenableBuilder(
                               valueListenable: cardBits,
@@ -180,12 +183,14 @@ class _ShopScreenState extends State<ShopScreen>
                           cost: 10,
                           name: "Card Pack",
                           backgroundController: _popupBackgroundController,
-                          child: Transform.scale(
-                            scale: 0.9,
-                            child: Transform.rotate(
-                              angle: 0.05 * pi,
-                              child: Image.asset(
-                                "assets/images/card_pack_common.png",
+                          child: FittedBox(
+                            child: Transform.scale(
+                              scale: 0.6,
+                              child: Transform.rotate(
+                                angle: 0.05 * pi,
+                                child: Image.asset(
+                                  "assets/images/card_pack_common.png",
+                                ),
                               ),
                             ),
                           ),
@@ -197,10 +202,12 @@ class _ShopScreenState extends State<ShopScreen>
                           cost: 20,
                           backgroundController: _popupBackgroundController,
                           name: "Custom Card",
-                          child: Text(
-                            "not done",
-                            style: TextStyle(
-                              color: Colors.white,
+                          child: Center(
+                            child: Text(
+                              "not done",
+                              style: TextStyle(
+                                color: Colors.white,
+                              ),
                             ),
                           ),
                         ),
@@ -326,25 +333,21 @@ class _CardPackDisplayState extends State<CardPackDisplay>
     popupOpacity = TweenSequence([
       TweenSequenceItem(
           tween: Tween(begin: 0.0, end: 1.0),
-          weight: 50
+          weight: 50,
       ),
       TweenSequenceItem(
           tween: Tween(begin: 1.0, end: 0.0),
-          weight: 35
-      ),
-      TweenSequenceItem(
-          tween: ConstantTween(0.0),
-          weight: 15
+          weight: 50,
       ),
     ]).animate(transitionController);
     popupScale = TweenSequence([
       TweenSequenceItem(
           tween: ConstantTween(1.0),
-          weight: 50
+          weight: 50,
       ),
       TweenSequenceItem(
           tween: Tween(begin: 1.0, end: 0.9),
-          weight: 50
+          weight: 50,
       ),
     ]).animate(transitionController);
     popupOffset = TweenSequence([
@@ -353,28 +356,28 @@ class _CardPackDisplayState extends State<CardPackDisplay>
             begin: Offset(0.0, 0.15),
             end: Offset(0.0, -0.03),
           ).chain(CurveTween(curve: Curves.easeOut)),
-          weight: 42
+          weight: 42,
       ),
       TweenSequenceItem(
           tween: Tween(
             begin: Offset(0.0, -0.03),
             end: Offset.zero,
           ).chain(CurveTween(curve: Curves.easeIn)),
-          weight: 8
+          weight: 8,
       ),
       TweenSequenceItem(
           tween: ConstantTween(Offset.zero),
-          weight: 50
+          weight: 50,
       ),
     ]).animate(transitionController);
     popupRotate = TweenSequence([
       TweenSequenceItem(
-          tween: Tween(begin: 0.01, end: 0.0),
-          weight: 50
+          tween: Tween(begin: -0.015, end: 0.0),
+          weight: 50,
       ),
       TweenSequenceItem(
           tween: ConstantTween(0.0),
-          weight: 50
+          weight: 50,
       ),
     ]).animate(transitionController);
 
@@ -389,7 +392,7 @@ class _CardPackDisplayState extends State<CardPackDisplay>
         tween: Tween(
           begin: 0.05,
           end: 0.0,
-        ).chain(CurveTween(curve: const ElasticOutCurve(2/3))),
+        ).chain(CurveTween(curve: const ElasticOutCurve(2/4))),
         weight: timeUntilFlip.toDouble(),
       ),
       TweenSequenceItem(
@@ -442,7 +445,7 @@ class _CardPackDisplayState extends State<CardPackDisplay>
         weight: 50,
       ),
     ]).animate(cardBitsController);
-    cardBitsScale = TweenSequence<double>([
+    cardBitsOpacity = TweenSequence<double>([
       TweenSequenceItem(
         tween: ConstantTween(0.0),
         weight: 50,
@@ -455,7 +458,7 @@ class _CardPackDisplayState extends State<CardPackDisplay>
         weight: 50,
       ),
     ]).animate(cardBitsController);
-    cardBitsOpacity = TweenSequence<double>([
+    cardBitsScale = TweenSequence<double>([
       TweenSequenceItem(
         tween: ConstantTween(0.7),
         weight: 50,
@@ -520,13 +523,22 @@ class _CardPackDisplayState extends State<CardPackDisplay>
 
   Future<void> playAnimation() async {
     transitionController.animateTo(0.5);
+    final audioController = AudioController();
+    audioController.playSfx(SfxType.cardPackOpen);
     await cardController.forward();
     if (widget.cards.any((e) => e.isDupe)) {
+      () async {
+        await Future.delayed(const Duration(milliseconds: 300));
+        audioController.playSfx(SfxType.cardPackBits);
+      }();
+      await Future.delayed(const Duration(milliseconds: 150));
       await cardBitsController.forward();
+      widget.animCompleter.complete();
       await Future.delayed(const Duration(milliseconds: 200));
       cardBitsArrowController.repeat();
+    } else {
+      widget.animCompleter.complete();
     }
-    widget.animCompleter.complete();
   }
 
   Future<void> onExit() async {
@@ -534,6 +546,7 @@ class _CardPackDisplayState extends State<CardPackDisplay>
       return;
     }
     widget.completer.complete();
+    transitionController.duration = const Duration(milliseconds: 280);
     await transitionController.forward();
     Navigator.of(context).pop();
   }
@@ -799,28 +812,30 @@ class ShopItemThumbnail extends StatelessWidget {
         ),
         margin: EdgeInsets.all(8),
         padding: EdgeInsets.fromLTRB(6, 2, 6, 2),
-        child: Column(
+        child: Stack(
+          fit: StackFit.expand,
           children: [
-            Expanded(
-              flex: 1,
-              child: cost == null ? SizedBox() : Align(
-                alignment: Alignment.centerLeft,
-                child: ShopItemPrice(cost: (cost ?? 0).toString()),
+            if (child != null) child!,
+            if (cost != null) Align(
+              alignment: Alignment.topLeft,
+              child: FractionallySizedBox(
+                heightFactor: 1/5,
+                child: ShopItemPrice(
+                  cost: (cost ?? 0).toString(),
+                ),
               ),
             ),
-            Expanded(
-              flex: 5,
-              child: Center(
-                child: child,
-              ),
-            ),
-            Expanded(
-              flex: 1,
-              child: name == null ? SizedBox() : Center(
-                child: Text(
-                  name!,
-                  style: TextStyle(
-                    color: Colors.white,
+            if (name != null) Align(
+              alignment: Alignment.bottomCenter,
+              child: FractionallySizedBox(
+                heightFactor: 1/5,
+                child: FittedBox(
+                  fit: BoxFit.contain,
+                  child: Text(
+                    name!,
+                    style: TextStyle(
+                      color: Colors.white,
+                    ),
                   ),
                 ),
               ),

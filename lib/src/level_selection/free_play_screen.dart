@@ -55,7 +55,7 @@ class _FreePlayScreenState extends State<FreePlayScreen> {
       for (final deck in playerProgress.decks)
         deck.value,
       //officialRandomiser,
-      pureRandomiser,
+      //pureRandomiser,
       for (final opponent in opponents)
         opponent.deck,
     ];

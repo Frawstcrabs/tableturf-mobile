@@ -60,12 +60,12 @@ class _SpinnerWidgetState extends State<SpinnerWidget>
 class CardFrontWidget extends StatelessWidget {
   final TableturfCardData card;
   final PlayerTraits traits;
-  final bool isHidden;
+  final bool isVisible;
 
   const CardFrontWidget({
     required this.card,
     this.traits = const YellowTraits(),
-    this.isHidden = false,
+    this.isVisible = true,
     super.key
   });
 
@@ -94,7 +94,7 @@ class CardFrontWidget extends StatelessWidget {
               Image.asset("assets/images/card_components/bg_${card.rarity}_lv1.png"),
               Image.asset(
                 card.designSprite,
-                color: isHidden ? Colors.black : null,
+                color: !isVisible ? Colors.black : null,
                 fit: BoxFit.fill,
               ),
               Align(
@@ -307,7 +307,7 @@ class CardFrontWidget extends StatelessWidget {
               ),
             ]
           );
-          if (isHidden) {
+          if (!isVisible) {
             cardWidget = ColorFiltered(
               colorFilter: ColorFilter.mode(
                 const Color.fromRGBO(0, 0, 0, 0.4),
@@ -490,6 +490,7 @@ class _CardSelectionWidgetState extends State<CardSelectionWidget>
                       BoxShadow(
                         spreadRadius: 6.0,
                         blurRadius: 6.0,
+                        blurStyle: BlurStyle.inner,
                         color: move.traits.normalColour,
                       )
                     ]

@@ -151,7 +151,8 @@ class _DeckEditorScreenState extends State<DeckEditorScreen>
   }
 
   Future<void> _showCardPopup(BuildContext context, ValueNotifier<TableturfCardIdentifier?> cardNotifier) async {
-    final ScrollController scrollController = ScrollController();
+    final scrollController = ScrollController();
+    final playerProgress = PlayerProgress();
     const popupBorderWidth = 1.0;
     const cardListPadding = 10.0;
     const interCardPadding = 5.0;
@@ -159,46 +160,51 @@ class _DeckEditorScreenState extends State<DeckEditorScreen>
     final TableturfCardIdentifier? selectedCard = await showListSelectPrompt(
       context,
       title: cardNotifier.value == null ? "Select Card" : "Replace Card?",
-      builder: (context, exitPopup) => RawScrollbar(
-        controller: scrollController,
-        thickness: popupBorderWidth + (cardListPadding / 2),
-        padding: const EdgeInsets.fromLTRB(
-          (popupBorderWidth + interCardPadding) / 2,
-          popupBorderWidth + cardListPadding + interCardPadding,
-          (popupBorderWidth + interCardPadding) / 2,
-          popupBorderWidth + cardListPadding + interCardPadding,
-        ),
-        thumbColor: const Color.fromRGBO(0, 0, 0, 0.4),
-        radius: Radius.circular(6),
-        child: GridView.builder(
+      builder: (context, exitPopup) {
+        final selectableCards = officialCards
+          .where((c) => playerProgress.unlockedCards.contains(c.ident))
+          .toList();
+        return RawScrollbar(
           controller: scrollController,
-          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-              mainAxisSpacing: interCardPadding,
-              crossAxisSpacing: interCardPadding,
-              crossAxisCount: 3,
-              childAspectRatio: CardWidget.CARD_RATIO
+          thickness: popupBorderWidth + (cardListPadding / 2),
+          padding: const EdgeInsets.fromLTRB(
+            (popupBorderWidth + interCardPadding) / 2,
+            popupBorderWidth + cardListPadding + interCardPadding,
+            (popupBorderWidth + interCardPadding) / 2,
+            popupBorderWidth + cardListPadding + interCardPadding,
           ),
-          itemCount: officialCards.length,
-          padding: const EdgeInsets.all(cardListPadding),
-          itemBuilder: (_, i) => GestureDetector(
-            onTap: () {
-              if (deckCards.any((c) => c.value == officialCards[i].ident)) {
-                return;
-              }
-              exitPopup(officialCards[i].ident);
-            },
-            child: Padding(
-              padding: const EdgeInsets.all(0),
-              child: HandCardWidget(
-                card: officialCards[i],
-                overlayColor: deckCards.any((c) => c.value == officialCards[i].ident)
-                    ? const Color.fromRGBO(0, 0, 0, 0.4)
-                    : Colors.transparent
+          thumbColor: const Color.fromRGBO(0, 0, 0, 0.4),
+          radius: Radius.circular(6),
+          child: GridView.builder(
+            controller: scrollController,
+            gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                mainAxisSpacing: interCardPadding,
+                crossAxisSpacing: interCardPadding,
+                crossAxisCount: 3,
+                childAspectRatio: CardWidget.CARD_RATIO
+            ),
+            itemCount: selectableCards.length,
+            padding: const EdgeInsets.all(cardListPadding),
+            itemBuilder: (_, i) => GestureDetector(
+              onTap: () {
+                if (deckCards.any((c) => c.value == selectableCards[i].ident)) {
+                  return;
+                }
+                exitPopup(selectableCards[i].ident);
+              },
+              child: Padding(
+                padding: const EdgeInsets.all(0),
+                child: HandCardWidget(
+                  card: selectableCards[i],
+                  overlayColor: deckCards.any((c) => c.value == selectableCards[i].ident)
+                      ? const Color.fromRGBO(0, 0, 0, 0.4)
+                      : Colors.transparent
+                ),
               ),
-            )
+            ),
           ),
-        ),
-      ),
+        );
+      },
     );
     if (selectedCard != null) {
       cardNotifier.value = selectedCard;
