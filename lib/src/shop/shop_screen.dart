@@ -403,13 +403,13 @@ class _CardPackDisplayState extends State<CardPackDisplay>
     ]).animate(cardController);
     cardFlip = TweenSequence([
       TweenSequenceItem(
-        tween: ConstantTween(1.0),
+        tween: ConstantTween(0.0),
         weight: timeUntilFlip.toDouble(),
       ),
       TweenSequenceItem(
         tween: Tween(
-          begin: 1.0,
-          end: 0.0,
+          begin: 0.0,
+          end: 1.0,
         ),
         weight: flipTime.toDouble(),
       ),
@@ -523,6 +523,15 @@ class _CardPackDisplayState extends State<CardPackDisplay>
   }
 
   Future<void> playAnimation() async {
+    await Future.delayed(const Duration(milliseconds: 5));
+    await Future.wait<void>([
+      precacheImage(AssetImage("assets/images/card_sleeves/sleeve_default.png"), context),
+      for (final (card: card, isDupe: _) in widget.cards) ...[
+        precacheImage(AssetImage("assets/images/card_components/bg_${card.rarity}_lv1.png"), context),
+        precacheImage(AssetImage("assets/images/card_components/count_${card.rarity}.png"), context),
+        precacheImage(AssetImage(card.designSprite), context),
+      ]
+    ]);
     transitionController.animateTo(0.5);
     final audioController = AudioController();
     audioController.playSfx(SfxType.cardPackOpen);
@@ -609,15 +618,11 @@ class _CardPackDisplayState extends State<CardPackDisplay>
       child: RotationTransition(
         turns: cardRotate,
         alignment: Alignment(0, -0.75),
-        child: AnimatedBuilder(
-          animation: cardFlip,
-          child: cardFront,
-          builder: (_, child) => FlipCard(
-            skew: cardFlip.value,
-            front: child!,
-            back: Image.asset(
-              "assets/images/card_sleeves/sleeve_default.png",
-            ),
+        child: FlipTransition(
+          skew: cardFlip,
+          front: cardFront,
+          back: Image.asset(
+            "assets/images/card_sleeves/sleeve_default.png",
           ),
         ),
       ),

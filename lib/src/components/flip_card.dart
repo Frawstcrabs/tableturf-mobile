@@ -129,8 +129,8 @@ class FlipTransitionPainter extends SnapshotPainter {
       ui.Image image,
       Size sourceSize,
       double pixelRatio) {
-    final skew = this.skew.value;
-    if (isFront ? (skew < 0.5) : (skew > 0.5)) {
+    final skew = 1.0 - this.skew.value;
+    if (isFront ? (skew > 0.5) : (skew < 0.5)) {
       // currently viewing other side
       return;
     }
@@ -164,7 +164,6 @@ class FlipTransitionPainter extends SnapshotPainter {
         || alignment != other.alignment
         || isFront != other.isFront;
   }
-
 }
 
 class FlipTransition extends StatefulWidget {

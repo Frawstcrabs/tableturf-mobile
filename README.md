@@ -13,7 +13,10 @@ Use `flutter run` to run on a device.
 - [x] Implement card bit rewards
 - [x] Animate card bit rewards
 - [x] Implement card packs
-- [ ] Make randomiser deck unlockable
+- [x] Optimise card flip animation in card pack
+- [x] Optimise animating the deck popup in/out
+- [ ] Make the deck editor less shit to use
+- [ ] Make randomiser deck unlockable (probably also move it to earlier in the opponent list)
 - [ ] Make the UI less shit/better able to handle different screen sizes
 - [ ] Add special tile distance awareness to AI alongside normal tile distance awareness (different calculations per level?)
 - [ ] Screen for testing custom decks/boards

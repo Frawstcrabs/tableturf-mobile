@@ -264,7 +264,6 @@ class _PlaySessionScreenState extends State<PlaySessionScreen>
 
   late final AnimationController _deckPopupController;
   late final OverlayEntry deckPopupOverlay;
-  late final SnapshotController deckPopupSnapshotController;
 
   @override
   void initState() {
@@ -499,12 +498,9 @@ class _PlaySessionScreenState extends State<PlaySessionScreen>
     deckPopupOverlay = OverlayEntry(builder: (_) {
       return DeckPopupOverlay(
         popupController: _deckPopupController,
-        deckPopupSnapshotController: deckPopupSnapshotController,
         player: widget.battle.yellow,
       );
     });
-    deckPopupSnapshotController = SnapshotController();
-    _deckPopupController.addStatusListener(_checkDeckPopupStatus);
 
     widget.battle.moveIsValidNotifier.addListener(_calculateNewScores);
     widget.battle.playerControlLock.addListener(_calculateNewScores);
@@ -521,7 +517,6 @@ class _PlaySessionScreenState extends State<PlaySessionScreen>
   void dispose() {
     deckPopupOverlay.remove();
     lifecycleNotifier.removeListener(_setBackgroundFlag);
-    _deckPopupController.removeStatusListener(_checkDeckPopupStatus);
     widget.battle.endOfGameNotifier.removeListener(_onGameEnd);
     widget.battle.specialMoveNotifier.removeListener(_onSpecialMove);
     widget.battle.moveIsValidNotifier.removeListener(_calculateNewScores);
@@ -547,19 +542,19 @@ class _PlaySessionScreenState extends State<PlaySessionScreen>
     widget.battle.playerControlLock.value = false;
   }
 
-  void _checkDeckPopupStatus(AnimationStatus status) {
-    deckPopupSnapshotController.allowSnapshotting = switch (status) {
-      AnimationStatus.forward || AnimationStatus.reverse => true,
-      _ => false,
-    };
-  }
-
   Future<void> _playInitSequence() async {
-    await Future<void>.delayed(const Duration(milliseconds: 600));
+    final battle = widget.battle;
+    // need to give precaching a moment before running, otherwise flutter
+    // complains about running markNeedsBuild during a build and dies
+    await Future.delayed(const Duration(milliseconds: 100));
+    await Future.wait<void>([
+      for (final card in battle.yellow.deck)
+        precacheImage(AssetImage(card.designSprite), context),
+      Future.delayed(const Duration(milliseconds: 500)),
+    ]);
     final audioController = AudioController();
 
     // handle blue since it doesnt matter anyway
-    final battle = widget.battle;
     final blue = battle.blue;
     for (var i = 0; i < 4; i++) {
       final newCard = blue.deck
@@ -1405,133 +1400,137 @@ class _PlaySessionScreenState extends State<PlaySessionScreen>
       ),
     );
 
-    final cardDeck = Listener(
-      onPointerDown: (_) => _showDeckPopup(),
-      onPointerUp: (_) => _hideDeckPopup(),
-      child: AspectRatio(
-        aspectRatio: 1.0,
-        child: RepaintBoundary(
-          child: LayoutBuilder(
-            builder: (context, constraints) {
-              final width = constraints.maxWidth;
-              return Container(
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: const Color.fromRGBO(21, 0, 96, 1.0),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black38,
-                      blurRadius: width * 0.03,
-                    ),
-                  ],
-                ),
-                child: Center(
-                  child: AnimatedBuilder(
-                    animation: _deckScaleController,
-                    builder: (_, __) => Transform.scale(
-                      scale: scaleDeckValue.value,
-                      child: Stack(
-                        children: [
-                          Center(
-                            child: ColorFiltered(
-                              colorFilter: ColorFilter.mode(
-                                scaleDeckColour.value!,
-                                BlendMode.srcATop,
-                              ),
-                              child: AnimatedBuilder(
-                                animation: _deckShuffleController,
-                                builder: (_, __) => Transform.rotate(
-                                  angle: shuffleCardRotate.value * 2 * pi,
-                                  child: Stack(
-                                    children: [
-                                      Transform.translate(
-                                        offset:
-                                            shuffleBottomCardMove.value * width,
-                                        child: _CardDeckSlice(
-                                          cardSleeve:
-                                              widget.battle.yellow.cardSleeve,
-                                          isDarkened: true,
-                                          width: width,
-                                        ),
-                                      ),
-                                      Transform.translate(
-                                        offset:
-                                            (shuffleTopCardMove.value) * width,
-                                        child: _CardDeckSlice(
-                                          cardSleeve:
-                                              widget.battle.yellow.cardSleeve,
-                                          isDarkened: false,
-                                          width: width,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
+    final cardDeck = GestureDetector(
+      // used to prevent screen from reading the tap
+      onTapDown: (_) {},
+      child: Listener(
+        onPointerDown: (_) => _showDeckPopup(),
+        onPointerUp: (_) => _hideDeckPopup(),
+        child: AspectRatio(
+          aspectRatio: 1.0,
+          child: RepaintBoundary(
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                final width = constraints.maxWidth;
+                return Container(
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: const Color.fromRGBO(21, 0, 96, 1.0),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black38,
+                        blurRadius: width * 0.03,
+                      ),
+                    ],
+                  ),
+                  child: Center(
+                    child: AnimatedBuilder(
+                      animation: _deckScaleController,
+                      builder: (_, __) => Transform.scale(
+                        scale: scaleDeckValue.value,
+                        child: Stack(
+                          children: [
+                            Center(
+                              child: ColorFiltered(
+                                colorFilter: ColorFilter.mode(
+                                  scaleDeckColour.value!,
+                                  BlendMode.srcATop,
                                 ),
-                              ),
-                            ),
-                          ),
-                          Transform.rotate(
-                            angle: 0.05 * pi,
-                            child: Align(
-                              alignment: Alignment(2.0, 1.25),
-                              child: FractionallySizedBox(
-                                widthFactor: 0.5,
-                                child: AspectRatio(
-                                  aspectRatio: 4 / 3,
-                                  child: Stack(
-                                    fit: StackFit.expand,
-                                    children: [
-                                      DecoratedBox(
-                                        decoration: const BoxDecoration(
-                                          gradient: RadialGradient(
-                                            center: Alignment.bottomRight,
-                                            radius: 1.2,
-                                            colors: [
-                                              Color.fromRGBO(8, 8, 8, 1.0),
-                                              Color.fromRGBO(38, 38, 38, 1.0),
-                                            ],
+                                child: AnimatedBuilder(
+                                  animation: _deckShuffleController,
+                                  builder: (_, __) => Transform.rotate(
+                                    angle: shuffleCardRotate.value * 2 * pi,
+                                    child: Stack(
+                                      children: [
+                                        Transform.translate(
+                                          offset:
+                                              shuffleBottomCardMove.value * width,
+                                          child: _CardDeckSlice(
+                                            cardSleeve:
+                                                widget.battle.yellow.cardSleeve,
+                                            isDarkened: true,
+                                            width: width,
                                           ),
                                         ),
-                                        child: Container(),
-                                      ),
-                                      FittedBox(
-                                        fit: BoxFit.contain,
-                                        child: AnimatedBuilder(
-                                          animation: Listenable.merge(
-                                              battle.yellow.hand),
-                                          builder: (_, __) {
-                                            int remainingCards = 0;
-                                            for (final card
-                                                in battle.yellow.deck) {
-                                              if (!card.isHeld &&
-                                                  !card.hasBeenPlayed) {
-                                                remainingCards += 1;
-                                              }
-                                            }
-                                            return Text(
-                                              remainingCards.toString(),
-                                              style: TextStyle(
-                                                fontFamily: "Splatfont2",
-                                                letterSpacing: width * 0.05,
-                                                fontSize: width * 0.2,
-                                              ),
-                                            );
-                                          },
+                                        Transform.translate(
+                                          offset:
+                                              (shuffleTopCardMove.value) * width,
+                                          child: _CardDeckSlice(
+                                            cardSleeve:
+                                                widget.battle.yellow.cardSleeve,
+                                            isDarkened: false,
+                                            width: width,
+                                          ),
                                         ),
-                                      ),
-                                    ],
+                                      ],
+                                    ),
                                   ),
                                 ),
                               ),
                             ),
-                          ),
-                        ],
+                            Transform.rotate(
+                              angle: 0.05 * pi,
+                              child: Align(
+                                alignment: Alignment(2.0, 1.25),
+                                child: FractionallySizedBox(
+                                  widthFactor: 0.5,
+                                  child: AspectRatio(
+                                    aspectRatio: 4 / 3,
+                                    child: Stack(
+                                      fit: StackFit.expand,
+                                      children: [
+                                        DecoratedBox(
+                                          decoration: const BoxDecoration(
+                                            gradient: RadialGradient(
+                                              center: Alignment.bottomRight,
+                                              radius: 1.2,
+                                              colors: [
+                                                Color.fromRGBO(8, 8, 8, 1.0),
+                                                Color.fromRGBO(38, 38, 38, 1.0),
+                                              ],
+                                            ),
+                                          ),
+                                          child: Container(),
+                                        ),
+                                        FittedBox(
+                                          fit: BoxFit.contain,
+                                          child: AnimatedBuilder(
+                                            animation: Listenable.merge(
+                                                battle.yellow.hand),
+                                            builder: (_, __) {
+                                              int remainingCards = 0;
+                                              for (final card
+                                                  in battle.yellow.deck) {
+                                                if (!card.isHeld &&
+                                                    !card.hasBeenPlayed) {
+                                                  remainingCards += 1;
+                                                }
+                                              }
+                                              return Text(
+                                                remainingCards.toString(),
+                                                style: TextStyle(
+                                                  fontFamily: "Splatfont2",
+                                                  letterSpacing: width * 0.05,
+                                                  fontSize: width * 0.2,
+                                                ),
+                                              );
+                                            },
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
                     ),
                   ),
-                ),
-              );
-            },
+                );
+              },
+            ),
           ),
         ),
       ),
@@ -1881,35 +1880,63 @@ class _PlaySessionScreenState extends State<PlaySessionScreen>
   }
 }
 
-class DeckPopupOverlay extends StatelessWidget {
+class DeckPopupOverlay extends StatefulWidget {
   const DeckPopupOverlay({
     super.key,
     required this.popupController,
-    required this.deckPopupSnapshotController,
     required this.player,
   });
 
   final AnimationController popupController;
-  final SnapshotController deckPopupSnapshotController;
   final TableturfPlayer player;
 
   @override
-  Widget build(BuildContext context) {
-    final mediaQuery = MediaQuery.of(context);
+  State<DeckPopupOverlay> createState() => _DeckPopupOverlayState();
+}
 
-    final deckPopupFade = popupController.drive(
+class _DeckPopupOverlayState extends State<DeckPopupOverlay> {
+  late final SnapshotController snapshotController = SnapshotController(
+    allowSnapshotting: true,
+  );
+  late final Animation<double> deckPopupFade, deckPopupScale;
+
+  @override
+  void initState() {
+    super.initState();
+    deckPopupFade = widget.popupController.drive(
       Tween(
         begin: 0.0,
         end: 1.0,
       ),
     );
-    final deckPopupScale = popupController.drive(
+    deckPopupScale = widget.popupController.drive(
       Tween(
         begin: 0.85,
         end: 1.0,
       ).chain(CurveTween(curve: Curves.easeOut)),
     );
-    final deckPopupBackground = popupController.drive(
+    for (final card in widget.player.hand) {
+      card.addListener(_onHandChange);
+    }
+  }
+
+  @override
+  void dispose() {
+    for (final card in widget.player.hand) {
+      card.removeListener(_onHandChange);
+    }
+    super.dispose();
+  }
+
+  void _onHandChange() {
+    snapshotController.clear();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final mediaQuery = MediaQuery.of(context);
+
+    final deckPopupBackground = widget.popupController.drive(
       DecorationTween(
         begin: const BoxDecoration(
           color: Colors.transparent,
@@ -1926,7 +1953,7 @@ class DeckPopupOverlay extends StatelessWidget {
         child: Padding(
           padding: mediaQuery.padding + EdgeInsets.all(30),
           child: SnapshotWidget(
-            controller: deckPopupSnapshotController,
+            controller: snapshotController,
             painter: PopupTransitionPainter(
               popupOpacity: deckPopupFade,
               popupScale: deckPopupScale,
@@ -1942,12 +1969,12 @@ class DeckPopupOverlay extends StatelessWidget {
               ),
               padding: EdgeInsets.all(8),
               child: ListenableBuilder(
-                listenable: Listenable.merge(player.hand),
+                listenable: Listenable.merge(widget.player.hand),
                 builder: (_, __) => ExactGrid(
                   height: 5,
                   width: 3,
                   children: [
-                    for (final card in player.deck)
+                    for (final card in widget.player.deck)
                       Padding(
                         padding: const EdgeInsets.all(5),
                         child: HandCardWidget(

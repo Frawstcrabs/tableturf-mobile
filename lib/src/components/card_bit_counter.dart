@@ -77,7 +77,7 @@ class _CardBitCounterState extends State<CardBitCounter>
         _buildDigitTickers();
       }
       final cardBitsDiff = widget.cardBits - oldWidget.cardBits;
-      final durationTime = 120 * log(cardBitsDiff.abs() + 1);
+      final durationTime = 111 * log(cardBitsDiff.abs() + 1);
       tickController.duration = Duration(
         milliseconds: durationTime.floor(),
       );

@@ -204,14 +204,20 @@ class _ShopBuyPromptState extends State<_ShopBuyPrompt>
         await onExit(false);
         return false;
       },
-      child: GestureDetector(
-        onTap: () => onExit(false),
-        child: FadeTransition(
-          opacity: promptFade,
-          child: Center(
-            child: promptBox,
+      child: Stack(
+        children: [
+          GestureDetector(
+            behavior: HitTestBehavior.opaque,
+            onTap: () => onExit(false),
+            child: SizedBox.expand(),
           ),
-        ),
+          FadeTransition(
+            opacity: promptFade,
+            child: Center(
+              child: promptBox,
+            ),
+          ),
+        ],
       ),
     );
   }

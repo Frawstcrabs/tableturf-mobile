@@ -490,7 +490,6 @@ class _CardSelectionWidgetState extends State<CardSelectionWidget>
                       BoxShadow(
                         spreadRadius: 6.0,
                         blurRadius: 6.0,
-                        blurStyle: BlurStyle.inner,
                         color: move.traits.normalColour,
                       )
                     ]
