@@ -5,7 +5,10 @@ import 'package:provider/provider.dart';
 import 'package:tableturf_mobile/src/card_manager/deck_editor_screen.dart';
 import 'package:tableturf_mobile/src/components/selection_button.dart';
 import 'package:tableturf_mobile/src/player_progress/player_progress.dart';
+import 'package:tableturf_mobile/src/settings/custom_name_dialog.dart';
 
+import '../components/card_widget.dart';
+import '../components/list_select_prompt.dart';
 import '../game_internals/deck.dart';
 import '../components/deck_thumbnail.dart';
 import '../settings/settings.dart';
@@ -14,6 +17,8 @@ import '../style/constants.dart';
 enum DeckPopupActions {
   delete,
   duplicate,
+  changeName,
+  changeSleeve,
 }
 
 
@@ -27,6 +32,79 @@ class DeckListScreen extends StatefulWidget {
 class _DeckListScreenState extends State<DeckListScreen> {
   bool _lockButtons = false;
 
+  Future<String?> _showCardSleevePopup() async {
+    final ScrollController scrollController = ScrollController();
+    final playerProgress = PlayerProgress();
+    const popupBorderWidth = 1.0;
+    const cardListPadding = 10.0;
+    const interCardPadding = 5.0;
+    final cardSleeves = [
+      "default",
+      "cool",
+      "supercool",
+      "ultracool",
+      "crustysean",
+      "sheldon",
+      "gnarlyeddy",
+      "jellafleur",
+      "mrcoco",
+      "harmony",
+      "judd",
+      "liljudd",
+      "murch",
+      "shiver",
+      "frye",
+      "bigman",
+      "staff",
+      "cuttlefish",
+      "callie",
+      "marie",
+      "shelly",
+      "annie",
+      "jelonzo",
+      "fredcrumbs",
+      "spyke",
+    ].where((element) => playerProgress.unlockedCardSleeves.contains(element)).toList();
+
+    final String? selectedSleeve = await showListSelectPrompt(
+      context,
+      title: "Select Card Sleeve",
+      builder: (context, exitPopup) => RawScrollbar(
+        controller: scrollController,
+        thickness: popupBorderWidth + (cardListPadding / 2),
+        padding: const EdgeInsets.fromLTRB(
+          (popupBorderWidth + interCardPadding) / 2,
+          popupBorderWidth + cardListPadding + interCardPadding,
+          (popupBorderWidth + interCardPadding) / 2,
+          popupBorderWidth + cardListPadding + interCardPadding,
+        ),
+        thumbColor: const Color.fromRGBO(0, 0, 0, 0.4),
+        radius: Radius.circular(6),
+        child: GridView.builder(
+          controller: scrollController,
+          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+              mainAxisSpacing: interCardPadding,
+              crossAxisSpacing: interCardPadding,
+              crossAxisCount: 3,
+              childAspectRatio: CardWidget.CARD_RATIO,
+          ),
+          itemCount: cardSleeves.length,
+          padding: const EdgeInsets.all(cardListPadding),
+          itemBuilder: (_, i) => GestureDetector(
+              onTap: () {
+                exitPopup(cardSleeves[i]);
+              },
+              child: Image.asset(
+                  "assets/images/card_sleeves/sleeve_${cardSleeves[i]}.png"
+              ),
+          ),
+        ),
+      ),
+    );
+    scrollController.dispose();
+    return selectedSleeve;
+  }
+
   @override
   Widget build(BuildContext context) {
     final playerProgress = PlayerProgress();
@@ -37,7 +115,7 @@ class _DeckListScreenState extends State<DeckListScreen> {
         Expanded(
             flex: 1,
             child: Center(
-              child: Text("Edit Deck", style: TextStyle(
+              child: Text("Deck List", style: TextStyle(
                 fontFamily: "Splatfont1",
                 color: Colors.black
               ))
@@ -108,7 +186,7 @@ class _DeckListScreenState extends State<DeckListScreen> {
                                                   Icons.more_vert,
                                                   color: Colors.white,
                                                 ),
-                                                onSelected: (val) {
+                                                onSelected: (val) async {
                                                   switch (val) {
                                                     case DeckPopupActions.delete:
                                                       playerProgress.deleteDeck(deck.deckID);
@@ -118,16 +196,39 @@ class _DeckListScreenState extends State<DeckListScreen> {
                                                       playerProgress.duplicateDeck(deck.deckID);
                                                       setState(() {});
                                                       break;
+                                                    case DeckPopupActions.changeName:
+                                                      final newName = await showCustomNameDialog(
+                                                        context,
+                                                        deck.name,
+                                                      );
+                                                      playerProgress.setDeckName(deck.deckID, newName);
+                                                      setState(() {});
+                                                      break;
+                                                    case DeckPopupActions.changeSleeve:
+                                                      final newSleeve = await _showCardSleevePopup();
+                                                      if (newSleeve != null) {
+                                                        playerProgress.setDeckSleeve(deck.deckID, newSleeve);
+                                                        setState(() {});
+                                                      }
+                                                      break;
                                                   }
                                                 },
                                                 itemBuilder: (context) => [
                                                   PopupMenuItem(
-                                                    child: Text("Delete"),
-                                                    value: DeckPopupActions.delete,
+                                                    child: Text("Rename"),
+                                                    value: DeckPopupActions.changeName,
+                                                  ),
+                                                  PopupMenuItem(
+                                                    child: Text("Change Sleeve"),
+                                                    value: DeckPopupActions.changeSleeve,
                                                   ),
                                                   PopupMenuItem(
                                                     child: Text("Duplicate"),
                                                     value: DeckPopupActions.duplicate,
+                                                  ),
+                                                  PopupMenuItem(
+                                                    child: Text("Delete"),
+                                                    value: DeckPopupActions.delete,
                                                   ),
                                                 ],
                                               )
@@ -213,27 +314,19 @@ class _DeckListScreenState extends State<DeckListScreen> {
     return WillPopScope(
       onWillPop: () async => true,
       child: Scaffold(
-          backgroundColor: Palette.backgroundDeckList,
-          body: DefaultTextStyle(
-            style: TextStyle(
-                fontFamily: "Splatfont2",
-                color: Colors.white,
-                fontSize: 18,
-                letterSpacing: 0.6,
-                shadows: [
-                  Shadow(
-                    color: const Color.fromRGBO(256, 256, 256, 0.4),
-                    offset: Offset(1, 1),
-                  )
-                ]
-            ),
-            child: Padding(
-              padding: mediaQuery.padding,
-              child: Center(
-                child: screen
-              ),
-            ),
-          )
+        backgroundColor: Palette.backgroundDeckList,
+        body: DefaultTextStyle(
+          style: TextStyle(
+            fontFamily: "Splatfont2",
+            color: Colors.white,
+            fontSize: 18,
+            letterSpacing: 0.6,
+          ),
+          child: Padding(
+            padding: mediaQuery.padding,
+            child: screen,
+          ),
+        ),
       ),
     );
   }

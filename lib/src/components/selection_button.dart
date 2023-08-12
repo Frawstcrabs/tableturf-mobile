@@ -33,31 +33,23 @@ class SelectionButtonState extends State<SelectionButton>
     super.initState();
 
     _selectController = AnimationController(
-        duration: const Duration(milliseconds: 125),
-        vsync: this
-    );
+        duration: const Duration(milliseconds: 125), vsync: this);
     const selectDownscale = 0.85;
     selectScale = TweenSequence([
       TweenSequenceItem(
           tween: Tween(begin: 1.0, end: selectDownscale)
               .chain(CurveTween(curve: Curves.decelerate)),
-          weight: 50
-      ),
+          weight: 50),
       TweenSequenceItem(
           tween: Tween(begin: selectDownscale, end: 1.05)
               .chain(CurveTween(curve: Curves.decelerate.flipped)),
-          weight: 50
-      ),
+          weight: 50),
     ]).animate(_selectController);
     selectColor = ColorTween(
-        begin: const Color.fromRGBO(71, 16, 175, 1.0),
-        end: const Color.fromRGBO(167, 231, 9, 1.0)
-    )
+            begin: const Color.fromRGBO(71, 16, 175, 1.0),
+            end: const Color.fromRGBO(167, 231, 9, 1.0))
         .animate(_selectController);
-    selectTextColor = ColorTween(
-        begin: Colors.white,
-        end: Colors.black
-    )
+    selectTextColor = ColorTween(begin: Colors.white, end: Colors.black)
         .animate(_selectController);
   }
 
@@ -85,34 +77,34 @@ class SelectionButtonState extends State<SelectionButton>
         _selectController.value = 0.0;
       },
       child: AnimatedBuilder(
-          animation: _selectController,
-          builder: (_, __) {
-            final textStyle = DefaultTextStyle.of(context).style.copyWith(
-                color: selectTextColor.value
-            );
-            return AspectRatio(
-                aspectRatio: 2/1,
-                child: Transform.scale(
-                  scale: selectScale.value,
-                  child: DecoratedBox(
-                      decoration: BoxDecoration(
-                        color: selectColor.value,
-                        borderRadius: BorderRadius.circular(20 * widget.designRatio),
-                        border: Border.all(
-                          color: Colors.black,
-                          width: 1.0 * widget.designRatio,
-                        ),
-                      ),
-                      child: Center(
-                          child: DefaultTextStyle(
-                              style: textStyle,
-                              child: widget.child
-                          )
-                      )
+        animation: _selectController,
+        builder: (_, __) {
+          final textStyle = DefaultTextStyle.of(context)
+              .style
+              .copyWith(color: selectTextColor.value);
+          return AspectRatio(
+            aspectRatio: 2 / 1,
+            child: Transform.scale(
+              scale: selectScale.value,
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  color: selectColor.value,
+                  borderRadius: BorderRadius.circular(20 * widget.designRatio),
+                  border: Border.all(
+                    color: Colors.black,
+                    width: 1.0 * widget.designRatio,
                   ),
-                )
-            );
-          }
+                ),
+                child: Center(
+                  child: DefaultTextStyle(
+                    style: textStyle,
+                    child: widget.child,
+                  ),
+                ),
+              ),
+            ),
+          );
+        },
       ),
     );
   }

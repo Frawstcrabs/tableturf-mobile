@@ -36,11 +36,11 @@ PageRouteBuilder<T> _buildGameSessionPage<T>({
   final playerProgress = PlayerProgress();
 
   final yellowDeckCards = yellowDeck.cards
-      .map((ident) => TableturfCard(playerProgress.identToCard(ident)))
+      .map((ident) => TableturfCard(playerProgress.identToCard(ident!)))
       .toList();
 
   final blueDeckCards = blueDeck.cards
-      .map((ident) => TableturfCard(playerProgress.identToCard(ident)))
+      .map((ident) => TableturfCard(playerProgress.identToCard(ident!)))
       .toList();
 
   final yellowPlayer = TableturfPlayer(

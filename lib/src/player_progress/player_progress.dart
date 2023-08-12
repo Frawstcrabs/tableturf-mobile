@@ -131,7 +131,8 @@ class PlayerProgress {
     }));
     _xp = _prefs.getInt("tableturf-xp") ?? 0;
     cardBits = ValueNotifier(
-      _prefs.getInt("tableturf-card_bits") ?? 0,
+      //_prefs.getInt("tableturf-card_bits") ?? 0,
+      9000,
     );
     cardBits.addListener(() {
       if (_commitChanges) {
@@ -151,7 +152,7 @@ class PlayerProgress {
 
     final List<dynamic> unlockedCardsJson = jsonDecode(
       _prefs.getString("tableturf-unlocked_cards")
-          ?? jsonEncode([for (final card in starterDeck.cards) card.toJson()])
+          ?? jsonEncode([for (final card in starterDeck.cards) card!.toJson()])
     );
     _unlockedCards = Set.from(unlockedCardsJson.map((e) {
       return TableturfCardIdentifier.fromJson(e as Map<String, dynamic>);
@@ -317,7 +318,7 @@ class PlayerProgress {
   void updateDeck({
     required int deckID,
     String? name,
-    List<TableturfCardIdentifier>? cards,
+    List<TableturfCardIdentifier?>? cards,
     String? cardSleeve,
   }) {
     final oldDeckIndex = _decks.indexWhere((deck) => deck.value.deckID == deckID);
@@ -334,7 +335,7 @@ class PlayerProgress {
 
   TableturfDeck createDeck({
     required String name,
-    required List<TableturfCardIdentifier> cards,
+    required List<TableturfCardIdentifier?> cards,
     required String cardSleeve,
   }) {
     final deck = TableturfDeck(
@@ -369,6 +370,14 @@ class PlayerProgress {
       await _writeDeck(deck);
       await _writeDeckIndexes();
     }();
+  }
+
+  void setDeckSleeve(int deckID, String newSleeve) {
+    updateDeck(deckID: deckID, cardSleeve: newSleeve);
+  }
+
+  void setDeckName(int deckID, String newName) {
+    updateDeck(deckID: deckID, name: newName);
   }
 
   void deleteDeck(int deckID) {

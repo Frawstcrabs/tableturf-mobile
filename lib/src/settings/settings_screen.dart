@@ -66,8 +66,8 @@ class SettingsScreen extends StatelessWidget {
             _SettingsLine(
               'Reset progress',
               const Icon(Icons.delete),
-              onSelected: () {
-                context.read<PlayerProgress>().reset();
+              onSelected: () async {
+                await context.read<PlayerProgress>().reset();
 
                 final messenger = ScaffoldMessenger.of(context);
                 messenger.showSnackBar(
@@ -101,7 +101,11 @@ class _NameChangeLine extends StatelessWidget {
 
     return InkResponse(
       highlightShape: BoxShape.rectangle,
-      onTap: () => showCustomNameDialog(context),
+      onTap: () async {
+        final name = settings.playerName.value;
+        final newName = await showCustomNameDialog(context, name, maxLength: 12);
+        settings.setPlayerName(newName);
+      },
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 8),
         child: Row(

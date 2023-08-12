@@ -276,17 +276,29 @@ class _LevelSelectionEntryState extends State<LevelSelectionEntry>
           controller: scrollController,
           itemCount: playerProgress.decks.length,
           padding: const EdgeInsets.all(itemListPadding),
-          itemBuilder: (_, i) => GestureDetector(
-            onTap: () {
-              exitPopup(playerProgress.decks[i].value);
-            },
-            child: AspectRatio(
+          itemBuilder: (_, i) {
+            var deck = playerProgress.decks[i].value;
+            final widget = AspectRatio(
               aspectRatio: DeckThumbnail.THUMBNAIL_RATIO,
-              child: DeckThumbnail(
-                deck: playerProgress.decks[i].value
-              ),
-            )
-          ),
+              child: DeckThumbnail(deck: deck),
+            );
+            if (deck.cards.any((c) => c == null)) {
+              return ColorFiltered(
+                colorFilter: ColorFilter.mode(
+                  const Color.fromRGBO(0, 0, 0, 0.3),
+                  BlendMode.srcATop,
+                ),
+                child: widget,
+              );
+            } else {
+              return GestureDetector(
+                onTap: () {
+                  exitPopup(deck);
+                },
+                child: widget,
+              );
+            }
+          },
         ),
       ),
     );
@@ -333,7 +345,7 @@ class _LevelSelectionEntryState extends State<LevelSelectionEntry>
                       final textStyle = winCountTextStyle.copyWith(
                         color: currentDifficulty == level
                           ? Colors.black
-                          : Colors.white
+                          : Colors.white,
                       );
                       return GestureDetector(
                         onTap: () {
@@ -343,7 +355,7 @@ class _LevelSelectionEntryState extends State<LevelSelectionEntry>
                           decoration: BoxDecoration(
                             color: currentDifficulty == level
                               ? Colors.white
-                              : Colors.grey[650]
+                              : Colors.grey[650],
                           ),
                           child: Row(
                             mainAxisAlignment: MainAxisAlignment.spaceAround,
@@ -365,8 +377,8 @@ class _LevelSelectionEntryState extends State<LevelSelectionEntry>
                                     ),
                                   ),
                                 ]),
-                              )
-                            ]
+                              ),
+                            ],
                           ),
                         ),
                       );

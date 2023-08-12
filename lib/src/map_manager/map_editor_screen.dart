@@ -891,9 +891,7 @@ class _MapEditorScreenState extends State<MapEditorScreen> {
           flex: 1,
           child: Row(
             children: [
-              const Spacer(flex: 4),
-              Expanded(
-                flex: 4,
+              Flexible(
                 child: TextField(
                   controller: _textEditingController,
                   style: TextStyle(
@@ -909,7 +907,6 @@ class _MapEditorScreenState extends State<MapEditorScreen> {
                   ),
                 ),
               ),
-              const Spacer(flex: 4),
             ],
           ),
         ),

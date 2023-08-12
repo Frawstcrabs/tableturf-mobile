@@ -244,7 +244,7 @@ class _CardListScreenState extends State<CardListScreen>
     with SingleTickerProviderStateMixin{
   bool _lockButtons = false;
   late final TabController tabController;
-  late final ValueNotifier<CardGridViewSortMode> sortMode = ValueNotifier(CardGridViewSortMode.none);
+  late final ValueNotifier<CardGridViewSortMode> sortMode = ValueNotifier(CardGridViewSortMode.number);
 
   @override
   void initState() {
@@ -273,12 +273,34 @@ class _CardListScreenState extends State<CardListScreen>
           child: Row(
             children: [
               Expanded(
-                flex: 1,
+                flex: 2,
                 child: Center(
-                  child: Text(
-                    "${playerProgress.unlockedCards.length}/${officialCards.length}",
-                    style: TextStyle(
-                      fontFamily: "Splatfont2",
+                  child: FractionallySizedBox(
+                    heightFactor: 0.6,
+                    child: FittedBox(
+                      child: RepaintBoundary(
+                        child: Builder(builder: (context) {
+                          final cardCount = playerProgress.unlockedCards.length;
+                          final textStyle = DefaultTextStyle.of(context).style;
+                          const fontSize = 16.0;
+                          return RichText(
+                            text: TextSpan(children: [
+                              TextSpan(
+                                text: cardCount.toString(),
+                                style: textStyle.copyWith(
+                                  fontSize: fontSize,
+                                ),
+                              ),
+                              TextSpan(
+                                text: "/${officialCards.length}",
+                                style: textStyle.copyWith(
+                                  fontSize: fontSize * 0.7,
+                                ),
+                              ),
+                            ]),
+                          );
+                        }),
+                      ),
                     ),
                   ),
                 ),
@@ -294,7 +316,36 @@ class _CardListScreenState extends State<CardListScreen>
                   ),
                 ),
               ),
-              const Spacer(flex: 1),
+              Expanded(
+                flex: 2,
+                child: Padding(
+                  padding: const EdgeInsets.all(5),
+                  child: ValueListenableBuilder(
+                    valueListenable: sortMode,
+                    builder: (_, currentSortMode, __) => GestureDetector(
+                      onTap: () {
+                        sortMode.value = switch (currentSortMode) {
+                          CardGridViewSortMode.number => CardGridViewSortMode.size,
+                          CardGridViewSortMode.size => CardGridViewSortMode.number,
+                        };
+                      },
+                      child: Container(
+                        decoration: BoxDecoration(
+                          color: Colors.grey[800],
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        padding: const EdgeInsets.all(5),
+                        child: Text(
+                          "Sort: ${currentSortMode.name}",
+                          style: TextStyle(
+                            color: Colors.white,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
             ],
           ),
         ),
@@ -326,53 +377,18 @@ class _CardListScreenState extends State<CardListScreen>
           flex: 17,
           child: ValueListenableBuilder(
             valueListenable: sortMode,
-            builder: (_, currentSortMode, __) => Stack(
-              fit: StackFit.expand,
+            builder: (_, currentSortMode, __) => TabBarView(
+              controller: tabController,
               children: [
-                TabBarView(
-                  controller: tabController,
-                  children: [
-                    CardGridView(
-                      cardList: officialCards,
-                      cardIsVisible: (c) => playerProgress.unlockedCards.contains(c.ident),
-                      sortMode: currentSortMode,
-                    ),
-                    CardGridView(
-                      cardList: [],
-                      cardIsVisible: (c) => true,
-                      sortMode: currentSortMode,
-                    ),
-                  ],
+                CardGridView(
+                  cardList: officialCards,
+                  cardIsVisible: (c) => playerProgress.unlockedCards.contains(c.ident),
+                  sortMode: currentSortMode,
                 ),
-                Padding(
-                  padding: const EdgeInsets.all(5),
-                  child: Align(
-                    alignment: Alignment.topRight,
-                    child: GestureDetector(
-                      onTap: () {
-                        sortMode.value = switch (currentSortMode) {
-                          CardGridViewSortMode.none => CardGridViewSortMode.size,
-                          CardGridViewSortMode.size => CardGridViewSortMode.none,
-                        };
-                      },
-                      child: Container(
-                        decoration: BoxDecoration(
-                          color: Colors.grey[800],
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        padding: const EdgeInsets.all(5),
-                        child: Text(
-                          switch (currentSortMode) {
-                            CardGridViewSortMode.none => "Sort by number",
-                            CardGridViewSortMode.size => "Sort by size",
-                          },
-                          style: TextStyle(
-                            color: Colors.white,
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
+                CardGridView(
+                  cardList: [],
+                  cardIsVisible: (c) => true,
+                  sortMode: currentSortMode,
                 ),
               ],
             ),
@@ -388,7 +404,7 @@ class _CardListScreenState extends State<CardListScreen>
                 child: Padding(
                   padding: const EdgeInsets.all(10),
                   child: SelectionButton(
-                    child: Text("Edit Deck"),
+                    child: Text("Deck List"),
                     designRatio: 0.5,
                     onPressStart: () async {
                       if (_lockButtons) return false;
@@ -437,12 +453,6 @@ class _CardListScreenState extends State<CardListScreen>
           color: Colors.black,
           fontSize: 18,
           letterSpacing: 0.6,
-          shadows: [
-            Shadow(
-              color: const Color.fromRGBO(256, 256, 256, 0.4),
-              offset: Offset(1, 1),
-            ),
-          ],
         ),
         child: Padding(
           padding: mediaQuery.padding,
@@ -454,7 +464,7 @@ class _CardListScreenState extends State<CardListScreen>
 }
 
 enum CardGridViewSortMode {
-  none,
+  number,
   size,
 }
 
@@ -481,11 +491,10 @@ class _CardGridViewState extends State<CardGridView> {
   void initState() {
     super.initState();
     cardLists = {
-      CardGridViewSortMode.none: widget.cardList,
+      CardGridViewSortMode.number: widget.cardList,
       CardGridViewSortMode.size: widget.cardList.sortedBy<num>((c) => c.count),
     };
   }
-
 
   Future<void> _showOfficialCardPopup(
       BuildContext context, int cardIndex) async {
@@ -652,12 +661,6 @@ class _CardDisplayPopupState extends State<CardDisplayPopup>
           color: Colors.black,
           fontSize: 16,
           letterSpacing: 0.6,
-          shadows: [
-            Shadow(
-              color: const Color.fromRGBO(256, 256, 256, 0.4),
-              offset: Offset(1, 1),
-            ),
-          ],
         ),
         child: Stack(
           fit: StackFit.expand,

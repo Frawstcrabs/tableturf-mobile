@@ -34,7 +34,7 @@ class Palette {
   static const backgroundLevelSelection = const Color(0xffa2dcc7);
   static const backgroundCardList = const Color.fromRGBO(208, 220, 220, 1.0);
   static const backgroundDeckList = const Color.fromRGBO(213, 225, 213, 1.0);
-  static const backgroundDeckEditor = const Color.fromRGBO(229, 224, 239, 1.0);
+  static const backgroundDeckEditor = const Color.fromRGBO(239, 226, 221, 1.0);
   static const backgroundMapList = const Color.fromRGBO(43, 43, 73, 1.0);
   static const backgroundMapEditor = const Color.fromRGBO(40, 40, 44, 1.0);
   static const backgroundPlaySession = const Color(0xff3f2f93);

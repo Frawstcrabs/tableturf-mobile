@@ -7,24 +7,51 @@ import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'settings.dart';
 
-void showCustomNameDialog(BuildContext context) {
-  showGeneralDialog(
-      context: context,
-      pageBuilder: (context, animation, secondaryAnimation) =>
-          CustomNameDialog(animation: animation));
+Future<String> showCustomNameDialog(BuildContext context, String name, {String? title, int? maxLength}) async {
+  final ret = await showGeneralDialog<String>(
+    context: context,
+    pageBuilder: (context, animation, secondaryAnimation) {
+      return CustomNameDialog(
+        animation: animation,
+        value: name,
+        title: title,
+        maxLength: maxLength,
+      );
+    }
+  );
+  return ret!;
 }
 
 class CustomNameDialog extends StatefulWidget {
   final Animation<double> animation;
+  final String value;
+  final String? title;
+  final int? maxLength;
 
-  const CustomNameDialog({required this.animation, super.key});
+  const CustomNameDialog({
+    super.key,
+    required this.animation,
+    required this.value,
+    this.title,
+    this.maxLength,
+  });
 
   @override
   State<CustomNameDialog> createState() => _CustomNameDialogState();
 }
 
 class _CustomNameDialogState extends State<CustomNameDialog> {
-  final TextEditingController _controller = TextEditingController();
+  late final TextEditingController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = TextEditingController(text: widget.value);
+  }
+
+  void onExit() {
+    Navigator.of(context).pop(_controller.text);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -34,37 +61,27 @@ class _CustomNameDialogState extends State<CustomNameDialog> {
         curve: Curves.easeOutCubic,
       ),
       child: SimpleDialog(
-        title: const Text('Change name'),
+        title: Text(widget.title ?? 'Change name'),
         children: [
           TextField(
             controller: _controller,
             autofocus: true,
-            maxLength: 12,
+            maxLength: widget.maxLength,
             maxLengthEnforcement: MaxLengthEnforcement.enforced,
             textAlign: TextAlign.center,
             textCapitalization: TextCapitalization.words,
             textInputAction: TextInputAction.done,
-            onChanged: (value) {
-              context.read<Settings>().setPlayerName(value);
-            },
             onSubmitted: (value) {
-              // Player tapped 'Submit'/'Done' on their keyboard.
-              Navigator.pop(context);
+              onExit();
             },
           ),
           TextButton(
-            onPressed: () => Navigator.pop(context),
+            onPressed: onExit,
             child: const Text('Close'),
           ),
         ],
       ),
     );
-  }
-
-  @override
-  void didChangeDependencies() {
-    _controller.text = context.read<Settings>().playerName.value;
-    super.didChangeDependencies();
   }
 
   @override

@@ -903,26 +903,27 @@ class _PlaySessionScreenState extends State<PlaySessionScreen>
           child: AnimatedBuilder(
             animation: _outroController,
             child: UnconstrainedBox(
+              clipBehavior: Clip.hardEdge,
               child: Container(
                 width: mediaQuery.size.width * 3,
                 color: Color.fromRGBO(236, 253, 86, 1.0),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                  children: Iterable.generate(
-                      (mediaQuery.size.width / 45).floor(),
-                      (_) => Text("GAME!")).toList(),
+                child: Transform.rotate(
+                  angle: -0.2,
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                    children: Iterable.generate(
+                        (mediaQuery.size.width / 45).floor(),
+                        (_) => Text("GAME!")).toList(),
+                  ),
                 ),
               ),
             ),
             builder: (context, child) {
-              return Transform.rotate(
-                angle: -0.2,
-                child: Transform.translate(
-                  offset: Offset(mediaQuery.size.width * outroMove.value, 0),
-                  child: Transform.scale(
-                    scaleX: outroScale.value,
-                    child: child,
-                  ),
+              return Transform.translate(
+                offset: Offset(mediaQuery.size.width * outroMove.value, 0),
+                child: Transform.scale(
+                  scaleX: outroScale.value,
+                  child: child,
                 ),
               );
             },
