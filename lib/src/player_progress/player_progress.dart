@@ -131,8 +131,7 @@ class PlayerProgress {
     }));
     _xp = _prefs.getInt("tableturf-xp") ?? 0;
     cardBits = ValueNotifier(
-      //_prefs.getInt("tableturf-card_bits") ?? 0,
-      9000,
+      _prefs.getInt("tableturf-card_bits") ?? 0,
     );
     cardBits.addListener(() {
       if (_commitChanges) {

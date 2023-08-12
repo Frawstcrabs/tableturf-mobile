@@ -181,7 +181,7 @@ class _ShopScreenState extends State<ShopScreen>
                       padding: const EdgeInsets.symmetric(vertical: 5.0),
                       children: [
                         ShopItemThumbnail(
-                          cost: 1000,
+                          cost: 10,
                           name: "Card Pack",
                           backgroundController: _popupBackgroundController,
                           child: FittedBox(
