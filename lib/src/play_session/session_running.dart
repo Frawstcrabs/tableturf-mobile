@@ -900,15 +900,13 @@ class _PlaySessionScreenState extends State<PlaySessionScreen>
           letterSpacing: 0.2,
         ),
         child: Center(
-          child: AnimatedBuilder(
-            animation: _outroController,
-            child: UnconstrainedBox(
-              clipBehavior: Clip.hardEdge,
-              child: Container(
-                width: mediaQuery.size.width * 3,
-                color: Color.fromRGBO(236, 253, 86, 1.0),
-                child: Transform.rotate(
-                  angle: -0.2,
+          child: ClipRect(
+            child: AnimatedBuilder(
+              animation: _outroController,
+              child: OverflowBox(
+                maxWidth: mediaQuery.size.width * 3,
+                child: Container(
+                  color: Color.fromRGBO(236, 253, 86, 1.0),
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                     children: Iterable.generate(
@@ -917,16 +915,19 @@ class _PlaySessionScreenState extends State<PlaySessionScreen>
                   ),
                 ),
               ),
+              builder: (context, child) {
+                return Transform.rotate(
+                  angle: -0.2,
+                  child: Transform.translate(
+                    offset: Offset(mediaQuery.size.width * outroMove.value, 0),
+                    child: Transform.scale(
+                      scaleX: outroScale.value,
+                      child: child,
+                    ),
+                  ),
+                );
+              },
             ),
-            builder: (context, child) {
-              return Transform.translate(
-                offset: Offset(mediaQuery.size.width * outroMove.value, 0),
-                child: Transform.scale(
-                  scaleX: outroScale.value,
-                  child: child,
-                ),
-              );
-            },
           ),
         ),
       );
