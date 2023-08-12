@@ -139,7 +139,7 @@ class _DeckEditorScreenState extends State<DeckEditorScreen>
       Tween(
         begin: 0.0,
         end: 1.0,
-      ).chain(CurveTween(curve: Curves.easeOut)),
+      ).chain(CurveTween(curve: Curves.easeOutCubic)),
     );
   }
 
