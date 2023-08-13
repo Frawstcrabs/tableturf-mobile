@@ -16,9 +16,10 @@ Use `flutter run` to run on a device.
 - [x] Optimise card flip animation in card pack
 - [x] Optimise animating the deck popup in/out
 - [x] Make the deck editor less shit to use
-- [ ] Make the bottom buttons in the map editor less shit
+- [x] Make the bottom buttons in the map editor less shit
 - [ ] Screen for testing custom decks/boards
-- [ ] Add buying cards with bits to the card list screen
+- [ ] Change card bits out for coins, add a loss reward because i suck at my own game
+- [ ] Add buying (upgrading?) cards to the card list screen
 - [ ] Make randomiser deck unlockable (probably also move it to earlier in the opponent list)
 - [ ] Make the UI better able to handle different screen sizes
 - [ ] Add special tile distance awareness to AI alongside normal tile distance awareness (different calculations per level?)

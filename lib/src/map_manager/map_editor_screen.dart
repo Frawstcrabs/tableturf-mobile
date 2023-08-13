@@ -10,6 +10,7 @@ import 'package:tableturf_mobile/src/player_progress/player_progress.dart';
 import 'package:tableturf_mobile/src/settings/settings.dart';
 import 'package:tableturf_mobile/src/style/shaders.dart';
 
+import '../components/multi_choice_prompt.dart';
 import '../game_internals/card.dart';
 import '../game_internals/map.dart';
 import '../game_internals/tile.dart';
@@ -289,6 +290,7 @@ class _MapEditorScreenState extends State<MapEditorScreen> {
   int operationStackPtr = 0;
   late ValueNotifier<int> gridWidthNotifier, gridHeightNotifier;
   bool _lockButtons = false;
+  Future<int>? exitPopup = null;
 
   @override
   void initState() {
@@ -299,7 +301,7 @@ class _MapEditorScreenState extends State<MapEditorScreen> {
     );
     gridWidthNotifier = ValueNotifier(widget.map?.board[0].length ?? 15);
     gridHeightNotifier = ValueNotifier(widget.map?.board.length ?? 15);
-    final name = widget.map?.name ?? "New Map ${playerProgress.maps.length}";
+    final name = widget.map?.name ?? "New Map ${playerProgress.maps.length + 1}";
     _textEditingController = TextEditingController(text: name);
     operationStack = [BoardState(
       board: boardNotifier.value.copy(),
@@ -1055,60 +1057,107 @@ class _MapEditorScreenState extends State<MapEditorScreen> {
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceEvenly,
             children: [
-              GestureDetector(
-                  onTap: _undoOperation,
-                  child: Center(
-                    child: Text("undo"),
-                  )
-              ),
-              GestureDetector(
-                  onTap: _redoOperation,
-                  child: Center(
-                    child: Text("redo"),
-                  )
-              ),
-              Padding(
-                padding: const EdgeInsets.all(10),
-                child: SelectionButton(
-                  child: Text("Back"),
-                  designRatio: 0.5,
-                  onPressStart: () async {
-                    if (_lockButtons) return false;
-                    _lockButtons = true;
-                    return true;
-                  },
-                  onPressEnd: () async {
-                    Navigator.of(context).pop(false);
-                    return Future<void>.delayed(const Duration(milliseconds: 100));
-                  },
+              Expanded(
+                flex: 2,
+                child: Padding(
+                  padding: const EdgeInsets.all(10),
+                  child: SelectionButton(
+                    child: Text(
+                      "Test",
+                      style: TextStyle(fontSize: 16),
+                    ),
+                    designRatio: 0.5,
+                    onPressStart: () async {
+                      if (_lockButtons) {
+                        return false;
+                      }
+                      print("testing screen goes here");
+                      return true;
+                    },
+                    onPressEnd: () async {},
+                  ),
                 ),
               ),
-              Padding(
-                padding: const EdgeInsets.all(10),
-                child: SelectionButton(
-                  child: Text("Save & Quit"),
-                  designRatio: 0.5,
-                  onPressStart: () async {
-                    if (_lockButtons) return false;
-                    _lockButtons = true;
-                    return true;
-                  },
-                  onPressEnd: () async {
-                    if (widget.map == null) {
-                      playerProgress.createMap(
-                        name: _textEditingController.text,
-                        board: boardNotifier.value.copy(),
+              Expanded(
+                flex: 1,
+                child: Center(
+                  child: GestureDetector(
+                    behavior: HitTestBehavior.opaque,
+                    onTap: _undoOperation,
+                    child: Transform.flip(
+                      flipX: true,
+                      child: Icon(
+                        Icons.refresh,
+                        color: Colors.white54,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+              Expanded(
+                flex: 1,
+                child: Center(
+                  child: GestureDetector(
+                    behavior: HitTestBehavior.opaque,
+                    onTap: _redoOperation,
+                    child: Icon(
+                      Icons.refresh,
+                      color: Colors.white54,
+                    ),
+                  ),
+                ),
+              ),
+              Expanded(
+                flex: 2,
+                child: Padding(
+                  padding: const EdgeInsets.all(10),
+                  child: SelectionButton(
+                    child: Text(
+                      "Exit",
+                      style: TextStyle(fontSize: 16),
+                    ),
+                    designRatio: 0.5,
+                    onPressStart: () async {
+                      if (_lockButtons) {
+                        return false;
+                      }
+                      _lockButtons = true;
+                      exitPopup = showMultiChoicePrompt(
+                        context,
+                        title: "Save changes?",
+                        options: ["Back to Edit", "Save!", "Don't Save"],
+                        defaultResult: 0,
                       );
-                    } else {
-                      playerProgress.updateMap(
-                        mapID: widget.map!.mapID,
-                        name: _textEditingController.text,
-                        board: boardNotifier.value.copy(),
-                      );
-                    }
-                    Navigator.of(context).pop(true);
-                    return Future<void>.delayed(const Duration(milliseconds: 100));
-                  },
+                      return true;
+                    },
+                    onPressEnd: () async {
+                      final choice = await exitPopup!;
+                      exitPopup = null;
+                      switch (choice) {
+                        case 0:
+                          _lockButtons = false;
+                          return;
+                        case 1:
+                          if (widget.map == null) {
+                            playerProgress.createMap(
+                              name: _textEditingController.text,
+                              board: boardNotifier.value.copy(),
+                            );
+                          } else {
+                            playerProgress.updateMap(
+                              mapID: widget.map!.mapID,
+                              name: _textEditingController.text,
+                              board: boardNotifier.value.copy(),
+                            );
+                          }
+                          Navigator.of(context).pop(true);
+                          return Future<void>.delayed(const Duration(milliseconds: 100));
+                        case 2:
+                          Navigator.of(context).pop(false);
+                          return Future<void>.delayed(const Duration(milliseconds: 100));
+                      }
+                    },
+                  ),
                 ),
               ),
             ],

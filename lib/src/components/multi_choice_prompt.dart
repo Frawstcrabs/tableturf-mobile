@@ -83,12 +83,14 @@ class _MultiChoiceOverlayController {
 class _MultiChoiceOverlay extends StatefulWidget {
   final String title;
   final List<String> options;
+  final int? defaultResult;
   final List<SfxType>? sfx;
   final bool useWave;
   final _MultiChoiceOverlayController _controller;
   const _MultiChoiceOverlay({
     required this.title,
     required this.options,
+    this.defaultResult,
     this.sfx,
     required this.useWave,
     required _MultiChoiceOverlayController controller
@@ -180,13 +182,11 @@ class _MultiChoiceOverlayState extends State<_MultiChoiceOverlay>
     widget._controller.stateLoaded.complete();
   }
 
-  Future<void> Function() _createTapCallback(int ret) {
-    return () async {
-      await _redrawSelectionController.forward();
-      _redrawSelectionWaveController.stop();
-      _redrawSelectionWaveController.value = 0.0;
-      completer.complete(ret);
-    };
+  Future<void> onExit(int ret) async {
+    await _redrawSelectionController.forward();
+    _redrawSelectionWaveController.stop();
+    _redrawSelectionWaveController.value = 0.0;
+    completer.complete(ret);
   }
 
   @override
@@ -194,7 +194,7 @@ class _MultiChoiceOverlayState extends State<_MultiChoiceOverlay>
     final mediaQuery = MediaQuery.of(context);
     final isLandscape = mediaQuery.orientation == Orientation.landscape;
 
-    final promptBox = FractionallySizedBox(
+    Widget promptBox = FractionallySizedBox(
       heightFactor: isLandscape ? 0.5 : null,
       widthFactor: isLandscape ? null : 0.8,
       child: AspectRatio(
@@ -247,63 +247,77 @@ class _MultiChoiceOverlayState extends State<_MultiChoiceOverlay>
                                         padding: EdgeInsets.all(5 * designRatio),
                                         child: Center(
                                           child: SelectionButton(
-                                            onPressEnd: _createTapCallback(i),
+                                            onPressEnd: () => onExit(i),
                                             designRatio: designRatio,
                                             child: Text(widget.options[i]),
                                             sfx: widget.sfx?[i] ?? SfxType.menuButtonPress,
                                           ),
                                         ),
                                       ),
-                                    )
-                                ]
+                                    ),
+                                ],
                               ),
-                            )
-                          )
-                        ]
+                            ),
+                          ),
+                        ],
                       ),
                     ),
                   ),
                 ),
               ),
             );
-          }
+          },
         ),
       ),
     );
+    late Widget background;
     if (widget.useWave) {
-      return FadeTransition(
-        opacity: redrawSelectionOpacity,
-        child: CustomPaint(
-          painter: SelectionBackgroundPainter(
-            waveAnimation: _redrawSelectionWaveController,
-            orientation: mediaQuery.orientation,
-          ),
-          child: Align(
-            alignment: isLandscape ? Alignment(0.4, 0.0) : Alignment(0.0, -0.4),
-            child: promptBox,
-          )
-        )
+      background = CustomPaint(
+        painter: SelectionBackgroundPainter(
+          waveAnimation: _redrawSelectionWaveController,
+          orientation: mediaQuery.orientation,
+        ),
+        child: const SizedBox.expand(),
+      );
+      promptBox = Align(
+        alignment: isLandscape ? Alignment(0.4, 0.0) : Alignment(0.0, -0.4),
+        child: promptBox,
       );
     } else {
-      return FadeTransition(
-        opacity: redrawSelectionOpacity,
-        child: DecoratedBox(
-          decoration: BoxDecoration(
-            gradient: RadialGradient(
-              colors: [
-                Colors.black38,
-                Colors.black54,
-              ],
-              radius: 1.3,
-            )
+      background = const DecoratedBox(
+        decoration: BoxDecoration(
+          gradient: RadialGradient(
+            colors: [
+              Colors.black38,
+              Colors.black54,
+            ],
+            radius: 1.3,
           ),
-          child: Align(
-            alignment: Alignment.center,
-            child: promptBox,
-          )
-        )
+        ),
+        child: const SizedBox.expand(),
+      );
+      promptBox = Center(
+        child: promptBox
       );
     }
+    return FadeTransition(
+      opacity: redrawSelectionOpacity,
+      child: Stack(
+        fit: StackFit.expand,
+        children: [
+          GestureDetector(
+            behavior: HitTestBehavior.opaque,
+            onTap: () {
+              if (widget.defaultResult != null) {
+                onExit(widget.defaultResult!);
+              }
+            },
+            child: background,
+          ),
+          promptBox,
+        ],
+      ),
+    );
   }
 }
 
@@ -311,6 +325,7 @@ class _MultiChoiceOverlayState extends State<_MultiChoiceOverlay>
 Future<int> showMultiChoicePrompt(BuildContext context, {
   required String title,
   required List<String> options,
+  int? defaultResult,
   List<SfxType>? sfx,
   bool useWave = false,
 }) async {
@@ -321,6 +336,7 @@ Future<int> showMultiChoicePrompt(BuildContext context, {
     return _MultiChoiceOverlay(
       title: title,
       options: options,
+      defaultResult: defaultResult,
       sfx: sfx,
       useWave: useWave,
       controller: controller

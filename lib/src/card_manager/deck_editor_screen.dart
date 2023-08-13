@@ -405,6 +405,7 @@ class _DeckEditorScreenState extends State<DeckEditorScreen>
                         context,
                         title: "Save changes?",
                         options: ["Back to Edit", "Save!", "Don't Save"],
+                        defaultResult: 0,
                       );
                       return true;
                     },
