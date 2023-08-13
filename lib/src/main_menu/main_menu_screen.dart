@@ -9,7 +9,7 @@ import 'package:tableturf_mobile/src/map_manager/map_list_screen.dart';
 import 'package:tableturf_mobile/src/shop/shop_screen.dart';
 
 import '../level_selection/level_selection_screen.dart';
-import '../card_manager/card_list_screen.dart';
+import '../card_list/card_list_screen.dart';
 import '../settings/settings.dart';
 import '../settings/settings_screen.dart';
 import '../style/my_transition.dart';

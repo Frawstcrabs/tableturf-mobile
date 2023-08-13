@@ -8,6 +8,7 @@ import 'package:tableturf_mobile/src/components/multi_choice_prompt.dart';
 import 'package:tableturf_mobile/src/components/selection_button.dart';
 import 'package:tableturf_mobile/src/player_progress/player_progress.dart';
 
+import '../components/exact_grid.dart';
 import '../components/list_select_prompt.dart';
 import '../game_internals/card.dart';
 import '../game_internals/deck.dart';
@@ -45,40 +46,6 @@ class DeckCardWidget extends StatelessWidget {
       );
     }
     return HandCardWidget(card: card, background: Palette.cardBackgroundSelectable);
-  }
-}
-
-class ExactGrid extends StatelessWidget {
-  final int height, width;
-  final List<Widget> children;
-  const ExactGrid({
-    super.key,
-    required this.height,
-    required this.width,
-    this.children = const [],
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      children: [
-        for (int i = 0; i < height * width; i += width)
-          Expanded(
-            child: Center(
-              child: Row(
-                children: [
-                  for (int j = 0; j < width; j++)
-                    Expanded(
-                      child: Center(
-                        child: i+j >= children.length ? Container() : children[i+j]
-                      )
-                    )
-                ]
-              ),
-            )
-          )
-      ]
-    );
   }
 }
 

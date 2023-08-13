@@ -10,7 +10,6 @@ import 'package:logging/logging.dart' hide Level;
 import 'package:provider/provider.dart';
 
 import 'package:tableturf_mobile/src/audio/audio_controller.dart';
-import 'package:tableturf_mobile/src/card_manager/deck_editor_screen.dart';
 import 'package:tableturf_mobile/src/components/popup_transition_painter.dart';
 import 'package:tableturf_mobile/src/game_internals/battle.dart';
 import 'package:tableturf_mobile/src/game_internals/card.dart';
@@ -22,6 +21,7 @@ import 'package:tableturf_mobile/src/settings/settings.dart';
 import 'package:tableturf_mobile/src/style/constants.dart';
 import 'package:tableturf_mobile/src/style/my_transition.dart';
 
+import '../components/exact_grid.dart';
 import '../game_internals/opponentAI.dart';
 import 'session_end.dart';
 import '../components/arc_tween.dart';

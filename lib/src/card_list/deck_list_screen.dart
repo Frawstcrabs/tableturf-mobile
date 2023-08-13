@@ -2,7 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:tableturf_mobile/src/card_manager/deck_editor_screen.dart';
+import 'package:tableturf_mobile/src/card_list/deck_editor_screen.dart';
 import 'package:tableturf_mobile/src/components/selection_button.dart';
 import 'package:tableturf_mobile/src/player_progress/player_progress.dart';
 import 'package:tableturf_mobile/src/settings/custom_name_dialog.dart';

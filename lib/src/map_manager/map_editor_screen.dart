@@ -5,18 +5,16 @@ import 'dart:math';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:collection/collection.dart';
-import 'package:tableturf_mobile/src/card_manager/deck_editor_screen.dart';
 import 'package:tableturf_mobile/src/player_progress/player_progress.dart';
-import 'package:tableturf_mobile/src/settings/settings.dart';
 import 'package:tableturf_mobile/src/style/shaders.dart';
 
+import '../components/exact_grid.dart';
 import '../components/multi_choice_prompt.dart';
 import '../game_internals/card.dart';
 import '../game_internals/map.dart';
 import '../game_internals/tile.dart';
 import '../components/board_widget.dart';
 import '../components/selection_button.dart';
-import '../components/card_selection.dart';
 import '../style/constants.dart';
 
 class GridPainter extends CustomPainter {
