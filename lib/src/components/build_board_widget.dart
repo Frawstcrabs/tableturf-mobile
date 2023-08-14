@@ -52,12 +52,12 @@ Widget buildBoardWidget({
                 battle,
                 tileSize: boardTileSize,
                 loopAnimation: loopAnimation,
-              )
-            ]
+              ),
+            ],
           ),
-        )
+        ),
       );
-    }
+    },
   );
   return Hero(
     tag: boardHeroTag,

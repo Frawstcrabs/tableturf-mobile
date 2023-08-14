@@ -8,14 +8,18 @@ import 'package:collection/collection.dart';
 import 'package:tableturf_mobile/src/player_progress/player_progress.dart';
 import 'package:tableturf_mobile/src/style/shaders.dart';
 
+import '../components/deck_thumbnail.dart';
 import '../components/exact_grid.dart';
+import '../components/list_select_prompt.dart';
 import '../components/multi_choice_prompt.dart';
 import '../game_internals/card.dart';
+import '../game_internals/deck.dart';
 import '../game_internals/map.dart';
 import '../game_internals/tile.dart';
 import '../components/board_widget.dart';
 import '../components/selection_button.dart';
 import '../style/constants.dart';
+import '../test_area/test_area_screen.dart';
 
 class GridPainter extends CustomPainter {
   static const DASH_LENGTH = 0.4;
@@ -247,11 +251,6 @@ class BoardState {
   });
 }
 
-class BoardOperation {
-  final BoardState before, after;
-  const BoardOperation({required this.before, required this.after});
-}
-
 enum EditMode {
   pan,
   paint,
@@ -289,6 +288,7 @@ class _MapEditorScreenState extends State<MapEditorScreen> {
   late ValueNotifier<int> gridWidthNotifier, gridHeightNotifier;
   bool _lockButtons = false;
   Future<int>? exitPopup = null;
+  Future<TableturfDeck?>? deckSelectPopup = null;
 
   @override
   void initState() {
@@ -895,7 +895,7 @@ class _MapEditorScreenState extends State<MapEditorScreen> {
                 child: TextField(
                   controller: _textEditingController,
                   style: TextStyle(
-                    fontFamily: "Splatfont1",
+                    fontFamily: "Splatfont2",
                     color: Colors.white,
                   ),
                   textAlign: TextAlign.center,
@@ -1069,19 +1069,68 @@ class _MapEditorScreenState extends State<MapEditorScreen> {
                       if (_lockButtons) {
                         return false;
                       }
-                      print("testing screen goes here");
+                      deckSelectPopup = showListSelectPrompt(
+                        context,
+                        title: "Select Deck",
+                        builder: (context, exitPopup) => ListView.builder(
+                          itemCount: playerProgress.decks.length,
+                          padding: const EdgeInsets.all(10.0),
+                          itemBuilder: (_, i) {
+                            var deck = playerProgress.decks[i].value;
+                            final widget = AspectRatio(
+                              aspectRatio: DeckThumbnail.THUMBNAIL_RATIO,
+                              child: DeckThumbnail(deck: deck),
+                            );
+                            if (deck.cards.any((c) => c == null)) {
+                              return ColorFiltered(
+                                colorFilter: ColorFilter.mode(
+                                  const Color.fromRGBO(0, 0, 0, 0.3),
+                                  BlendMode.srcATop,
+                                ),
+                                child: widget,
+                              );
+                            } else {
+                              return GestureDetector(
+                                onTap: () {
+                                  exitPopup(deck);
+                                },
+                                child: widget,
+                              );
+                            }
+                          },
+                        ),
+                      );
                       return true;
                     },
-                    onPressEnd: () async {},
+                    onPressEnd: () async {
+                      final selectedDeck = await deckSelectPopup!;
+                      deckSelectPopup = null;
+                      if (selectedDeck == null) {
+                        return;
+                      }
+                      await Future<void>.delayed(const Duration(milliseconds: 150));
+                      Navigator.of(context).push(MaterialPageRoute(
+                        builder: (_) {
+                          return TestAreaScreen(
+                            board: boardNotifier.value,
+                            deck: selectedDeck.cards
+                                .whereNotNull()
+                                .map(playerProgress.identToCard)
+                                .toList(),
+                          );
+                        },
+                      ));
+                      return Future<void>.delayed(const Duration(milliseconds: 100));
+                    },
                   ),
                 ),
               ),
               Expanded(
                 flex: 1,
-                child: Center(
-                  child: GestureDetector(
-                    behavior: HitTestBehavior.opaque,
-                    onTap: _undoOperation,
+                child: GestureDetector(
+                  behavior: HitTestBehavior.opaque,
+                  onTap: _undoOperation,
+                  child: Center(
                     child: Transform.flip(
                       flipX: true,
                       child: Icon(
@@ -1094,10 +1143,10 @@ class _MapEditorScreenState extends State<MapEditorScreen> {
               ),
               Expanded(
                 flex: 1,
-                child: Center(
-                  child: GestureDetector(
-                    behavior: HitTestBehavior.opaque,
-                    onTap: _redoOperation,
+                child: GestureDetector(
+                  behavior: HitTestBehavior.opaque,
+                  onTap: _redoOperation,
+                  child: Center(
                     child: Icon(
                       Icons.refresh,
                       color: Colors.white54,

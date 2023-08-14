@@ -17,7 +17,7 @@ Use `flutter run` to run on a device.
 - [x] Optimise animating the deck popup in/out
 - [x] Make the deck editor less shit to use
 - [x] Make the bottom buttons in the map editor less shit
-- [ ] Screen for testing custom decks/boards
+- [x] Screen for testing custom decks/boards
 - [ ] Change card bits out for coins, add a loss reward because i suck at my own game
 - [ ] Add buying (upgrading?) cards to the card list screen
 - [ ] Make randomiser deck unlockable (probably also move it to earlier in the opponent list)

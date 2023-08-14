@@ -35,7 +35,6 @@ class _DeckListScreenState extends State<DeckListScreen> {
   Future<String?> _showCardSleevePopup() async {
     final ScrollController scrollController = ScrollController();
     final playerProgress = PlayerProgress();
-    const popupBorderWidth = 1.0;
     const cardListPadding = 10.0;
     const interCardPadding = 5.0;
     final cardSleeves = [
@@ -69,34 +68,21 @@ class _DeckListScreenState extends State<DeckListScreen> {
     final String? selectedSleeve = await showListSelectPrompt(
       context,
       title: "Select Card Sleeve",
-      builder: (context, exitPopup) => RawScrollbar(
-        controller: scrollController,
-        thickness: popupBorderWidth + (cardListPadding / 2),
-        padding: const EdgeInsets.fromLTRB(
-          (popupBorderWidth + interCardPadding) / 2,
-          popupBorderWidth + cardListPadding + interCardPadding,
-          (popupBorderWidth + interCardPadding) / 2,
-          popupBorderWidth + cardListPadding + interCardPadding,
+      builder: (context, exitPopup) => GridView.builder(
+        gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+          mainAxisSpacing: interCardPadding,
+          crossAxisSpacing: interCardPadding,
+          crossAxisCount: 3,
+          childAspectRatio: CardWidget.CARD_RATIO,
         ),
-        thumbColor: const Color.fromRGBO(0, 0, 0, 0.4),
-        radius: Radius.circular(6),
-        child: GridView.builder(
-          controller: scrollController,
-          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-              mainAxisSpacing: interCardPadding,
-              crossAxisSpacing: interCardPadding,
-              crossAxisCount: 3,
-              childAspectRatio: CardWidget.CARD_RATIO,
-          ),
-          itemCount: cardSleeves.length,
-          padding: const EdgeInsets.all(cardListPadding),
-          itemBuilder: (_, i) => GestureDetector(
-              onTap: () {
-                exitPopup(cardSleeves[i]);
-              },
-              child: Image.asset(
-                  "assets/images/card_sleeves/sleeve_${cardSleeves[i]}.png"
-              ),
+        itemCount: cardSleeves.length,
+        padding: const EdgeInsets.all(cardListPadding),
+        itemBuilder: (_, i) => GestureDetector(
+          onTap: () {
+            exitPopup(cardSleeves[i]);
+          },
+          child: Image.asset(
+            "assets/images/card_sleeves/sleeve_${cardSleeves[i]}.png",
           ),
         ),
       ),

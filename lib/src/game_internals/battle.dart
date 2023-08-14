@@ -102,7 +102,7 @@ class TableturfBattle {
 
   final ValueNotifier<int> yellowCountNotifier = ValueNotifier(1);
   final ValueNotifier<int> blueCountNotifier = ValueNotifier(1);
-  final ValueNotifier<int> turnCountNotifier = ValueNotifier(kReleaseMode ? 12 : 12);
+  final ValueNotifier<int> turnCountNotifier = ValueNotifier(kReleaseMode ? 12 : 1);
   int _yellowSpecialCount = 0, _blueSpecialCount = 0;
 
   final TableturfPlayer yellow;
@@ -110,7 +110,8 @@ class TableturfBattle {
   final AILevel aiLevel;
   final AILevel? playerAI;
 
-  final TileGrid board, origBoard;
+  TileGrid board;
+  final TileGrid origBoard;
 
   TableturfBattle({
     required this.yellow,
@@ -438,7 +439,7 @@ class TableturfBattle {
 
     final prevYellowSpecialCount = _yellowSpecialCount;
     final prevBlueSpecialCount = _blueSpecialCount;
-    events.addAll(_countSpecial(newBoard));
+    events.addAll(countSpecial(newBoard));
 
     final newYellowSpecial = (
         yellow.special.value
@@ -637,7 +638,7 @@ class TableturfBattle {
     }
   }
 
-  Iterable<BattleEvent> _countSpecial(TileGrid newBoard) sync* {
+  Iterable<BattleEvent> countSpecial(TileGrid newBoard) sync* {
     final prevYellowSpecialCount = _yellowSpecialCount;
     final prevBlueSpecialCount = _blueSpecialCount;
     _yellowSpecialCount = 0;

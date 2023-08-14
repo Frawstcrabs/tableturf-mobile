@@ -4,15 +4,18 @@ import 'dart:async';
 
 import 'package:collection/collection.dart';
 import 'package:flutter/material.dart';
+import 'package:tableturf_mobile/src/components/map_thumbnail.dart';
 import 'package:tableturf_mobile/src/components/multi_choice_prompt.dart';
 import 'package:tableturf_mobile/src/components/selection_button.dart';
 import 'package:tableturf_mobile/src/player_progress/player_progress.dart';
+import 'package:tableturf_mobile/src/test_area/test_area_screen.dart';
 
 import '../components/exact_grid.dart';
 import '../components/list_select_prompt.dart';
 import '../game_internals/card.dart';
 import '../game_internals/deck.dart';
 import '../components/card_widget.dart';
+import '../game_internals/map.dart';
 import '../style/constants.dart';
 import 'card_list_screen.dart';
 
@@ -74,6 +77,7 @@ class _DeckEditorScreenState extends State<DeckEditorScreen>
   );
 
   Future<int>? exitPopup = null;
+  Future<TableturfMap?>? mapSelectPopup = null;
   Future<void>? changeSleevePopup = null;
   bool _lockButtons = false;
 
@@ -275,7 +279,7 @@ class _DeckEditorScreenState extends State<DeckEditorScreen>
                         animation: entryHeight,
                         child: ValueListenableBuilder(
                           valueListenable: offstageNotifier,
-                          child: DeckReorderView(),
+                          child: const DeckReorderView(),
                           builder: (ctx, bool isOffstage, child) {
                             return Offstage(
                               offstage: isOffstage,
@@ -326,10 +330,60 @@ class _DeckEditorScreenState extends State<DeckEditorScreen>
                       if (_lockButtons) {
                         return false;
                       }
-                      print("testing screen goes here");
+                      const cardListPadding = 10.0;
+                      const interCardPadding = 5.0;
+                      mapSelectPopup = showListSelectPrompt(
+                        context,
+                        title: "Select Map",
+                        builder: (context, selectItem) {
+                          final mapList = officialMaps + playerProgress.maps
+                            .map((m) => m.value)
+                            .toList();
+                          return GridView.builder(
+                            gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                              mainAxisSpacing: interCardPadding,
+                              crossAxisSpacing: interCardPadding,
+                              crossAxisCount: 3,
+                              childAspectRatio: CardWidget.CARD_RATIO,
+                            ),
+                            itemCount: mapList.length,
+                            padding: const EdgeInsets.all(cardListPadding),
+                            itemBuilder: (_, i) {
+                              final map = mapList[i];
+                              return GestureDetector(
+                                onTap: () {
+                                  selectItem(map);
+                                },
+                                child: MapThumbnail(
+                                  map: map,
+                                ),
+                              );
+                            },
+                          );
+                        }
+                      );
                       return true;
                     },
-                    onPressEnd: () async {},
+                    onPressEnd: () async {
+                      final selectedMap = await mapSelectPopup!;
+                      mapSelectPopup = null;
+                      if (selectedMap == null) {
+                        return;
+                      }
+                      await Future<void>.delayed(const Duration(milliseconds: 150));
+                      Navigator.of(context).push(MaterialPageRoute(
+                        builder: (_) {
+                          return TestAreaScreen(
+                            board: selectedMap.board,
+                            deck: deckCards.cards
+                                .whereNotNull()
+                                .map(playerProgress.identToCard)
+                                .toList(),
+                          );
+                        },
+                      ));
+                      return Future<void>.delayed(const Duration(milliseconds: 100));
+                    },
                   ),
                 ),
               ),
@@ -505,9 +559,7 @@ class DeckCount extends StatelessWidget {
 }
 
 class DeckReorderView extends StatelessWidget {
-  const DeckReorderView({
-    super.key,
-  });
+  const DeckReorderView({super.key});
 
   @override
   Widget build(BuildContext context) {
