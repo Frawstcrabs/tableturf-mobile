@@ -322,11 +322,11 @@ class _TestAreaScreenState extends State<TestAreaScreen>
     final image = await boundary.toImage(
       pixelRatio: MediaQuery.of(context).devicePixelRatio,
     );
-    battle.playerControlLock.value = true;
+    battle.playerControlLock.value = false;
     screenImageNotifier.value = image;
     screenWipeController.forward(from: 0.0).then((_) async {
       screenImageNotifier.value = null;
-      battle.playerControlLock.value = false;
+      battle.playerControlLock.value = true;
     });
     for (var y = 0; y < battle.board.length; y++) {
       for (var x = 0; x < battle.board[0].length; x++) {
