@@ -680,6 +680,12 @@ class TableturfBattle {
     }
   }
 
+  void resetSpecials() {
+    _yellowSpecialCount = 0;
+    _blueSpecialCount = 0;
+    activatedSpecialsNotifier.value = Set();
+  }
+
   Future<void> runBlueAI() async {
     final TableturfMove blueMove = (await Future.wait([
       compute(findBestBlueMove, [

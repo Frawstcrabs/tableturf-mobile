@@ -2,22 +2,22 @@ import 'dart:math';
 
 import 'package:flutter/material.dart';
 
-class CardBitCounter extends StatefulWidget {
-  final int cardBits;
+class CashCounter extends StatefulWidget {
+  final int cash;
   final int digits;
   final double designRatio;
-  const CardBitCounter({
+  const CashCounter({
     super.key,
-    required this.cardBits,
-    this.digits = 4,
+    required this.cash,
+    this.digits = 6,
     required this.designRatio,
   });
 
   @override
-  State<CardBitCounter> createState() => _CardBitCounterState();
+  State<CashCounter> createState() => _CashCounterState();
 }
 
-class _CardBitCounterState extends State<CardBitCounter>
+class _CashCounterState extends State<CashCounter>
     with SingleTickerProviderStateMixin {
   late final AnimationController tickController;
   late ProxyAnimation digitTickerDriver;
@@ -32,7 +32,7 @@ class _CardBitCounterState extends State<CardBitCounter>
     );
     digitTickerDriver = ProxyAnimation(
       tickController.drive(
-        ConstantTween(widget.cardBits.toDouble()),
+        ConstantTween(widget.cash.toDouble()),
       ),
     );
 
@@ -64,20 +64,20 @@ class _CardBitCounterState extends State<CardBitCounter>
   }
 
   @override
-  void didUpdateWidget(CardBitCounter oldWidget) {
+  void didUpdateWidget(CashCounter oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (widget.cardBits != oldWidget.cardBits) {
+    if (widget.cash != oldWidget.cash) {
       digitTickerDriver.parent = tickController.drive(
         Tween(
-          begin: oldWidget.cardBits.toDouble(),
-          end: widget.cardBits.toDouble(),
+          begin: oldWidget.cash.toDouble(),
+          end: widget.cash.toDouble(),
         ),
       );
       if (widget.digits != oldWidget.digits) {
         _buildDigitTickers();
       }
-      final cardBitsDiff = widget.cardBits - oldWidget.cardBits;
-      final durationTime = 111 * log(cardBitsDiff.abs() + 1);
+      final cashDiff = widget.cash - oldWidget.cash;
+      final durationTime = 118 * log(cashDiff.abs() + 1);
       tickController.duration = Duration(
         milliseconds: durationTime.floor(),
       );
@@ -100,7 +100,7 @@ class _CardBitCounterState extends State<CardBitCounter>
             AspectRatio(
               aspectRatio: 1.0,
               child: Image.asset(
-                "assets/images/card_bit.png",
+                "assets/images/cash.png",
               ),
             ),
             SizedBox(

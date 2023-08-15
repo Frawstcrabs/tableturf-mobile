@@ -146,6 +146,7 @@ List<TableturfCardData> createPureRandomCards() {
 
 
 const BATTLE_LOSS_XP = 40;
+const BATTLE_LOSS_CASH = 50;
 
 const OPPONENT_LIST = [
   -1, -2, -3, -4, -5,
@@ -598,13 +599,13 @@ class _LevelSelectionScreenState extends State<LevelSelectionScreen> {
     return (yellowDeck, difficulty) async {
       int beforeXp = playerProgress.xp;
       int beforeRank = playerProgress.rank;
-      int beforeCardBits = playerProgress.cardBits.value;
+      int beforeCash = playerProgress.cash.value;
       int winCount = 0;
       String? unlockedCardSleeve = null;
       final onWin = () async {
         winCount = playerProgress.incrementWins("deck:${opponent.deck.deckID}", difficulty);
         playerProgress.xp += difficulty.xpAmount;
-        playerProgress.cardBits.value += difficulty.cardBitReward;
+        playerProgress.cash.value += difficulty.cashReward;
         final afterRank = playerProgress.rank;
         if (difficulty == CARD_SLEEVE_UNLOCK_DIFFICULTY
             && winCount == CARD_SLEEVE_UNLOCK_REQ) {
@@ -634,6 +635,7 @@ class _LevelSelectionScreenState extends State<LevelSelectionScreen> {
       };
       final onLose = () async {
         playerProgress.xp += BATTLE_LOSS_XP;
+        playerProgress.cash.value += BATTLE_LOSS_CASH;
         final afterRank = playerProgress.rank;
         _checkRankUpRewards(beforeRank, afterRank);
       };
@@ -642,8 +644,8 @@ class _LevelSelectionScreenState extends State<LevelSelectionScreen> {
           context,
           beforeXp: beforeXp,
           afterXp: playerProgress.xp,
-          beforeCardBits: beforeCardBits,
-          afterCardBits: playerProgress.cardBits.value,
+          beforeCash: beforeCash,
+          afterCash: playerProgress.cash.value,
         );
         await Future<void>.delayed(const Duration(milliseconds: 100));
         final afterRank = playerProgress.rank;

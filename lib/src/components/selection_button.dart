@@ -26,7 +26,8 @@ class SelectionButtonState extends State<SelectionButton>
     with SingleTickerProviderStateMixin {
   late final AnimationController _selectController;
   late final Animation<double> selectScale;
-  late final Animation<Color?> selectColor, selectTextColor;
+  late final Animation<Decoration> selectColor;
+  late final Animation<TextStyle> selectTextColor;
 
   @override
   void initState() {
@@ -45,12 +46,38 @@ class SelectionButtonState extends State<SelectionButton>
               .chain(CurveTween(curve: Curves.decelerate.flipped)),
           weight: 50),
     ]).animate(_selectController);
-    selectColor = ColorTween(
-            begin: const Color.fromRGBO(71, 16, 175, 1.0),
-            end: const Color.fromRGBO(167, 231, 9, 1.0))
-        .animate(_selectController);
-    selectTextColor = ColorTween(begin: Colors.white, end: Colors.black)
-        .animate(_selectController);
+    selectColor = _selectController.drive(
+      DecorationTween(
+        begin: BoxDecoration(
+          color: const Color.fromRGBO(71, 16, 175, 1.0),
+          borderRadius: BorderRadius.circular(20 * widget.designRatio),
+          border: Border.all(
+            color: Colors.black,
+            width: 1.0 * widget.designRatio,
+          ),
+        ),
+        end: BoxDecoration(
+          color: const Color.fromRGBO(167, 231, 9, 1.0),
+          borderRadius: BorderRadius.circular(20 * widget.designRatio),
+          border: Border.all(
+            color: Colors.black,
+            width: 1.0 * widget.designRatio,
+          ),
+        ),
+      ),
+    );
+    selectTextColor = _selectController.drive(
+      TextStyleTween(
+        begin: TextStyle(
+          fontFamily: "Splatfont2",
+          color: Colors.white,
+        ),
+        end: TextStyle(
+          fontFamily: "Splatfont2",
+          color: Colors.black,
+        ),
+      ),
+    );
   }
 
   @override
@@ -76,35 +103,20 @@ class SelectionButtonState extends State<SelectionButton>
         await widget.onPressEnd?.call();
         _selectController.value = 0.0;
       },
-      child: AnimatedBuilder(
-        animation: _selectController,
-        builder: (_, __) {
-          final textStyle = DefaultTextStyle.of(context)
-              .style
-              .copyWith(color: selectTextColor.value);
-          return AspectRatio(
-            aspectRatio: 2 / 1,
-            child: Transform.scale(
-              scale: selectScale.value,
-              child: DecoratedBox(
-                decoration: BoxDecoration(
-                  color: selectColor.value,
-                  borderRadius: BorderRadius.circular(20 * widget.designRatio),
-                  border: Border.all(
-                    color: Colors.black,
-                    width: 1.0 * widget.designRatio,
-                  ),
-                ),
-                child: Center(
-                  child: DefaultTextStyle(
-                    style: textStyle,
-                    child: widget.child,
-                  ),
-                ),
+      child: AspectRatio(
+        aspectRatio: 2 / 1,
+        child: ScaleTransition(
+          scale: selectScale,
+          child: DecoratedBoxTransition(
+            decoration: selectColor,
+            child: Center(
+              child: DefaultTextStyleTransition(
+                style: selectTextColor,
+                child: widget.child,
               ),
             ),
-          );
-        },
+          ),
+        ),
       ),
     );
   }

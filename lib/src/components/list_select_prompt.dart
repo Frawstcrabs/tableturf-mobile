@@ -7,22 +7,24 @@ import 'popup_transition_painter.dart';
 
 typedef ListSelectBuilder<T> = Widget Function(BuildContext, void Function(T?));
 
-class _ListSelectOverlay<T> extends StatefulWidget {
+class ListSelectOverlay<T> extends StatefulWidget {
   final String title;
   final ListSelectBuilder<T> builder;
   final Animation<double> popupAnimation;
-  const _ListSelectOverlay({
+  final void Function(T? ret) onExit;
+  const ListSelectOverlay({
     super.key,
     required this.title,
     required this.builder,
     required this.popupAnimation,
+    required this.onExit,
   });
 
   @override
-  State<_ListSelectOverlay<T>> createState() => _ListSelectOverlayState();
+  State<ListSelectOverlay<T>> createState() => _ListSelectOverlayState();
 }
 
-class _ListSelectOverlayState<T> extends State<_ListSelectOverlay<T>> {
+class _ListSelectOverlayState<T> extends State<ListSelectOverlay<T>> {
   late final Animation<double> _popupScale, _popupOpacity;
   late final Animation<Decoration> _popupBackgroundDecoration;
   late final ScrollController scrollController;
@@ -67,7 +69,7 @@ class _ListSelectOverlayState<T> extends State<_ListSelectOverlay<T>> {
   }
 
   Future<void> onPopupExit([T? retValue]) async {
-    Navigator.of(context).pop(retValue);
+    widget.onExit(retValue);
   }
 
   @override
@@ -78,109 +80,104 @@ class _ListSelectOverlayState<T> extends State<_ListSelectOverlay<T>> {
       height: 0.5,
       thickness: 0.5,
     );
-    return DefaultTextStyle(
-      style: TextStyle(
-          fontFamily: "Splatfont2",
-          color: Colors.black,
-          fontSize: 16,
-          letterSpacing: 0.6,
-          shadows: [
-            Shadow(
-              color: const Color.fromRGBO(256, 256, 256, 0.4),
-              offset: Offset(1, 1),
-            )
-          ]
-      ),
-      child: AnimatedBuilder(
-        animation: widget.popupAnimation,
-        child: Center(
-          child: FractionallySizedBox(
-            heightFactor: 0.8,
-            widthFactor: 0.8,
-            child: DecoratedBox(
-              decoration: BoxDecoration(
-                border: Border.all(width: borderWidth),
-                borderRadius: BorderRadius.circular(10),
-                color: Colors.grey[600],
-              ),
-              child: Padding(
-                padding: EdgeInsets.all(borderWidth),
-                child: Column(
-                  children: [
-                    Expanded(
-                      flex: 1,
-                      child: Center(
-                        child: Text(
-                          widget.title,
-                          style: TextStyle(color: Colors.white),
-                        )
-                      ),
+    final popup = Center(
+      child: FractionallySizedBox(
+        heightFactor: 0.8,
+        widthFactor: 0.8,
+        child: DecoratedBox(
+          decoration: BoxDecoration(
+            border: Border.all(width: borderWidth),
+            borderRadius: BorderRadius.circular(10),
+            color: Colors.grey[600],
+          ),
+          child: Padding(
+            padding: EdgeInsets.all(borderWidth),
+            child: Column(
+              children: [
+                Expanded(
+                  flex: 1,
+                  child: Center(
+                    child: Text(
+                      widget.title,
+                      style: TextStyle(color: Colors.white),
                     ),
-                    divider,
-                    Expanded(
-                      flex: 8,
-                      child: DecoratedBox(
-                        decoration: BoxDecoration(
-                          color: Colors.grey[350]
-                        ),
-                        child: RepaintBoundary(
-                          child: widget.builder(context, onPopupExit),
-                        ),
-                      ),
-                    ),
-                    divider,
-                    Expanded(
-                      flex: 1,
-                      child: Center(
-                        child: AspectRatio(
-                          aspectRatio: 4.0,
-                          child: Padding(
-                            padding: const EdgeInsets.all(5),
-                            child: SelectionButton(
-                              child: Text("Cancel"),
-                              designRatio: 0.5,
-                              onPressEnd: () async {
-                                onPopupExit();
-                                return Future<void>.delayed(const Duration(milliseconds: 100));
-                              },
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
-                  ]
+                  ),
                 ),
-              ),
+                divider,
+                Expanded(
+                  flex: 8,
+                  child: DecoratedBox(
+                    decoration: BoxDecoration(
+                      color: Colors.grey[350],
+                    ),
+                    child: widget.builder(context, onPopupExit),
+                  ),
+                ),
+                divider,
+                Expanded(
+                  flex: 1,
+                  child: Center(
+                    child: AspectRatio(
+                      aspectRatio: 4.0,
+                      child: Padding(
+                        padding: const EdgeInsets.all(5),
+                        child: SelectionButton(
+                          child: Text("Cancel"),
+                          designRatio: 0.5,
+                          onPressEnd: () async {
+                            onPopupExit();
+                            return Future<void>.delayed(const Duration(milliseconds: 100));
+                          },
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
             ),
           ),
         ),
-        builder: (_, child) {
-          return WillPopScope(
-            onWillPop: () async {
-              onPopupExit();
-              return false;
-            },
-            child: Stack(
-              children: [
-                GestureDetector(
-                  onTap: onPopupExit,
-                  child: DecoratedBoxTransition(
-                    decoration: _popupBackgroundDecoration,
-                    child: SizedBox.expand(),
-                  )
+      ),
+    );
+    return DefaultTextStyle(
+      style: TextStyle(
+        fontFamily: "Splatfont2",
+        color: Colors.black,
+        fontSize: 16,
+        letterSpacing: 0.6,
+        shadows: [
+          Shadow(
+            color: const Color.fromRGBO(256, 256, 256, 0.4),
+            offset: Offset(1, 1),
+          )
+        ],
+      ),
+      child: WillPopScope(
+        onWillPop: () async {
+          onPopupExit();
+          return false;
+        },
+        child: RepaintBoundary(
+          child: Stack(
+            children: [
+              GestureDetector(
+                onTap: onPopupExit,
+                child: DecoratedBoxTransition(
+                  decoration: _popupBackgroundDecoration,
+                  child: SizedBox.expand(),
+                )
+              ),
+              SnapshotWidget(
+                controller: snapshotController,
+                painter: PopupTransitionPainter(
+                  popupScale: _popupScale,
+                  popupOpacity: _popupOpacity,
                 ),
-                SnapshotWidget(
-                  controller: snapshotController,
-                  painter: PopupTransitionPainter(
-                    popupScale: _popupScale,
-                    popupOpacity: _popupOpacity,
-                  ),
-                  child: child,
-                ),
-              ]
-            ),
-          );
-        }
+                child: popup,
+              ),
+            ]
+          ),
+        ),
       ),
     );
   }
@@ -196,10 +193,13 @@ Future<T?> showListSelectPrompt<T>(BuildContext context, {
     reverseTransitionDuration: const Duration(milliseconds: 150),
     opaque: false,
     pageBuilder: (ctx, animation, __) {
-      return _ListSelectOverlay(
+      return ListSelectOverlay<T>(
         title: title,
         builder: builder,
         popupAnimation: animation,
+        onExit: (ret) {
+          Navigator.of(context).pop(ret);
+        }
       );
     }
   ));

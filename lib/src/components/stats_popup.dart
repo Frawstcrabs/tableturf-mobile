@@ -9,7 +9,7 @@ import 'package:tableturf_mobile/src/player_progress/player_progress.dart';
 import '../components/paint_score_bar.dart';
 import '../settings/settings.dart';
 import '../style/constants.dart';
-import 'card_bit_counter.dart';
+import 'cash_counter.dart';
 
 class XpBarPainter extends CustomPainter {
   final Animation<double> length, waveAnimation;
@@ -67,13 +67,13 @@ class XpBarAnimationEntry {
 
 class XpBarPopup extends StatefulWidget {
   final int beforeXp, afterXp;
-  final int beforeCardBits, afterCardBits;
+  final int beforeCash, afterCash;
   const XpBarPopup({
     super.key,
     required this.beforeXp,
     required this.afterXp,
-    required this.beforeCardBits,
-    required this.afterCardBits,
+    required this.beforeCash,
+    required this.afterCash,
   });
 
   @override
@@ -101,7 +101,7 @@ class _XpBarPopupState extends State<XpBarPopup>
   int currentXpRequirement = 100;
   int xpDiff = 0;
 
-  late final ValueNotifier<int> cardBitsNotifier;
+  late final ValueNotifier<int> cashNotifier;
 
   @override
   void initState() {
@@ -247,7 +247,7 @@ class _XpBarPopupState extends State<XpBarPopup>
       vsync: this
     );
 
-    cardBitsNotifier = ValueNotifier(widget.beforeCardBits);
+    cashNotifier = ValueNotifier(widget.beforeCash);
 
     xpDiff = widget.afterXp - widget.beforeXp;
     startAnimation();
@@ -303,7 +303,7 @@ class _XpBarPopupState extends State<XpBarPopup>
           rankUpController.forward(from: 0.0);
         } else {
           await transitionController.animateTo(0.5);
-          cardBitsNotifier.value = widget.afterCardBits;
+          cashNotifier.value = widget.afterCash;
           audioController.playSfx(SfxType.xpGaugeFill);
           firstTween = false;
         }
@@ -531,9 +531,9 @@ class _XpBarPopupState extends State<XpBarPopup>
                   top: 40 * designRatio,
                   right: 50 * designRatio,
                   child: ValueListenableBuilder(
-                    valueListenable: cardBitsNotifier,
-                    builder: (_, int cardBits, __) => CardBitCounter(
-                      cardBits: cardBits,
+                    valueListenable: cashNotifier,
+                    builder: (_, int cash, __) => CashCounter(
+                      cash: cash,
                       designRatio: designRatio,
                     ),
                   ),
@@ -600,8 +600,8 @@ class _XpBarPopupState extends State<XpBarPopup>
 Future<void> showStatsPopup(BuildContext context, {
   required int beforeXp,
   required int afterXp,
-  required int beforeCardBits,
-  required int afterCardBits,
+  required int beforeCash,
+  required int afterCash,
 }) async {
   await Navigator.of(context).push(PageRouteBuilder(
     opaque: false,
@@ -609,8 +609,8 @@ Future<void> showStatsPopup(BuildContext context, {
       return XpBarPopup(
         beforeXp: beforeXp,
         afterXp: afterXp,
-        beforeCardBits: beforeCardBits,
-        afterCardBits: afterCardBits,
+        beforeCash: beforeCash,
+        afterCash: afterCash,
       );
     }
   ));

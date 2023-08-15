@@ -6,7 +6,7 @@ import 'package:tableturf_mobile/src/audio/audio_controller.dart';
 import 'package:tableturf_mobile/src/audio/sounds.dart';
 import 'package:tableturf_mobile/src/components/card_selection.dart';
 import 'package:tableturf_mobile/src/components/card_widget.dart';
-import 'package:tableturf_mobile/src/components/card_bit_counter.dart';
+import 'package:tableturf_mobile/src/components/cash_counter.dart';
 import 'package:tableturf_mobile/src/game_internals/card.dart';
 import 'package:tableturf_mobile/src/player_progress/player_progress.dart';
 import 'package:tableturf_mobile/src/shop/shop_buy_prompt.dart';
@@ -90,22 +90,22 @@ class _ShopScreenState extends State<ShopScreen>
       }
     ));
     await animCompleter.future;
-    int cardBitsTotal = 0;
+    int cashTotal = 0;
     for (final entry in selectedCards) {
       if (entry.isDupe) {
-        cardBitsTotal += entry.card.cardBitsValue;
+        cashTotal += entry.card.cashValue;
       } else {
         playerProgress.unlockCard(entry.card.ident);
       }
     }
-    playerProgress.cardBits.value += cardBitsTotal;
+    playerProgress.cash.value += cashTotal;
     return completer.future;
   }
 
   @override
   Widget build(BuildContext context) {
     final mediaQuery = MediaQuery.of(context);
-    final cardBits = PlayerProgress().cardBits;
+    final cash = PlayerProgress().cash;
     final screen = Stack(
       fit: StackFit.passthrough,
       children: [
@@ -125,9 +125,9 @@ class _ShopScreenState extends State<ShopScreen>
                           widthFactor: 0.9,
                           child: FittedBox(
                             child: ValueListenableBuilder(
-                              valueListenable: cardBits,
-                              builder: (_, cardBits, __) => CardBitCounter(
-                                cardBits: cardBits,
+                              valueListenable: cash,
+                              builder: (_, cash, __) => CashCounter(
+                                cash: cash,
                                 designRatio: 1,
                               ),
                             ),
@@ -142,6 +142,7 @@ class _ShopScreenState extends State<ShopScreen>
                           "Hotlantis",
                           style: TextStyle(
                             fontFamily: "Splatfont1",
+                            shadows: const [],
                           ),
                         ),
                       ),
@@ -181,7 +182,7 @@ class _ShopScreenState extends State<ShopScreen>
                       padding: const EdgeInsets.symmetric(vertical: 5.0),
                       children: [
                         ShopItemThumbnail(
-                          cost: 10,
+                          cost: 1000,
                           name: "Card Pack",
                           backgroundController: _popupBackgroundController,
                           child: FittedBox(
@@ -200,14 +201,17 @@ class _ShopScreenState extends State<ShopScreen>
                           },
                         ),
                         ShopItemThumbnail(
-                          cost: 20,
+                          cost: 2000,
                           backgroundController: _popupBackgroundController,
                           name: "Custom Card",
                           child: Center(
-                            child: Text(
-                              "not done",
-                              style: TextStyle(
-                                color: Colors.white,
+                            child: FittedBox(
+                              child: Text(
+                                "dont buy this",
+                                textAlign: TextAlign.center,
+                                style: TextStyle(
+                                  color: Colors.white,
+                                ),
                               ),
                             ),
                           ),
@@ -317,12 +321,12 @@ class _CardPackDisplayState extends State<CardPackDisplay>
   late final AnimationController cardController;
   late final Animation<double> cardRotate, cardFlip;
 
-  late final AnimationController cardBitsController;
-  late final Animation<double> cardBitsOpacity, cardBitsScale, cardShrink, cardFade;
+  late final AnimationController cashController;
+  late final Animation<double> cashOpacity, cashScale, cardShrink, cardFade;
 
-  late final AnimationController cardBitsArrowController;
-  late final Animation<double> cardBitsArrowOpacity;
-  late final Animation<Offset> cardBitsArrowOffset;
+  late final AnimationController cashArrowController;
+  late final Animation<double> cashArrowOpacity;
+  late final Animation<Offset> cashArrowOffset;
 
   @override
   void initState() {
@@ -415,7 +419,7 @@ class _CardPackDisplayState extends State<CardPackDisplay>
       ),
     ]).animate(cardController);
 
-    cardBitsController = AnimationController(
+    cashController = AnimationController(
       duration: const Duration(milliseconds: 300),
       vsync: this,
     );
@@ -432,7 +436,7 @@ class _CardPackDisplayState extends State<CardPackDisplay>
         tween: ConstantTween(cardShrinkAmount),
         weight: 50,
       ),
-    ]).animate(cardBitsController);
+    ]).animate(cashController);
     cardFade = TweenSequence<double>([
       TweenSequenceItem(
         tween: ConstantTween(1.0),
@@ -445,8 +449,8 @@ class _CardPackDisplayState extends State<CardPackDisplay>
         ),
         weight: 50,
       ),
-    ]).animate(cardBitsController);
-    cardBitsOpacity = TweenSequence<double>([
+    ]).animate(cashController);
+    cashOpacity = TweenSequence<double>([
       TweenSequenceItem(
         tween: ConstantTween(0.0),
         weight: 50,
@@ -458,8 +462,8 @@ class _CardPackDisplayState extends State<CardPackDisplay>
         ),
         weight: 50,
       ),
-    ]).animate(cardBitsController);
-    cardBitsScale = TweenSequence<double>([
+    ]).animate(cashController);
+    cashScale = TweenSequence<double>([
       TweenSequenceItem(
         tween: ConstantTween(0.7),
         weight: 50,
@@ -471,14 +475,14 @@ class _CardPackDisplayState extends State<CardPackDisplay>
         ).chain(CurveTween(curve: Curves.easeOutBack)),
         weight: 50,
       ),
-    ]).animate(cardBitsController);
+    ]).animate(cashController);
 
-    cardBitsArrowController = AnimationController(
+    cashArrowController = AnimationController(
       duration: const Duration(milliseconds: 1000),
       vsync: this,
     );
-    cardBitsArrowController.value = 1.0;
-    cardBitsArrowOpacity = TweenSequence<double>([
+    cashArrowController.value = 1.0;
+    cashArrowOpacity = TweenSequence<double>([
       TweenSequenceItem(
         tween: ConstantTween(1.0),
         weight: 60,
@@ -494,8 +498,8 @@ class _CardPackDisplayState extends State<CardPackDisplay>
         tween: ConstantTween(0.0),
         weight: 15,
       ),
-    ]).animate(cardBitsArrowController);
-    cardBitsArrowOffset = TweenSequence<Offset>([
+    ]).animate(cashArrowController);
+    cashArrowOffset = TweenSequence<Offset>([
       TweenSequenceItem(
         tween: Tween(
           begin: Offset(0, -0.05),
@@ -507,7 +511,7 @@ class _CardPackDisplayState extends State<CardPackDisplay>
         tween: ConstantTween(Offset(0, 0.35)),
         weight: 45,
       ),
-    ]).animate(cardBitsArrowController);
+    ]).animate(cashArrowController);
 
     playAnimation();
   }
@@ -517,8 +521,8 @@ class _CardPackDisplayState extends State<CardPackDisplay>
   void dispose() {
     transitionController.dispose();
     cardController.dispose();
-    cardBitsController.dispose();
-    cardBitsArrowController.dispose();
+    cashController.dispose();
+    cashArrowController.dispose();
     super.dispose();
   }
 
@@ -542,10 +546,10 @@ class _CardPackDisplayState extends State<CardPackDisplay>
         audioController.playSfx(SfxType.cardPackBits);
       }();
       await Future.delayed(const Duration(milliseconds: 150));
-      await cardBitsController.forward();
+      await cashController.forward();
       widget.animCompleter.complete();
       await Future.delayed(const Duration(milliseconds: 200));
-      cardBitsArrowController.repeat();
+      cashArrowController.repeat();
     } else {
       widget.animCompleter.complete();
     }
@@ -581,9 +585,9 @@ class _CardPackDisplayState extends State<CardPackDisplay>
                 Expanded(
                   flex: 8,
                   child: SlideTransition(
-                    position: cardBitsArrowOffset,
+                    position: cashArrowOffset,
                     child: FadeTransition(
-                      opacity: cardBitsArrowOpacity,
+                      opacity: cashArrowOpacity,
                       child: Center(
                         child: Transform.scale(
                           scale: 0.75,
@@ -599,11 +603,11 @@ class _CardPackDisplayState extends State<CardPackDisplay>
                 Expanded(
                   flex: 12,
                   child: FadeTransition(
-                    opacity: cardBitsOpacity,
+                    opacity: cashOpacity,
                     child: ScaleTransition(
-                      scale: cardBitsScale,
+                      scale: cashScale,
                       child: Center(
-                        child: ShopItemPrice(cost: "x ${entry.card.cardBitsValue}"),
+                        child: ShopItemPrice(cost: "x ${entry.card.cashValue}"),
                       ),
                     ),
                   ),
@@ -736,7 +740,7 @@ class _CardPackDisplayState extends State<CardPackDisplay>
   }
 }
 
-class ShopItemThumbnail extends StatelessWidget {
+class ShopItemThumbnail extends StatefulWidget {
   final int cost;
   final String name;
   final Widget child;
@@ -752,15 +756,49 @@ class ShopItemThumbnail extends StatelessWidget {
   });
 
   @override
+  State<ShopItemThumbnail> createState() => _ShopItemThumbnailState();
+}
+
+class _ShopItemThumbnailState extends State<ShopItemThumbnail>
+    with SingleTickerProviderStateMixin {
+  late final pressController = AnimationController(
+    duration: const Duration(milliseconds: 50),
+    vsync: this,
+  );
+  late final Animation<double> pressScale;
+
+  @override
+  void initState() {
+    super.initState();
+    const pressScaleDown = 0.9;
+    pressScale = pressController.drive(
+      Tween(
+        begin: 1.0,
+        end: pressScaleDown,
+      ).chain(CurveTween(curve: Curves.easeOut)),
+    );
+  }
+
+  @override
+  void dispose() {
+    pressController.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: () async {
+    return Listener(
+      onPointerDown: (_) async {
+        pressController.forward();
+      },
+      onPointerUp: (_) async {
         final playerProgress = PlayerProgress();
-        final cost = this.cost;
-        if (playerProgress.cardBits.value < cost) {
+        final cost = this.widget.cost;
+        pressController.reverse();
+        if (playerProgress.cash.value < cost) {
           return;
         }
-        backgroundController.forward();
+        widget.backgroundController.forward();
         final purchased = await showShopBuyPrompt(
           context,
           builder: (context, designRatio) {
@@ -782,7 +820,7 @@ class ShopItemThumbnail extends StatelessWidget {
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         Text(
-                          "Buy a $name?",
+                          "Buy a ${widget.name}?",
                           style: TextStyle(
                             fontSize: 30 * designRatio,
                           ),
@@ -796,54 +834,57 @@ class ShopItemThumbnail extends StatelessWidget {
           },
         );
         if (purchased) {
-          playerProgress.cardBits.value -= cost;
-          await onPurchase?.call();
+          playerProgress.cash.value -= cost;
+          await widget.onPurchase?.call();
         }
-        await backgroundController.reverse();
+        await widget.backgroundController.reverse();
       },
-      child: Container(
-        decoration: BoxDecoration(
-          border: Border.all(
-            color: Colors.black,
-            width: 3.0,
+      child: ScaleTransition(
+        scale: pressScale,
+        child: Container(
+          decoration: BoxDecoration(
+            border: Border.all(
+              color: Colors.black,
+              width: 3.0,
+            ),
+            borderRadius: BorderRadius.circular(15.0),
+            color: Color.alphaBlend(
+              Colors.pink.withOpacity(0.2),
+              Colors.grey[700]!,
+            ),
           ),
-          borderRadius: BorderRadius.circular(15.0),
-          color: Color.alphaBlend(
-            Colors.pink.withOpacity(0.2),
-            Colors.grey[700]!,
-          ),
-        ),
-        margin: EdgeInsets.all(8),
-        padding: EdgeInsets.fromLTRB(6, 2, 6, 2),
-        child: Stack(
-          fit: StackFit.expand,
-          children: [
-            child,
-            Align(
-              alignment: Alignment.topLeft,
-              child: FractionallySizedBox(
-                heightFactor: 1/5,
-                child: ShopItemPrice(
-                  cost: cost.toString(),
+          margin: EdgeInsets.all(8),
+          padding: EdgeInsets.fromLTRB(6, 2, 6, 2),
+          child: Stack(
+            fit: StackFit.expand,
+            children: [
+              widget.child,
+              Align(
+                alignment: Alignment.topLeft,
+                child: FractionallySizedBox(
+                  heightFactor: 1/5,
+                  child: ShopItemPrice(
+                    cost: widget.cost.toString(),
+                  ),
                 ),
               ),
-            ),
-            Align(
-              alignment: Alignment.bottomCenter,
-              child: FractionallySizedBox(
-                heightFactor: 1/5,
-                child: FittedBox(
-                  fit: BoxFit.contain,
-                  child: Text(
-                    name,
-                    style: TextStyle(
-                      color: Colors.white,
+              Align(
+                alignment: Alignment.bottomCenter,
+                child: FractionallySizedBox(
+                  heightFactor: 1/5,
+                  child: FittedBox(
+                    fit: BoxFit.contain,
+                    child: Text(
+                      widget.name,
+                      style: TextStyle(
+                        color: Colors.white,
+                      ),
                     ),
                   ),
                 ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
@@ -867,7 +908,7 @@ class ShopItemPrice extends StatelessWidget {
           Transform.scale(
             scale: 0.8,
             child: Image.asset(
-              "assets/images/card_bit.png",
+              "assets/images/cash.png",
             ),
           ),
           Text(

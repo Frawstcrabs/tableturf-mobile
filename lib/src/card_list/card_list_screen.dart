@@ -335,10 +335,15 @@ class _CardListScreenState extends State<CardListScreen>
                           borderRadius: BorderRadius.circular(8),
                         ),
                         padding: const EdgeInsets.all(5),
-                        child: Text(
-                          "Sort: ${currentSortMode.name}",
-                          style: TextStyle(
-                            color: Colors.white,
+                        child: Align(
+                          alignment: Alignment.centerLeft,
+                          child: FittedBox(
+                            child: Text(
+                              "Sort: ${currentSortMode.name}",
+                              style: TextStyle(
+                                color: Colors.white,
+                              ),
+                            ),
                           ),
                         ),
                       ),

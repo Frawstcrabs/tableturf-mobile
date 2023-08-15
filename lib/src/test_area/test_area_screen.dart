@@ -244,6 +244,7 @@ class _TestAreaScreenState extends State<TestAreaScreen>
     }
     battle.boardChangeNotifier.value = Set();
     battle.activatedSpecialsNotifier.value = prevState.activatedSpecials;
+    battle.countSpecial(battle.board).forEach((_) {});
     battle.moveCardNotifier.value = null;
     // in case the values were already set to this
     battle.moveCardNotifier.notifyListeners();
@@ -264,6 +265,7 @@ class _TestAreaScreenState extends State<TestAreaScreen>
     }
     battle.boardChangeNotifier.value = Set();
     battle.activatedSpecialsNotifier.value = nextState.activatedSpecials;
+    battle.countSpecial(battle.board).forEach((_) {});
     nextState.card?.isPlayable = false;
     nextState.card?.hasBeenPlayed = true;
     battle.moveCardNotifier.value = null;
@@ -334,7 +336,7 @@ class _TestAreaScreenState extends State<TestAreaScreen>
       }
     }
     battle.boardChangeNotifier.value = Set();
-    battle.activatedSpecialsNotifier.value = Set();
+    battle.resetSpecials();
     for (final card in battle.yellow.deck) {
       card.isPlayable = true;
       card.hasBeenPlayed = false;
@@ -620,7 +622,25 @@ class SelectableCard extends StatelessWidget {
             color: Palette.cardEdge,
           ),
         ),
-        child: Center(child: Text("Confirm")),
+        child: Center(
+          child: FractionallySizedBox(
+            widthFactor: 0.9,
+            child: FittedBox(
+              fit: BoxFit.fitWidth,
+              child: Text(
+                "Confirm",
+                style: TextStyle(
+                  shadows: [
+                    Shadow(
+                      color: const Color.fromRGBO(256, 256, 256, 0.4),
+                      offset: Offset(1, 1),
+                    )
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
       ),
     );
   }

@@ -76,8 +76,11 @@ class _DeckEditorScreenState extends State<DeckEditorScreen>
     allowSnapshotting: true,
   );
 
+  late final AnimationController mapPopupController;
+  final mapPopupStatus = ChangeNotifier();
+
   Future<int>? exitPopup = null;
-  Future<TableturfMap?>? mapSelectPopup = null;
+  Completer<TableturfMap?>? mapSelectCompleter = Completer();
   Future<void>? changeSleevePopup = null;
   bool _lockButtons = false;
 
@@ -112,12 +115,20 @@ class _DeckEditorScreenState extends State<DeckEditorScreen>
         end: 1.0,
       ).chain(CurveTween(curve: Curves.easeOutCubic)),
     );
+
+    mapPopupController = AnimationController(
+      duration: const Duration(milliseconds: 150),
+      vsync: this,
+    );
+    mapPopupController.addStatusListener((_) => mapPopupStatus.notifyListeners());
   }
 
   @override
   void dispose() {
     _textEditingController.dispose();
     tabController.dispose();
+    expandController.dispose();
+    mapPopupController.dispose();
     super.dispose();
   }
 
@@ -126,347 +137,325 @@ class _DeckEditorScreenState extends State<DeckEditorScreen>
     final playerProgress = PlayerProgress();
     final mediaQuery = MediaQuery.of(context);
     final screen = Column(
-      children: [
-        Expanded(
-          flex: 2,
-          child: Row(
-            children: [
-              Expanded(
-                flex: 1,
-                child: Center(
-                  child: FractionallySizedBox(
-                    heightFactor: 0.6,
-                    child: FittedBox(
-                      child: RepaintBoundary(
-                        child: Builder(builder: (context) {
-                          final cards = DeckCards.of(context).cards;
-                          final amount = cards.fold(0, (e, c) {
-                            return e + (c == null ? 0 : 1);
-                          });
-                          final textStyle = DefaultTextStyle.of(context).style;
-                          const fontSize = 16.0;
-                          return RichText(
-                            text: TextSpan(children: [
-                              TextSpan(
-                                text: amount.toString(),
-                                style: textStyle.copyWith(
-                                  fontSize: fontSize,
-                                ),
-                              ),
-                              TextSpan(
-                                text: "/15",
-                                style: textStyle.copyWith(
-                                  fontSize: fontSize * 0.7,
-                                ),
-                              ),
-                            ]),
-                          );
-                        }),
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-              Expanded(
-                flex: 1,
-                child: RepaintBoundary(
-                  child: DeckCount(),
-                ),
-              ),
-              Expanded(
-                flex: 2,
-                child: Center(
-                  child: Text(
-                    "Edit Deck",
-                    style: TextStyle(
-                      fontFamily: "Splatfont1",
-                    ),
-                  ),
-                ),
-              ),
-              Expanded(
-                flex: 2,
-                child: Padding(
-                  padding: const EdgeInsets.all(5),
-                  child: ValueListenableBuilder(
-                    valueListenable: sortMode,
-                    builder: (_, currentSortMode, __) => GestureDetector(
-                      onTap: () {
-                        sortMode.value = switch (currentSortMode) {
-                          CardGridViewSortMode.number => CardGridViewSortMode.size,
-                          CardGridViewSortMode.size => CardGridViewSortMode.number,
-                        };
-                      },
-                      child: Container(
-                        decoration: BoxDecoration(
-                          color: Colors.grey[800],
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        padding: const EdgeInsets.all(5),
-                        child: Text(
-                          "Sort: ${currentSortMode.name}",
-                          style: TextStyle(
-                            color: Colors.white,
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-            ],
-          )
-        ),
-        Expanded(
-          flex: 18,
-          child: Stack(
-            children: [
-              Column(
+          children: [
+            Expanded(
+              flex: 2,
+              child: Row(
                 children: [
                   Expanded(
                     flex: 1,
-                    child: DecoratedBox(
-                      decoration: const BoxDecoration(
-                        color: Color.fromRGBO(0, 0, 0, 0.2),
-                      ),
-                      child: TabBar(
-                        controller: tabController,
-                        tabs: [
-                          for (final name in ["Official", "Custom"])
-                            Center(
-                              child: Text(
-                                name,
-                                style: const TextStyle(
-                                  fontFamily: "Splatfont2",
-                                  color: Colors.white,
-                                ),
-                              ),
-                            ),
-                        ],
+                    child: Center(
+                      child: FractionallySizedBox(
+                        heightFactor: 0.6,
+                        child: FittedBox(
+                          child: RepaintBoundary(
+                            child: Builder(builder: (context) {
+                              final cards = DeckCards.of(context).cards;
+                              final amount = cards.fold(0, (e, c) {
+                                return e + (c == null ? 0 : 1);
+                              });
+                              final textStyle = DefaultTextStyle.of(context).style;
+                              const fontSize = 16.0;
+                              return RichText(
+                                text: TextSpan(children: [
+                                  TextSpan(
+                                    text: amount.toString(),
+                                    style: textStyle.copyWith(
+                                      fontSize: fontSize,
+                                    ),
+                                  ),
+                                  TextSpan(
+                                    text: "/15",
+                                    style: textStyle.copyWith(
+                                      fontSize: fontSize * 0.7,
+                                    ),
+                                  ),
+                                ]),
+                              );
+                            }),
+                          ),
+                        ),
                       ),
                     ),
                   ),
-                  divider,
                   Expanded(
-                    flex: 17,
-                    child: ValueListenableBuilder(
-                      valueListenable: sortMode,
-                      builder: (_, currentSortMode, __) => TabBarView(
-                        controller: tabController,
-                        children: [
-                          CardGridView(
-                            cardList: officialCards
-                                .where((c) => playerProgress.unlockedCards.contains(c.ident))
-                                .toList(),
-                            sortMode: currentSortMode,
+                    flex: 1,
+                    child: RepaintBoundary(
+                      child: DeckCount(),
+                    ),
+                  ),
+                  Expanded(
+                    flex: 2,
+                    child: Center(
+                      child: Text(
+                        "Edit Deck",
+                        style: TextStyle(
+                          fontFamily: "Splatfont1",
+                        ),
+                      ),
+                    ),
+                  ),
+                  Expanded(
+                    flex: 2,
+                    child: Padding(
+                      padding: const EdgeInsets.all(5),
+                      child: ValueListenableBuilder(
+                        valueListenable: sortMode,
+                        builder: (_, currentSortMode, __) => GestureDetector(
+                          onTap: () {
+                            sortMode.value = switch (currentSortMode) {
+                              CardGridViewSortMode.number => CardGridViewSortMode.size,
+                              CardGridViewSortMode.size => CardGridViewSortMode.number,
+                            };
+                          },
+                          child: Container(
+                            decoration: BoxDecoration(
+                              color: Colors.grey[800],
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            padding: const EdgeInsets.all(5),
+                            child: Align(
+                              alignment: Alignment.centerLeft,
+                              child: FittedBox(
+                                child: Text(
+                                  "Sort: ${currentSortMode.name}",
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                  ),
+                                ),
+                              ),
+                            ),
                           ),
-                          CardGridView(
-                            cardList: [],
-                            sortMode: currentSortMode,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              )
+            ),
+            Expanded(
+              flex: 18,
+              child: Stack(
+                children: [
+                  Column(
+                    children: [
+                      Expanded(
+                        flex: 1,
+                        child: DecoratedBox(
+                          decoration: const BoxDecoration(
+                            color: Color.fromRGBO(0, 0, 0, 0.2),
                           ),
-                        ],
+                          child: TabBar(
+                            controller: tabController,
+                            tabs: [
+                              for (final name in ["Official", "Custom"])
+                                Center(
+                                  child: Text(
+                                    name,
+                                    style: const TextStyle(
+                                      fontFamily: "Splatfont2",
+                                      color: Colors.white,
+                                    ),
+                                  ),
+                                ),
+                            ],
+                          ),
+                        ),
+                      ),
+                      divider,
+                      Expanded(
+                        flex: 17,
+                        child: ValueListenableBuilder(
+                          valueListenable: sortMode,
+                          builder: (_, currentSortMode, __) => TabBarView(
+                            controller: tabController,
+                            children: [
+                              CardGridView(
+                                cardList: officialCards
+                                    .where((c) => playerProgress.unlockedCards.contains(c.ident))
+                                    .toList(),
+                                sortMode: currentSortMode,
+                              ),
+                              CardGridView(
+                                cardList: [],
+                                sortMode: currentSortMode,
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  Align(
+                    alignment: Alignment.bottomCenter,
+                    child: RepaintBoundary(
+                      child: LayoutBuilder(
+                        builder: (context, constraints) {
+                          return AnimatedBuilder(
+                            animation: entryHeight,
+                            child: ValueListenableBuilder(
+                              valueListenable: offstageNotifier,
+                              child: const DeckReorderView(),
+                              builder: (ctx, bool isOffstage, child) {
+                                return Offstage(
+                                  offstage: isOffstage,
+                                  child: OverflowBox(
+                                    maxWidth: constraints.maxWidth,
+                                    maxHeight: constraints.maxHeight,
+                                    alignment: Alignment.topCenter,
+                                    child: SnapshotWidget(
+                                      controller: snapshotController,
+                                      child: child,
+                                    ),
+                                  ),
+                                );
+                              },
+                            ),
+                            builder: (ctx, child) {
+                              return ClipRect(
+                                child: FractionallySizedBox(
+                                  heightFactor: entryHeight.value,
+                                  child: child,
+                                ),
+                              );
+                            },
+                          );
+                        },
                       ),
                     ),
                   ),
                 ],
               ),
-              Align(
-                alignment: Alignment.bottomCenter,
-                child: RepaintBoundary(
-                  child: LayoutBuilder(
-                    builder: (context, constraints) {
-                      return AnimatedBuilder(
-                        animation: entryHeight,
-                        child: ValueListenableBuilder(
-                          valueListenable: offstageNotifier,
-                          child: const DeckReorderView(),
-                          builder: (ctx, bool isOffstage, child) {
-                            return Offstage(
-                              offstage: isOffstage,
-                              child: OverflowBox(
-                                maxWidth: constraints.maxWidth,
-                                maxHeight: constraints.maxHeight,
-                                alignment: Alignment.topCenter,
-                                child: SnapshotWidget(
-                                  controller: snapshotController,
-                                  child: child,
-                                ),
-                              ),
-                            );
-                          },
+            ),
+            divider,
+            Expanded(
+              flex: 2,
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                children: [
+                  Expanded(
+                    child: Padding(
+                      padding: const EdgeInsets.all(10),
+                      child: SelectionButton(
+                        child: Text(
+                          "Test",
+                          style: TextStyle(fontSize: 16),
                         ),
-                        builder: (ctx, child) {
-                          return ClipRect(
-                            child: FractionallySizedBox(
-                              heightFactor: entryHeight.value,
-                              child: child,
-                            ),
-                          );
+                        designRatio: 0.5,
+                        onPressStart: () async {
+                          if (_lockButtons) {
+                            return false;
+                          }
+                          mapSelectCompleter = Completer();
+                          mapPopupController.forward(from: 0.0);
+                          return true;
                         },
-                      );
-                    },
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-        divider,
-        Expanded(
-          flex: 2,
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-            children: [
-              Expanded(
-                child: Padding(
-                  padding: const EdgeInsets.all(10),
-                  child: SelectionButton(
-                    child: Text(
-                      "Test",
-                      style: TextStyle(fontSize: 16),
-                    ),
-                    designRatio: 0.5,
-                    onPressStart: () async {
-                      if (_lockButtons) {
-                        return false;
-                      }
-                      const cardListPadding = 10.0;
-                      const interCardPadding = 5.0;
-                      mapSelectPopup = showListSelectPrompt(
-                        context,
-                        title: "Select Map",
-                        builder: (context, selectItem) {
-                          final mapList = officialMaps + playerProgress.maps
-                            .map((m) => m.value)
-                            .toList();
-                          return GridView.builder(
-                            gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                              mainAxisSpacing: interCardPadding,
-                              crossAxisSpacing: interCardPadding,
-                              crossAxisCount: 3,
-                              childAspectRatio: CardWidget.CARD_RATIO,
-                            ),
-                            itemCount: mapList.length,
-                            padding: const EdgeInsets.all(cardListPadding),
-                            itemBuilder: (_, i) {
-                              final map = mapList[i];
-                              return GestureDetector(
-                                onTap: () {
-                                  selectItem(map);
-                                },
-                                child: MapThumbnail(
-                                  map: map,
-                                ),
+                        onPressEnd: () async {
+                          final selectedMap = await mapSelectCompleter!.future;
+                          await mapPopupController.reverse();
+                          mapSelectCompleter = null;
+                          if (selectedMap == null) {
+                            return;
+                          }
+                          await Future<void>.delayed(const Duration(milliseconds: 150));
+                          Navigator.of(context).push(MaterialPageRoute(
+                            builder: (_) {
+                              return TestAreaScreen(
+                                board: selectedMap.board,
+                                deck: deckCards.cards
+                                    .whereNotNull()
+                                    .map(playerProgress.identToCard)
+                                    .toList(),
                               );
                             },
-                          );
-                        }
-                      );
-                      return true;
-                    },
-                    onPressEnd: () async {
-                      final selectedMap = await mapSelectPopup!;
-                      mapSelectPopup = null;
-                      if (selectedMap == null) {
-                        return;
-                      }
-                      await Future<void>.delayed(const Duration(milliseconds: 150));
-                      Navigator.of(context).push(MaterialPageRoute(
-                        builder: (_) {
-                          return TestAreaScreen(
-                            board: selectedMap.board,
-                            deck: deckCards.cards
-                                .whereNotNull()
-                                .map(playerProgress.identToCard)
-                                .toList(),
-                          );
+                          ));
+                          return Future<void>.delayed(const Duration(milliseconds: 100));
                         },
-                      ));
-                      return Future<void>.delayed(const Duration(milliseconds: 100));
-                    },
-                  ),
-                ),
-              ),
-              Expanded(
-                child: Padding(
-                  padding: const EdgeInsets.all(10),
-                  child: DeckReorderButton(
-                    controller: expandController,
-                    onTap: () async {
-                      switch (expandController.status) {
-                        case AnimationStatus.reverse:
-                        case AnimationStatus.dismissed:
-                          snapshotController.clear();
-                          await expandController.forward();
-                          snapshotController.allowSnapshotting = false;
-                        case AnimationStatus.forward:
-                        case AnimationStatus.completed:
-                          snapshotController.allowSnapshotting = true;
-                          await expandController.reverse();
-                      }
-                    },
-                  ),
-                ),
-              ),
-              Expanded(
-                child: Padding(
-                  padding: const EdgeInsets.all(10),
-                  child: SelectionButton(
-                    child: Text(
-                      "Exit",
-                      style: TextStyle(fontSize: 16),
+                      ),
                     ),
-                    designRatio: 0.5,
-                    onPressStart: () async {
-                      if (_lockButtons) {
-                        return false;
-                      }
-                      _lockButtons = true;
-                      exitPopup = showMultiChoicePrompt(
-                        context,
-                        title: "Save changes?",
-                        options: ["Back to Edit", "Save!", "Don't Save"],
-                        defaultResult: 0,
-                      );
-                      return true;
-                    },
-                    onPressEnd: () async {
-                      final choice = await exitPopup!;
-                      exitPopup = null;
-                      switch (choice) {
-                        case 0:
-                          _lockButtons = false;
-                          return;
-                        case 1:
-                          if (widget.deck == null) {
-                            playerProgress.createDeck(
-                              cards: [...deckCards.cards],
-                              name: _textEditingController.text,
-                              cardSleeve: cardSleeve.value,
-                            );
-                          } else {
-                            playerProgress.updateDeck(
-                              deckID: widget.deck!.deckID,
-                              cards: [...deckCards.cards],
-                              name: _textEditingController.text,
-                              cardSleeve: cardSleeve.value,
-                            );
-                          }
-                          Navigator.of(context).pop(true);
-                          return Future<void>.delayed(const Duration(milliseconds: 100));
-                        case 2:
-                          Navigator.of(context).pop(false);
-                          return Future<void>.delayed(const Duration(milliseconds: 100));
-                      }
-                    },
                   ),
-                ),
+                  Expanded(
+                    child: Padding(
+                      padding: const EdgeInsets.all(10),
+                      child: RepaintBoundary(
+                        child: DeckReorderButton(
+                          controller: expandController,
+                          onTap: () async {
+                            switch (expandController.status) {
+                              case AnimationStatus.reverse:
+                              case AnimationStatus.dismissed:
+                                snapshotController.clear();
+                                await expandController.forward();
+                                snapshotController.allowSnapshotting = false;
+                              case AnimationStatus.forward:
+                              case AnimationStatus.completed:
+                                snapshotController.allowSnapshotting = true;
+                                await expandController.reverse();
+                            }
+                          },
+                        ),
+                      ),
+                    ),
+                  ),
+                  Expanded(
+                    child: Padding(
+                      padding: const EdgeInsets.all(10),
+                      child: SelectionButton(
+                        child: Text(
+                          "Exit",
+                          style: TextStyle(fontSize: 16),
+                        ),
+                        designRatio: 0.5,
+                        onPressStart: () async {
+                          if (_lockButtons) {
+                            return false;
+                          }
+                          _lockButtons = true;
+                          exitPopup = showMultiChoicePrompt(
+                            context,
+                            title: "Save changes?",
+                            options: ["Back to Edit", "Save!", "Don't Save"],
+                            defaultResult: 0,
+                          );
+                          return true;
+                        },
+                        onPressEnd: () async {
+                          final choice = await exitPopup!;
+                          exitPopup = null;
+                          switch (choice) {
+                            case 0:
+                              _lockButtons = false;
+                              return;
+                            case 1:
+                              if (widget.deck == null) {
+                                playerProgress.createDeck(
+                                  cards: [...deckCards.cards],
+                                  name: _textEditingController.text,
+                                  cardSleeve: cardSleeve.value,
+                                );
+                              } else {
+                                playerProgress.updateDeck(
+                                  deckID: widget.deck!.deckID,
+                                  cards: [...deckCards.cards],
+                                  name: _textEditingController.text,
+                                  cardSleeve: cardSleeve.value,
+                                );
+                              }
+                              Navigator.of(context).pop(true);
+                              return Future<void>.delayed(const Duration(milliseconds: 100));
+                            case 2:
+                              Navigator.of(context).pop(false);
+                              return Future<void>.delayed(const Duration(milliseconds: 100));
+                          }
+                        },
+                      ),
+                    ),
+                  ),
+                ],
               ),
-            ],
-          ),
-        ),
-      ],
-    );
+            ),
+          ],
+        );
     return Scaffold(
       backgroundColor: Palette.backgroundDeckEditor,
       body: DefaultTextStyle(
@@ -481,10 +470,59 @@ class _DeckEditorScreenState extends State<DeckEditorScreen>
           padding: mediaQuery.padding,
           child: DeckCards(
             model: deckCards,
-            child: screen,
+            child: Stack(
+              fit: StackFit.expand,
+              children: [
+                screen,
+                RepaintBoundary(
+                  child: ListenableBuilder(
+                    listenable: mapPopupStatus,
+                    child: ListSelectOverlay<TableturfMap>(
+                      title: "Select Map",
+                      popupAnimation: mapPopupController,
+                      onExit: (ret) {
+                        mapSelectCompleter!.complete(ret);
+                      },
+                      builder: (context, selectItem) {
+                        const cardListPadding = 10.0;
+                        const interCardPadding = 5.0;
+                        final mapList = officialMaps + playerProgress.maps
+                            .map((m) => m.value)
+                            .toList();
+                        return GridView.builder(
+                          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                            mainAxisSpacing: interCardPadding,
+                            crossAxisSpacing: interCardPadding,
+                            crossAxisCount: 3,
+                            childAspectRatio: CardWidget.CARD_RATIO,
+                          ),
+                          itemCount: mapList.length,
+                          padding: const EdgeInsets.all(cardListPadding),
+                          itemBuilder: (_, i) {
+                            final map = mapList[i];
+                            return GestureDetector(
+                              onTap: () {
+                                selectItem(map);
+                              },
+                              child: MapThumbnail(
+                                map: map,
+                              ),
+                            );
+                          },
+                        );
+                      },
+                    ),
+                    builder: (_, child) => IgnorePointer(
+                      ignoring: mapPopupController.status == AnimationStatus.dismissed,
+                      child: child,
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
-      )
+      ),
     );
   }
 }

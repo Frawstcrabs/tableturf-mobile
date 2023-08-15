@@ -78,7 +78,7 @@ class PlayerProgress {
   late Map<String, Map<AILevel, int>> _winCounts;
 
   late int _xp;
-  late final ValueNotifier<int> cardBits;
+  late final ValueNotifier<int> cash;
   late Set<TableturfCardIdentifier> _unlockedCards;
   late Set<String> _unlockedCardSleeves;
   late Set<int> _unlockedOpponents;
@@ -130,12 +130,13 @@ class PlayerProgress {
       );
     }));
     _xp = _prefs.getInt("tableturf-xp") ?? 0;
-    cardBits = ValueNotifier(
-      _prefs.getInt("tableturf-card_bits") ?? 0,
+    cash = ValueNotifier(
+      //_prefs.getInt("tableturf-cash") ?? 0,
+      990000,
     );
-    cardBits.addListener(() {
+    cash.addListener(() {
       if (_commitChanges) {
-        _prefs.setInt("tableturf-card_bits", cardBits.value);
+        _prefs.setInt("tableturf-cash", cash.value);
       }
     });
 
@@ -524,7 +525,7 @@ class PlayerProgress {
     _unlockedCards = Set.from([...starterDeck.cards]);
     _unlockedCardSleeves = Set.from(["default"]);
     xp = 0;
-    cardBits.value = 0;
+    cash.value = 0;
     _decks = [ValueNotifier(starterDeck)];
     _nextDeckID = 1;
     await Future.wait([
