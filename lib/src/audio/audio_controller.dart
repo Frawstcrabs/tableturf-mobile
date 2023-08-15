@@ -7,6 +7,7 @@ import 'dart:io';
 import 'dart:math';
 
 import 'package:audioplayers/audioplayers.dart' as AA;
+import 'package:collection/collection.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:just_audio/just_audio.dart' as JA;
@@ -64,8 +65,16 @@ abstract class _MusicPlayer {
     return await retFuture.future;
   }
 
-  Future<void> mute();
-  Future<void> unmute();
+  Future<void> mute() async {
+    await setVolume(0.0);
+  }
+
+  Future<void> unmute() async {
+    await setVolume(1.0);
+  }
+
+  Future<void> muteSfx();
+  Future<void> unmuteSfx();
 }
 
 class _MobileMusicPlayer extends _MusicPlayer {
@@ -148,13 +157,20 @@ class _MobileMusicPlayer extends _MusicPlayer {
   }
 
   @override
-  Future<void> mute() async {
-    await setVolume(0.0);
+  Future<void> muteSfx() async {
+    await Future.wait([
+      for (final soundId in _sfxSources.values.flattened)
+        _sfxPlayer.setVolume(soundId: soundId, volume: 0.0)
+    ]);
   }
 
   @override
-  Future<void> unmute() async {
-    await setVolume(1.0);
+  Future<void> unmuteSfx() async {
+    await Future.wait([
+      for (final MapEntry(key: sfx, value: soundIds) in _sfxSources.entries)
+        for (final soundId in soundIds)
+          _sfxPlayer.setVolume(soundId: soundId, volume: soundTypeToVolume(sfx))
+    ]);
   }
 
   @override
@@ -170,6 +186,7 @@ class _DesktopMusicPlayer extends _MusicPlayer {
 
   final AA.AudioCache _sfxCache = AA.AudioCache(prefix: "assets/sfx/");
   final Map<SfxType, List<String>> _sfxSources;
+  bool _sfxIsMuted = false;
 
   _DesktopMusicPlayer():
     musicStartPlayer = AA.AudioPlayer(),
@@ -247,6 +264,7 @@ class _DesktopMusicPlayer extends _MusicPlayer {
 
   @override
   Future<void> playSfx(SfxType sfx) async {
+    if (_sfxIsMuted) return;
     final options = _sfxSources[sfx]!;
     final index = Random().nextInt(options.length);
     final player = AA.AudioPlayer()..audioCache = _sfxCache;
@@ -257,18 +275,13 @@ class _DesktopMusicPlayer extends _MusicPlayer {
   }
 
   @override
-  Future<void> mute() async {
-    await setVolume(0.0);
+  Future<void> muteSfx() async {
+    _sfxIsMuted = true;
   }
 
   @override
-  Future<void> unmute() async {
-    await setVolume(1.0);
-  }
-
-  @override
-  void dispose() {
-    // nothing to dispose
+  Future<void> unmuteSfx() async {
+    _sfxIsMuted = false;
   }
 }
 
@@ -449,11 +462,12 @@ class AudioController {
 
   Future<void> _muteSfx() async {
     _log.info("muting sfx");
-    // TODO: make muting sfx work
+    _musicPlayer.muteSfx();
   }
 
   Future<void> _unmuteSfx() async {
     _log.info("unmuting sfx");
+    _musicPlayer.unmuteSfx();
   }
 
   void _soundsOnHandler() {
