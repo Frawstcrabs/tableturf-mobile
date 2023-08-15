@@ -131,8 +131,7 @@ class PlayerProgress {
     }));
     _xp = _prefs.getInt("tableturf-xp") ?? 0;
     cash = ValueNotifier(
-      //_prefs.getInt("tableturf-cash") ?? 0,
-      990000,
+      _prefs.getInt("tableturf-cash") ?? 0,
     );
     cash.addListener(() {
       if (_commitChanges) {
