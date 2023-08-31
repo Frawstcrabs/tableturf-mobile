@@ -1,10 +1,11 @@
+import 'dart:async';
 import 'dart:math';
 import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
 import 'package:tableturf_mobile/src/audio/audio_controller.dart';
 import 'package:tableturf_mobile/src/audio/sounds.dart';
+import 'package:tableturf_mobile/src/components/tableturf_battle.dart';
 
 import '../style/constants.dart';
 
@@ -388,12 +389,10 @@ class CardWidget extends StatefulWidget {
   static const double CARD_RATIO = CARD_WIDTH / CARD_HEIGHT;
   static const double CORNER_RADIUS = 25;
   final ValueNotifier<TableturfCard?> cardNotifier;
-  final TableturfBattle battle;
 
   const CardWidget({
     super.key,
     required this.cardNotifier,
-    required this.battle,
   });
 
   @override
@@ -402,6 +401,10 @@ class CardWidget extends StatefulWidget {
 
 class _CardWidgetState extends State<CardWidget>
     with SingleTickerProviderStateMixin {
+  late final TableturfBattleController controller;
+  late final StreamSubscription<BattleEvent> battleSubscription;
+  final ValueNotifier<bool> isSelectable = ValueNotifier(true);
+  final ValueNotifier<bool> isSelected = ValueNotifier(false);
   late AnimationController _transitionController;
   late Animation<double> transitionOutShrink, transitionOutFade, transitionInMove, transitionInFade;
   late TableturfCard? _prevCard;
@@ -432,9 +435,32 @@ class _CardWidgetState extends State<CardWidget>
       end: 0,
     ).animate(_transitionController);
 
+    battleSubscription = TableturfBattle.listen(context, _onBattleEvent);
+    controller = TableturfBattle.getControllerOf(context);
+    controller.moveCardNotifier.addListener(_updateSelectable);
+    widget.cardNotifier.addListener(_updateSelectable);
+    controller.moveSpecialNotifier.addListener(_updateSelectable);
+    controller.movePassNotifier.addListener(_updateSelectable);
     _prevCard = widget.cardNotifier.value;
     widget.cardNotifier.addListener(onCardChange);
     super.initState();
+  }
+
+  Future<void> _onBattleEvent(BattleEvent event) async {
+    switch (event) {
+      case TurnEnd():
+        setState(() {});
+    }
+  }
+
+  void _updateSelectable() {
+    final card = widget.cardNotifier.value;
+    if (card != null) {
+      isSelectable.value = controller.movePassNotifier.value ? true
+          : controller.moveSpecialNotifier.value ? card.isPlayableSpecial : card.isPlayable;
+    }
+    isSelected.value = controller.moveCardNotifier.value != null
+        && controller.moveCardNotifier.value == widget.cardNotifier.value;
   }
 
   void onCardChange() async {
@@ -461,27 +487,23 @@ class _CardWidgetState extends State<CardWidget>
   void dispose() {
     _transitionController.dispose();
     widget.cardNotifier.removeListener(onCardChange);
+    controller.moveCardNotifier.removeListener(_updateSelectable);
+    controller.moveSpecialNotifier.removeListener(_updateSelectable);
+    controller.movePassNotifier.removeListener(_updateSelectable);
+    battleSubscription.cancel();
     super.dispose();
   }
 
-  bool _cardIsSelectable(TableturfCard card) {
-    final battle = widget.battle;
-    return battle.movePassNotifier.value ? true
-      : battle.moveSpecialNotifier.value ? card.isPlayableSpecial : card.isPlayable;
-  }
-
   Widget _buildCard(TableturfCard card) {
-    final isSelectable = _cardIsSelectable(card);
-    final isSelected = widget.battle.moveCardNotifier.value == card;
     final Color background = (
-        isSelected
+        isSelected.value
             ? Palette.cardBackgroundSelected
             : Palette.cardBackgroundSelectable
     );
     final cardWidget = HandCardWidget(
       card: card.data,
       background: background,
-      overlayColor: isSelectable
+      overlayColor: isSelectable.value
         ? Colors.transparent
         : const Color.fromRGBO(0, 0, 0, 0.4),
     );
@@ -492,7 +514,7 @@ class _CardWidgetState extends State<CardWidget>
       child: AnimatedScale(
         duration: animationDuration,
         curve: animationCurve,
-        scale: isSelected ? 1.06 : 1.0,
+        scale: isSelected.value ? 1.06 : 1.0,
         child: cardWidget,
       ),
     );
@@ -500,50 +522,48 @@ class _CardWidgetState extends State<CardWidget>
 
   @override
   Widget build(BuildContext context) {
-    final moveCardNotifier = widget.battle.moveCardNotifier;
     var reactiveCard = GestureDetector(
       child: AnimatedBuilder(
         animation: Listenable.merge([
           widget.cardNotifier,
-          widget.battle.playerControlLock,
-          widget.battle.moveSpecialNotifier,
-          widget.battle.movePassNotifier,
-          moveCardNotifier,
+          controller.playerControlIsLocked,
+          isSelectable,
+          isSelected,
         ]),
         builder: (_, __) {
           return _buildCard(widget.cardNotifier.value!);
         }
       ),
       onTapDown: (details) {
+        final moveCard = controller.moveCardNotifier.value;
         final card = widget.cardNotifier.value;
         if (card == null) {
           return;
         }
-        final battle = widget.battle;
-        if (!battle.playerControlLock.value) {
+        if (controller.playerControlIsLocked.value) {
           return;
         }
         final audioController = AudioController();
-        if (!_cardIsSelectable(card)) {
+        if (!isSelectable.value) {
           return;
         }
-        if (battle.moveSpecialNotifier.value) {
+        if (controller.moveSpecialNotifier.value) {
           audioController.playSfx(SfxType.selectCardNormal);
         } else {
           audioController.playSfx(SfxType.selectCardNormal);
         }
 
-        if (moveCardNotifier.value?.ident == card.ident) {
-          moveCardNotifier.value = null;
+        if (moveCard?.ident == card.ident) {
+          controller.moveCardNotifier.value = null;
         } else {
-          moveCardNotifier.value = card;
+          controller.moveCardNotifier.value = card;
         }
         if (details.kind == ui.PointerDeviceKind.touch
-            && battle.moveLocationNotifier.value == null
-            && !battle.movePassNotifier.value) {
-          battle.moveLocationNotifier.value = Coords(
-              battle.board[0].length ~/ 2,
-              battle.board.length ~/ 2
+            && controller.moveLocationNotifier.value == null
+            && !controller.movePassNotifier.value) {
+          controller.moveLocationNotifier.value = Coords(
+            controller.board[0].length ~/ 2,
+            controller.board.length ~/ 2,
           );
         }
       }

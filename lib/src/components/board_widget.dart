@@ -1,8 +1,11 @@
+import 'dart:async';
 import 'dart:math';
 import 'dart:ui' as ui;
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:collection/collection.dart';
+import 'package:tableturf_mobile/src/components/tableturf_battle.dart';
 import 'package:tableturf_mobile/src/settings/settings.dart';
 import 'package:tableturf_mobile/src/style/shaders.dart';
 
@@ -295,10 +298,9 @@ class BoardSpecialPainter extends CustomPainter {
 }
 
 class BoardWidget extends StatefulWidget {
-  final TableturfBattle battle;
   final double tileSize;
 
-  const BoardWidget(this.battle, {
+  const BoardWidget({
     super.key,
     required this.tileSize,
   });
@@ -313,16 +315,17 @@ class _BoardWidgetState extends State<BoardWidget>
   late final AnimationController _flameController;
   late final Animation<double> flashOpacity;
   final ValueNotifier<bool> showSpecialDarken = ValueNotifier(false);
-  late AssetImage _normalInkImage, _specialInkImage, _wallTileImage, _maskImage, _effectImage;
-  ImageStream? _normalInkStream, _specialInkStream, _wallTileStream, _maskStream, _effectStream;
-  ImageInfo? _normalInkInfo, _specialInkInfo, _wallTileInfo, _maskInfo, _effectInfo;
+  final ValueNotifier<Set<Coords>> changedTiles = ValueNotifier(Set());
+
+  late AssetImage _maskImage, _effectImage;
+  ImageStream? _maskStream, _effectStream;
+  ImageInfo? _maskInfo, _effectInfo;
+  late final TableturfBattleController controller;
+  late final StreamSubscription<BattleEvent> battleSubscription;
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    _normalInkImage = AssetImage("assets/images/normal_ink.png");
-    _specialInkImage = AssetImage("assets/images/special_ink.png");
-    _wallTileImage = AssetImage("assets/images/wall.png");
     _maskImage = AssetImage("assets/images/fire_mask3.png");
     _effectImage = AssetImage("assets/images/fire_noise.jpg");
     // We call _getImage here because createLocalImageConfiguration() needs to
@@ -357,36 +360,6 @@ class _BoardWidgetState extends State<BoardWidget>
       oldEffectStream?.removeListener(listener);
       _effectStream!.addListener(listener);
     }
-    final ImageStream? oldNormalInkStream = _normalInkStream;
-    _normalInkStream = _normalInkImage.resolve(createLocalImageConfiguration(context));
-    if (_normalInkStream!.key != oldNormalInkStream?.key) {
-      // If the keys are the same, then we got the same image back, and so we don't
-      // need to update the listeners. If the key changed, though, we must make sure
-      // to switch our listeners to the new image stream.
-      final ImageStreamListener listener = ImageStreamListener(_updateNormalInkImage);
-      oldNormalInkStream?.removeListener(listener);
-      _normalInkStream!.addListener(listener);
-    }
-    final ImageStream? oldSpecialInkStream = _specialInkStream;
-    _specialInkStream = _specialInkImage.resolve(createLocalImageConfiguration(context));
-    if (_specialInkStream!.key != oldSpecialInkStream?.key) {
-      // If the keys are the same, then we got the same image back, and so we don't
-      // need to update the listeners. If the key changed, though, we must make sure
-      // to switch our listeners to the new image stream.
-      final ImageStreamListener listener = ImageStreamListener(_updateSpecialInkImage);
-      oldSpecialInkStream?.removeListener(listener);
-      _specialInkStream!.addListener(listener);
-    }
-    final ImageStream? oldWallTileStream = _wallTileStream;
-    _wallTileStream = _wallTileImage.resolve(createLocalImageConfiguration(context));
-    if (_wallTileStream!.key != oldWallTileStream?.key) {
-      // If the keys are the same, then we got the same image back, and so we don't
-      // need to update the listeners. If the key changed, though, we must make sure
-      // to switch our listeners to the new image stream.
-      final ImageStreamListener listener = ImageStreamListener(_updateWallTileImage);
-      oldWallTileStream?.removeListener(listener);
-      _wallTileStream!.addListener(listener);
-    }
   }
 
   void _updateMaskImage(ImageInfo imageInfo, bool synchronousCall) {
@@ -405,39 +378,15 @@ class _BoardWidgetState extends State<BoardWidget>
     });
   }
 
-  void _updateNormalInkImage(ImageInfo imageInfo, bool synchronousCall) {
-    setState(() {
-      // Trigger a build whenever the image changes.
-      _normalInkInfo?.dispose();
-      _normalInkInfo = imageInfo;
-    });
-  }
-
-  void _updateSpecialInkImage(ImageInfo imageInfo, bool synchronousCall) {
-    setState(() {
-      // Trigger a build whenever the image changes.
-      _specialInkInfo?.dispose();
-      _specialInkInfo = imageInfo;
-    });
-  }
-
-  void _updateWallTileImage(ImageInfo imageInfo, bool synchronousCall) {
-    setState(() {
-      // Trigger a build whenever the image changes.
-      _wallTileInfo?.dispose();
-      _wallTileInfo = imageInfo;
-    });
-  }
-
   @override
   void initState() {
     _flashController = AnimationController(
-        duration: const Duration(milliseconds: 200),
-        vsync: this
+      duration: const Duration(milliseconds: 200),
+      vsync: this,
     );
     _flameController = AnimationController(
-        duration: const Duration(milliseconds: 900),
-        vsync: this
+      duration: const Duration(milliseconds: 900),
+      vsync: this,
     );
     _flashController.value = 1.0;
     flashOpacity = Tween(
@@ -445,60 +394,58 @@ class _BoardWidgetState extends State<BoardWidget>
       end: 0.0
     ).animate(_flashController);
 
-    widget.battle.boardChangeNotifier.addListener(_runFlash);
-    widget.battle.activatedSpecialsNotifier.addListener(_runFlameAnimation);
-    widget.battle.moveSpecialNotifier.addListener(_checkSpecialDarken);
-    widget.battle.revealCardsNotifier.addListener(_clearSpecialDarken);
-    _runFlameAnimation();
+    controller = TableturfBattle.get(context);
+    battleSubscription = TableturfBattle.listen(context, _onBattleEvent);
+    controller.moveSpecialNotifier.addListener(_updateSpecialDarken);
     super.initState();
   }
 
-  void _runFlash() {
-    _flashController.forward(from: 0.0);
-  }
-
-  void _runFlameAnimation() {
-    final settings = Settings();
-    if (!settings.continuousAnimation.value) {
-      return;
+  Future<void> _onBattleEvent(BattleEvent event) async {
+    switch (event) {
+      case BoardTilesUpdate(:final updates, :final duration, :final type):
+        for (final MapEntry(key: coords, value: state) in updates.entries) {
+          controller.board[coords.y][coords.x] = state;
+        }
+        if (type != BoardTileUpdateType.silent) {
+          changedTiles.value = updates.keys.toSet();
+          _flashController.duration = [const Duration(milliseconds: 200), duration ~/ 5].min;
+          _flashController.forward(from: 0.0);
+        } else {
+          changedTiles.notifyListeners();
+        }
+      case BoardSpecialUpdate(:final updates):
+        controller.activatedSpecials.value = updates;
+        final settings = Settings();
+        if (!settings.continuousAnimation.value) {
+          return;
+        }
+        if (updates.isNotEmpty) {
+          _flameController.repeat();
+        } else {
+          _flameController.stop();
+          _flameController.value = 0.0;
+        }
+      case RevealCards():
+        showSpecialDarken.value = false;
     }
-    if (widget.battle.activatedSpecialsNotifier.value.isNotEmpty) {
-      _flameController.repeat();
-    } else {
-      _flameController.stop();
-      _flameController.value = 0.0;
-    }
   }
 
-  void _checkSpecialDarken() {
-    showSpecialDarken.value = widget.battle.moveSpecialNotifier.value;
-  }
-
-  void _clearSpecialDarken() {
-    showSpecialDarken.value = false;
+  void _updateSpecialDarken() {
+    showSpecialDarken.value = controller.moveSpecialNotifier.value;
   }
 
   @override
   void dispose() {
-    widget.battle.boardChangeNotifier.removeListener(_runFlash);
-    widget.battle.activatedSpecialsNotifier.removeListener(_runFlameAnimation);
     _flashController.dispose();
     _flameController.dispose();
+    battleSubscription.cancel();
     _maskStream?.removeListener(ImageStreamListener(_updateMaskImage));
     _maskInfo?.dispose();
     _maskInfo = null;
     _effectStream?.removeListener(ImageStreamListener(_updateEffectImage));
     _effectInfo?.dispose();
     _effectInfo = null;
-    _normalInkStream?.removeListener(ImageStreamListener(_updateNormalInkImage));
-    _normalInkInfo?.dispose();
-    _normalInkInfo = null;
-    _specialInkStream?.removeListener(ImageStreamListener(_updateSpecialInkImage));
-    _specialInkInfo?.dispose();
-    _specialInkInfo = null;
-    _wallTileStream?.removeListener(ImageStreamListener(_updateWallTileImage));
-    _wallTileInfo?.dispose();
-    _wallTileInfo = null;
+    controller.moveSpecialNotifier.removeListener(_updateSpecialDarken);
     super.dispose();
   }
 
@@ -510,10 +457,10 @@ class _BoardWidgetState extends State<BoardWidget>
         RepaintBoundary(
           child: CustomPaint(
             painter: BoardPainter(
-              board: widget.battle.board,
+              board: controller.board,
               tileSideLength: widget.tileSize,
               specialButtonOn: showSpecialDarken,
-              repaint: widget.battle.boardChangeNotifier,
+              repaint: changedTiles,
               //normalInk: _normalInkInfo?.image,
               //specialInk: _specialInkInfo?.image,
               //wallTile: _wallTileInfo?.image,
@@ -526,7 +473,7 @@ class _BoardWidgetState extends State<BoardWidget>
           child: CustomPaint(
             painter: BoardFlashPainter(
               flashOpacity,
-              widget.battle.boardChangeNotifier,
+              changedTiles,
               widget.tileSize
             ),
             child: Container(),
@@ -537,9 +484,9 @@ class _BoardWidgetState extends State<BoardWidget>
           RepaintBoundary(
             child: CustomPaint(
               painter: BoardSpecialPainter(
-                board: widget.battle.board,
+                board: controller.board,
                 tileSideLength: widget.tileSize,
-                activatedSpecialsNotifier: widget.battle.activatedSpecialsNotifier,
+                activatedSpecialsNotifier: controller.activatedSpecials,
                 flameAnimation: _flameController,
                 fireMask: _maskInfo!.image,
                 fireEffect: _effectInfo!.image,

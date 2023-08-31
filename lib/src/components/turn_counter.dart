@@ -7,9 +7,14 @@ import 'package:tableturf_mobile/src/game_internals/battle.dart';
 import 'package:tableturf_mobile/src/audio/audio_controller.dart';
 import 'package:tableturf_mobile/src/style/constants.dart';
 
+import 'tableturf_battle.dart';
+
 class TurnCounter extends StatefulWidget {
-  final TableturfBattle battle;
-  const TurnCounter({super.key, required this.battle});
+  final int initialTurnCount;
+  const TurnCounter({
+    super.key,
+    required this.initialTurnCount,
+  });
 
   @override
   State<TurnCounter> createState() => _TurnCounterState();
@@ -18,6 +23,8 @@ class TurnCounter extends StatefulWidget {
 class _TurnCounterState extends State<TurnCounter>
     with SingleTickerProviderStateMixin {
   final GlobalKey _key = GlobalKey(debugLabel: "TurnCounter");
+  late final TableturfBattleController model;
+  late final StreamSubscription<BattleEvent> battleSubscription;
   late int turnCount;
   late final AnimationController _tickController;
   late final Animation<Decoration> _backgroundDarken;
@@ -32,8 +39,9 @@ class _TurnCounterState extends State<TurnCounter>
   @override
   void initState() {
     super.initState();
-    turnCount = widget.battle.turnCountNotifier.value;
-    widget.battle.turnCountNotifier.addListener(_onTurnCountChange);
+    model = TableturfBattle.getControllerOf(context);
+    turnCount = widget.initialTurnCount;
+    battleSubscription = TableturfBattle.listen(context, _onBattleEvent);
 
     _tickController = AnimationController(
       duration: Durations.animateTurnCounter,
@@ -125,17 +133,21 @@ class _TurnCounterState extends State<TurnCounter>
 
   @override
   void dispose() {
-    widget.battle.turnCountNotifier.removeListener(_onTurnCountChange);
+    battleSubscription.cancel();
     _tickController.dispose();
     animationLayer?.remove();
     animationLayer = null;
     super.dispose();
   }
 
-  Future<void> _onTurnCountChange() async {
-    final newValue = widget.battle.turnCountNotifier.value;
+  Future<void> _onBattleEvent(BattleEvent event) async {
+    switch (event) {
+      case TurnCountTick(:final newTurnCount):
+        await _onTurnCountChange(newTurnCount);
+    }
+  }
 
-    final audioController = AudioController();
+  Future<void> _onTurnCountChange(int newValue) async {
     final overlayState = Overlay.of(context);
 
     assert(animationLayer == null);
@@ -173,7 +185,6 @@ class _TurnCounterState extends State<TurnCounter>
     overlayState.insert(animationLayer!);
 
     _tickController.value = 0.0;
-    await audioController.playSfx(newValue <= 3 ? SfxType.turnCountEnding : SfxType.turnCountNormal);
     Timer(Durations.turnCounterUpdate, () async {
       setState(() {
         turnCount = newValue;

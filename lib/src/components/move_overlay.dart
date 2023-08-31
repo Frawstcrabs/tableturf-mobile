@@ -1,14 +1,19 @@
+import 'dart:async';
 import 'dart:math';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import 'package:tableturf_mobile/src/game_internals/battle.dart';
 import 'package:tableturf_mobile/src/game_internals/card.dart';
 import 'package:tableturf_mobile/src/game_internals/tile.dart';
 
+import 'tableturf_battle.dart';
+
 class MoveOverlayPainter extends CustomPainter {
-  final TableturfBattle battle;
+  final TableturfBattleController controller;
   final Animation<double> animation;
+  final ValueListenable<bool> isRevealed;
   final double tileSideLength;
 
   static const drawComplex = true;
@@ -24,27 +29,27 @@ class MoveOverlayPainter extends CustomPainter {
     cos(DOT_ANGLE),
   );
 
-  MoveOverlayPainter(this.battle, this.animation, this.tileSideLength):
+  MoveOverlayPainter(this.controller, this.animation, this.isRevealed, this.tileSideLength):
     super(
       repaint: Listenable.merge([
         animation,
-        battle.moveCardNotifier,
-        battle.moveRotationNotifier,
-        battle.moveLocationNotifier,
-        battle.moveIsValidNotifier,
-        battle.movePassNotifier,
-        battle.revealCardsNotifier,
+        controller.moveCardNotifier,
+        controller.moveRotationNotifier,
+        controller.moveLocationNotifier,
+        controller.moveIsValidNotifier,
+        controller.movePassNotifier,
+        isRevealed,
       ])
     )
   ;
 
   void _paintBasic(Canvas canvas) {
-    final card = battle.moveCardNotifier.value;
-    final rot = battle.moveRotationNotifier.value;
-    final location = battle.moveLocationNotifier.value;
-    final isValid = battle.moveIsValidNotifier.value;
-    final isPassed = battle.movePassNotifier.value;
-    final isRevealed = battle.revealCardsNotifier.value;
+    final card = controller.moveCardNotifier.value;
+    final rot = controller.moveRotationNotifier.value;
+    final location = controller.moveLocationNotifier.value;
+    final isValid = controller.moveIsValidNotifier.value;
+    final isPassed = controller.movePassNotifier.value;
+    final isRevealed = this.isRevealed.value;
 
     if (card == null || location == null || isRevealed || isPassed) {
       return;
@@ -93,12 +98,12 @@ class MoveOverlayPainter extends CustomPainter {
   }
 
   void _paintComplex(Canvas canvas) {
-    final card = battle.moveCardNotifier.value;
-    final rot = battle.moveRotationNotifier.value;
-    final location = battle.moveLocationNotifier.value;
-    final isValid = battle.moveIsValidNotifier.value;
-    final isPassed = battle.movePassNotifier.value;
-    final isRevealed = battle.revealCardsNotifier.value;
+    final card = controller.moveCardNotifier.value;
+    final rot = controller.moveRotationNotifier.value;
+    final location = controller.moveLocationNotifier.value;
+    final isValid = controller.moveIsValidNotifier.value;
+    final isPassed = controller.movePassNotifier.value;
+    final isRevealed = this.isRevealed.value;
 
     if (card == null || location == null || isRevealed || isPassed) {
       return;
@@ -238,11 +243,10 @@ class MoveOverlayPainter extends CustomPainter {
 }
 
 class MoveOverlayWidget extends StatefulWidget {
-  final TableturfBattle battle;
   final double tileSize;
   final bool loopAnimation;
 
-  const MoveOverlayWidget(this.battle, {required this.tileSize, required this.loopAnimation});
+  const MoveOverlayWidget({required this.tileSize, required this.loopAnimation});
 
   @override
   State<MoveOverlayWidget> createState() => _MoveOverlayWidgetState();
@@ -251,27 +255,37 @@ class MoveOverlayWidget extends StatefulWidget {
 class _MoveOverlayWidgetState extends State<MoveOverlayWidget>
     with SingleTickerProviderStateMixin {
   late final AnimationController _animationController;
+  late final TableturfBattleController controller;
+  late final StreamSubscription<BattleEvent> battleSubscription;
+  final ValueNotifier<bool> isRevealed = ValueNotifier(false);
 
   @override
   void initState() {
     super.initState();
+    controller = TableturfBattle.getControllerOf(context);
+    battleSubscription = TableturfBattle.listen(context, _onBattleEvent);
+    controller.moveChangeNotifier.addListener(_checkHasMove);
+    isRevealed.addListener(_checkHasMove);
     _animationController = AnimationController(
       duration: const Duration(milliseconds: 1000),
-      vsync: this
+      vsync: this,
     );
-    widget.battle.moveCardNotifier.addListener(_checkHasMove);
-    widget.battle.moveRotationNotifier.addListener(_checkHasMove);
-    widget.battle.moveLocationNotifier.addListener(_checkHasMove);
-    widget.battle.moveIsValidNotifier.addListener(_checkHasMove);
-    widget.battle.movePassNotifier.addListener(_checkHasMove);
-    widget.battle.revealCardsNotifier.addListener(_checkHasMove);
+  }
+
+  Future<void> _onBattleEvent(BattleEvent event) async {
+    switch (event) {
+      case TurnStart():
+        isRevealed.value = true;
+      case TurnEnd():
+        isRevealed.value = false;
+    }
   }
 
   void _checkHasMove() {
-    final card = widget.battle.moveCardNotifier.value;
-    final location = widget.battle.moveLocationNotifier.value;
-    final isPassed = widget.battle.movePassNotifier.value;
-    final isRevealed = widget.battle.revealCardsNotifier.value;
+    final card = controller.moveCardNotifier.value;
+    final location = controller.moveLocationNotifier.value;
+    final isPassed = controller.movePassNotifier.value;
+    final isRevealed = this.isRevealed.value;
 
     if (card == null || location == null || isRevealed || isPassed) {
       if (_animationController.status != AnimationStatus.dismissed) {
@@ -289,12 +303,9 @@ class _MoveOverlayWidgetState extends State<MoveOverlayWidget>
   @override
   void dispose() {
     _animationController.dispose();
-    widget.battle.moveCardNotifier.removeListener(_checkHasMove);
-    widget.battle.moveRotationNotifier.removeListener(_checkHasMove);
-    widget.battle.moveLocationNotifier.removeListener(_checkHasMove);
-    widget.battle.moveIsValidNotifier.removeListener(_checkHasMove);
-    widget.battle.movePassNotifier.removeListener(_checkHasMove);
-    widget.battle.revealCardsNotifier.removeListener(_checkHasMove);
+    controller.moveChangeNotifier.removeListener(_checkHasMove);
+    isRevealed.removeListener(_checkHasMove);
+    battleSubscription.cancel();
     super.dispose();
   }
 
@@ -304,8 +315,9 @@ class _MoveOverlayWidgetState extends State<MoveOverlayWidget>
       child: IgnorePointer(
         child: CustomPaint(
           painter: MoveOverlayPainter(
-            widget.battle,
+            controller,
             _animationController,
+            isRevealed,
             widget.tileSize
           ),
           child: Container(),

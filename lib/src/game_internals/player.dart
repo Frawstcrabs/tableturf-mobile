@@ -21,52 +21,22 @@ extension RandomChoice<T> on List<T> {
   }
 }
 
+typedef PlayerID = int;
+
 class TableturfPlayer {
+  final PlayerID id;
   final String name;
   final String? icon;
-  final List<TableturfCard> deck;
-  final List<ValueNotifier<TableturfCard?>> hand;
-  final ValueNotifier<int> special;
   final String cardSleeve;
   final PlayerTraits traits;
 
-  TableturfPlayer({
+  const TableturfPlayer({
+    required this.id,
     required this.name,
     this.icon,
-    required this.deck,
-    required this.hand,
     required this.traits,
     this.cardSleeve = "assets/images/card_sleeves/sleeve_default.png",
-    special = 0,
-  }): special = ValueNotifier(special);
-
-  void refreshHand() {
-    for (var i = 0; i < hand.length; i++) {
-      final card = hand[i].value;
-      if (card == null) {
-        continue;
-      }
-      if (card.hasBeenPlayed) {
-        final newCard = deck.where((card) => !card.isHeld && !card.hasBeenPlayed).toList().random();
-        card.isHeld = false;
-        newCard.isHeld = true;
-        hand[i].value = newCard;
-      }
-    }
-  }
-
-  void reset() {
-    for (final card in deck) {
-      card.isHeld = false;
-      card.hasBeenPlayed = false;
-      card.isPlayable = false;
-      card.isPlayableSpecial = false;
-    }
-    for (final card in hand) {
-      card.value = null;
-    }
-    special.value = 0;
-  }
+  });
 }
 
 abstract class PlayerTraits {

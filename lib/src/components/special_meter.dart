@@ -1,9 +1,12 @@
+import 'dart:async';
 import 'dart:math';
 
 import 'package:flutter/material.dart';
 import 'package:tableturf_mobile/src/game_internals/player.dart';
 import 'package:tableturf_mobile/src/style/constants.dart';
 
+import '../game_internals/battle.dart';
+import 'tableturf_battle.dart';
 import 'card_widget.dart';
 
 class SpecialTile extends StatefulWidget {
@@ -67,14 +70,44 @@ class _SpecialTileState extends State<SpecialTile>
   }
 }
 
-class SpecialMeter extends StatelessWidget {
+class SpecialMeter extends StatefulWidget {
   final TableturfPlayer player;
+  final int? initialValue;
   final TextDirection direction;
   const SpecialMeter({
     super.key,
     required this.player,
     this.direction = TextDirection.ltr,
+    this.initialValue,
   });
+
+  @override
+  State<SpecialMeter> createState() => _SpecialMeterState();
+}
+
+class _SpecialMeterState extends State<SpecialMeter> {
+  late final ValueNotifier<int> specialNotifier;
+  late final StreamSubscription<BattleEvent> battleSubscription;
+
+  @override
+  void initState() {
+    super.initState();
+    specialNotifier = ValueNotifier(widget.initialValue ?? 0);
+    battleSubscription = TableturfBattle.listen(context, _onBattleEvent);
+  }
+
+  @override
+  void dispose() {
+    battleSubscription.cancel();
+    super.dispose();
+  }
+
+  Future<void> _onBattleEvent(BattleEvent event) async {
+    switch (event) {
+      case PlayerSpecialUpdate(:final specialDiffs):
+        specialNotifier.value += specialDiffs[widget.player.id]!;
+    }
+  }
 
   Widget build(BuildContext context) {
     return RepaintBoundary(
@@ -83,12 +116,12 @@ class SpecialMeter extends StatelessWidget {
           final tileSize = constraints.maxHeight;
           return FittedBox(
             fit: BoxFit.contain,
-            alignment: AlignmentDirectional.centerStart.resolve(direction),
+            alignment: AlignmentDirectional.centerStart.resolve(widget.direction),
             child: ValueListenableBuilder(
-              valueListenable: player.special,
+              valueListenable: specialNotifier,
               builder: (_, int specialCount, __) {
                 return Row(
-                  textDirection: direction,
+                  textDirection: widget.direction,
                   children: [
                     for (var i = 0; i < max(specialCount, 4); i++)
                       Container(
@@ -101,12 +134,12 @@ class SpecialMeter extends StatelessWidget {
                               height: tileSize,
                             ),
                             if (i < specialCount) SpecialTile(
-                              colour: player.traits.specialColour,
+                              colour: widget.player.traits.specialColour,
                               tileSize: tileSize,
                             )
                           ]
                         ) : SpecialTile(
-                          colour: player.traits.specialColour,
+                          colour: widget.player.traits.specialColour,
                           tileSize: tileSize,
                         ),
                       ),

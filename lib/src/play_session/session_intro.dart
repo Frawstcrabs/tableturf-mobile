@@ -10,19 +10,18 @@ import 'package:tableturf_mobile/src/game_internals/opponentAI.dart';
 import 'package:tableturf_mobile/src/game_internals/player.dart';
 import 'package:tableturf_mobile/src/game_internals/tile.dart';
 import 'package:tableturf_mobile/src/components/splashtag.dart';
+import 'package:tableturf_mobile/src/components/tableturf_battle.dart';
 import 'package:tableturf_mobile/src/style/constants.dart';
 import 'package:tableturf_mobile/src/style/my_transition.dart';
 
 import '../audio/songs.dart';
 import '../audio/sounds.dart';
+import '../game_internals/card.dart';
 import 'session_running.dart';
 import '../components/build_board_widget.dart';
 
 class PlaySessionIntro extends StatefulWidget {
-  final TableturfPlayer yellow, blue;
-  final TileGrid board;
-  final AILevel aiLevel;
-  final AILevel? playerAI;
+  final LocalTableturfBattle battle;
   final String boardHeroTag;
   final void Function()? onWin, onLose;
   final Future<void> Function(BuildContext)? onPostGame;
@@ -31,14 +30,10 @@ class PlaySessionIntro extends StatefulWidget {
 
   const PlaySessionIntro({
     super.key,
+    required this.battle,
     required this.sessionCompleter,
     required this.boardHeroTag,
-    required this.yellow,
-    required this.blue,
-    required this.board,
-    required this.aiLevel,
     required this.showXpPopup,
-    this.playerAI,
     this.onWin,
     this.onLose,
     this.onPostGame,
@@ -51,7 +46,7 @@ class PlaySessionIntro extends StatefulWidget {
 class _PlaySessionIntroState extends State<PlaySessionIntro>
     with SingleTickerProviderStateMixin {
   static final _log = Logger('PlaySessionIntroState');
-  late final TableturfBattle battle;
+  late final TableturfBattleController controller;
 
   late final AnimationController _introAnimator;
   late final Animation<double> _firstSplashTagOpacity, _secondSplashTagOpacity, _vsSplashOpacity, _vsSplashBackgroundOpacity;
@@ -79,12 +74,12 @@ class _PlaySessionIntroState extends State<PlaySessionIntro>
   @override
   void initState() {
     super.initState();
-    battle = TableturfBattle(
-      yellow: widget.yellow,
-      blue: widget.blue,
-      board: widget.board,
-      aiLevel: widget.aiLevel,
-      playerAI: widget.playerAI,
+    final battle = widget.battle;
+    controller = TableturfBattleController(
+      board: battle.board.copy(),
+      player: battle.player,
+      playerDeck: battle.playerDeck,
+      model: battle,
     );
 
     _introAnimator = AnimationController(
@@ -372,11 +367,11 @@ class _PlaySessionIntroState extends State<PlaySessionIntro>
                         child: FadeTransition(
                           opacity: _firstSplashTagOpacity,
                           child: SplashTag(
-                            name: battle.yellow.name,
-                            tagIcon: battle.yellow.icon,
-                          )
+                            name: widget.battle.player.name,
+                            tagIcon: widget.battle.player.icon,
+                          ),
                         ),
-                      )
+                      ),
                     ),
                     AlignTransition(
                       alignment: _secondSplashTagTranslation,
@@ -388,11 +383,11 @@ class _PlaySessionIntroState extends State<PlaySessionIntro>
                         child: FadeTransition(
                           opacity: _secondSplashTagOpacity,
                           child: SplashTag(
-                            name: battle.blue.name,
-                            tagIcon: battle.blue.icon,
-                          )
+                            name: widget.battle.opponent.name,
+                            tagIcon: widget.battle.opponent.icon,
+                          ),
                         ),
-                      )
+                      ),
                     ),
                     FractionallySizedBox(
                       heightFactor: 0.6,
@@ -454,7 +449,8 @@ class _PlaySessionIntroState extends State<PlaySessionIntro>
         return PlaySessionScreen(
           key: const Key('play session screen'),
           sessionCompleter: widget.sessionCompleter,
-          battle: battle,
+          battle: widget.battle,
+          controller: controller,
           boardHeroTag: widget.boardHeroTag,
           onWin: widget.onWin,
           onLose: widget.onLose,
@@ -493,10 +489,14 @@ class _PlaySessionIntroState extends State<PlaySessionIntro>
       color: Palette.backgroundPlaySession,
       child: Padding(
         padding: mediaQuery.padding,
-        child: buildBoardWidget(
-          battle: battle,
-          loopAnimation: false,
-          boardHeroTag: widget.boardHeroTag,
+        child: TableturfBattle(
+          controller: controller,
+          eventStream: Stream.empty(),
+          child: buildBoardWidget(
+            controller: controller,
+            loopAnimation: false,
+            boardHeroTag: widget.boardHeroTag,
+          ),
         ),
       ),
     );

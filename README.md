@@ -19,13 +19,16 @@ Use `flutter run` to run on a device.
 - [x] Make the bottom buttons in the map editor less shit
 - [x] Screen for testing custom decks/boards
 - [x] Change card bits out for coins, add a loss reward because i suck at my own game
-- [ ] Add buying (upgrading?) cards to the card list screen
+- [x] Refactor game logic to use an MVC style approach to make gamemodes easier to add
+- [ ] Add rendering different card levels (basic or full-on?)
+- [ ] Add being able to see card levels in a match
+- [-] Add buying cards to the card list screen (interface added, non-functional ATM)
 - [ ] Make randomiser deck unlockable (probably also move it to earlier in the opponent list)
 - [ ] Make the UI better able to handle different screen sizes
+- [ ] Custom card creator
 - [ ] Add final graphical effects to session start/end
 - [ ] Add special point/passed turn counting
 - [ ] Achievements?
 - [ ] Add special tile distance awareness to AI alongside normal tile distance awareness? (different calculations per level?)
-- [ ] Custom card creator
 - [ ] Move all animation durations into a single global list of constants
 - [ ] Multiplayer

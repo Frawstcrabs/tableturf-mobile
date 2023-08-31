@@ -65,17 +65,17 @@ class _ShopScreenState extends State<ShopScreen>
       if (rand < freshProbability) {
         final index = rng.nextInt(freshCards.length);
         final card = freshCards.removeAt(index);
-        final isDupe = playerProgress.unlockedCards.contains(card.ident);
+        final isDupe = playerProgress.unlockedCards.containsKey(card.ident);
         selectedCards.add((card: card, isDupe: isDupe));
       } else if (rand < freshProbability + rareProbability) {
         final index = rng.nextInt(rareCards.length);
         final card = rareCards.removeAt(index);
-        final isDupe = playerProgress.unlockedCards.contains(card.ident);
+        final isDupe = playerProgress.unlockedCards.containsKey(card.ident);
         selectedCards.add((card: card, isDupe: isDupe));
       } else {
         final index = rng.nextInt(commonCards.length);
         final card = commonCards.removeAt(index);
-        final isDupe = playerProgress.unlockedCards.contains(card.ident);
+        final isDupe = playerProgress.unlockedCards.containsKey(card.ident);
         selectedCards.add((card: card, isDupe: isDupe));
       }
     }

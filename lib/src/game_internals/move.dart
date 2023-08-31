@@ -49,7 +49,7 @@ Iterable<TableturfMove> getMoves(TileGrid board, TableturfCard card, {bool speci
           y: moveY,
           special: special,
         );
-        if (moveIsValid(board, move)) {
+        if (checkMoveIsValid(board, move)) {
           yield move;
         }
       }
@@ -57,7 +57,7 @@ Iterable<TableturfMove> getMoves(TileGrid board, TableturfCard card, {bool speci
   }
 }
 
-bool moveIsValid(TileGrid board, TableturfMove move) {
+bool checkMoveIsValid(TileGrid board, TableturfMove move) {
   if (!move.special) {
     return _normalMoveIsValid(board, move);
   } else {
@@ -119,7 +119,7 @@ bool _specialMoveIsValid(TileGrid board, TableturfMove move) {
         return false;
       }
       if (!isTouchingYellow && cardTile.isFilled) {
-        for (var modY = -1; modY <= 1; modY++) {
+        loop:for (var modY = -1; modY <= 1; modY++) {
           for (var modX = -1; modX <= 1; modX++) {
             final boardY = moveY + y + modY;
             final boardX = moveX + x + modX;
@@ -129,11 +129,8 @@ bool _specialMoveIsValid(TileGrid board, TableturfMove move) {
             final TileState edgeTile = board[boardY][boardX];
             if (edgeTile == TileState.yellowSpecial) {
               isTouchingYellow = true;
-              break;
+              break loop;
             }
-          }
-          if (isTouchingYellow) {
-            break;
           }
         }
       }

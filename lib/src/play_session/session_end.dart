@@ -11,6 +11,7 @@ import 'package:tableturf_mobile/src/audio/sounds.dart';
 import 'package:tableturf_mobile/src/game_internals/battle.dart';
 import 'package:tableturf_mobile/src/game_internals/player.dart';
 import 'package:tableturf_mobile/src/play_session/session_intro.dart';
+import 'package:tableturf_mobile/src/components/tableturf_battle.dart';
 import 'package:tableturf_mobile/src/player_progress/player_progress.dart';
 import 'package:tableturf_mobile/src/settings/settings.dart';
 import 'package:tableturf_mobile/src/style/constants.dart';
@@ -160,7 +161,8 @@ class WinEffectPainter extends CustomPainter {
 
 class PlaySessionEnd extends StatefulWidget {
   final String boardHeroTag;
-  final TableturfBattle battle;
+  final TableturfBattleController controller;
+  final LocalTableturfBattle battle;
   final void Function()? onWin, onLose;
   final Future<void> Function(BuildContext)? onPostGame;
   final Completer sessionCompleter;
@@ -170,6 +172,7 @@ class PlaySessionEnd extends StatefulWidget {
     super.key,
     required this.sessionCompleter,
     required this.boardHeroTag,
+    required this.controller,
     required this.battle,
     required this.showXpPopup,
     this.onWin,
@@ -229,8 +232,8 @@ class _PlaySessionEndState extends State<PlaySessionEnd>
         .animate(_scoreCountersAnimator);
 
     final battle = widget.battle;
-    final yellowScore = battle.yellowCountNotifier.value;
-    final blueScore = battle.blueCountNotifier.value;
+    final yellowScore = battle.playerScores[battle.player.id]!;
+    final blueScore = battle.playerScores[battle.opponent.id]!;
     final yellowScoreRatio = yellowScore / (yellowScore + blueScore);
     const initialBarSize = 0.3;
     const barStartOffset = -0.005;
@@ -371,18 +374,13 @@ class _PlaySessionEndState extends State<PlaySessionEnd>
     );
     if (choice == 0) {
       final battle = widget.battle;
-      battle.yellow.reset();
-      battle.blue.reset();
+      battle.reset();
       audioController.stopSong(fadeDuration: Durations.transitionToGame);
       Navigator.of(context).pushReplacement(buildFadeToBlackTransition(
         child: PlaySessionIntro(
+          battle: battle,
           sessionCompleter: widget.sessionCompleter,
-          yellow: battle.yellow,
-          blue: battle.blue,
-          board: battle.origBoard,
           boardHeroTag: "boardView-${Random().nextInt(2^31).toString()}",
-          aiLevel: battle.aiLevel,
-          playerAI: battle.playerAI,
           onWin: widget.onWin,
           onLose: widget.onLose,
           onPostGame: widget.onPostGame,
@@ -410,11 +408,38 @@ class _PlaySessionEndState extends State<PlaySessionEnd>
   @override
   Widget build(BuildContext context) {
     final mediaQuery = MediaQuery.of(context);
-
+    final battle = widget.battle;
     final boardWidget = buildBoardWidget(
-      battle: widget.battle,
+      controller: widget.controller,
       loopAnimation: false,
       boardHeroTag: widget.boardHeroTag,
+    );
+
+    final playerScores = Flex(
+      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+      direction: mediaQuery.orientation == Orientation.portrait ? Axis.horizontal : Axis.vertical,
+      children: [
+        ScaleTransition(
+          scale: scoreSize,
+          child: FadeTransition(
+            opacity: scoreFade,
+            child: ScoreCounter(
+              initialScore: battle.playerScores[battle.player.id]!,
+              player: battle.player,
+            ),
+          ),
+        ),
+        ScaleTransition(
+          scale: scoreSize,
+          child: FadeTransition(
+            opacity: scoreFade,
+            child: ScoreCounter(
+              initialScore: battle.playerScores[battle.opponent.id]!,
+              player: battle.opponent,
+            ),
+          ),
+        ),
+      ],
     );
 
     late final Widget screen;
@@ -430,35 +455,11 @@ class _PlaySessionEndState extends State<PlaySessionEnd>
                 child: boardWidget
             ),
             Expanded(
-                flex: 1,
-                child: FractionallySizedBox(
-                  heightFactor: 0.8,
-                  child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                      children: [
-                        ScaleTransition(
-                          scale: scoreSize,
-                          child: FadeTransition(
-                            opacity: scoreFade,
-                            child: ScoreCounter(
-                              scoreNotifier: widget.battle.yellowCountNotifier,
-                              traits: const YellowTraits()
-                            ),
-                          ),
-                        ),
-                        ScaleTransition(
-                          scale: scoreSize,
-                          child: FadeTransition(
-                            opacity: scoreFade,
-                            child: ScoreCounter(
-                              scoreNotifier: widget.battle.blueCountNotifier,
-                              traits: const BlueTraits()
-                            ),
-                          ),
-                        ),
-                      ]
-                  ),
-                )
+              flex: 1,
+              child: FractionallySizedBox(
+                heightFactor: 0.8,
+                child: playerScores,
+              ),
             ),
             Expanded(
               flex: 1,
@@ -499,8 +500,8 @@ class _PlaySessionEndState extends State<PlaySessionEnd>
                     child: FractionallySizedBox(
                       widthFactor: 0.8,
                       child: SplashTag(
-                        name: widget.battle.yellow.name,
-                        tagIcon: widget.battle.yellow.icon,
+                        name: battle.player.name,
+                        tagIcon: battle.player.icon,
                       ),
                     ),
                   ),
@@ -508,8 +509,8 @@ class _PlaySessionEndState extends State<PlaySessionEnd>
                     child: FractionallySizedBox(
                       widthFactor: 0.8,
                       child: SplashTag(
-                        name: widget.battle.blue.name,
-                        tagIcon: widget.battle.blue.icon,
+                        name: battle.opponent.name,
+                        tagIcon: battle.opponent.icon,
                       ),
                     ),
                   )
@@ -535,8 +536,8 @@ class _PlaySessionEndState extends State<PlaySessionEnd>
                     child: FractionallySizedBox(
                       widthFactor: 0.8,
                       child: SplashTag(
-                        name: widget.battle.yellow.name,
-                        tagIcon: widget.battle.yellow.icon,
+                        name: battle.player.name,
+                        tagIcon: battle.player.icon,
                       ),
                     ),
                   ),
@@ -544,8 +545,8 @@ class _PlaySessionEndState extends State<PlaySessionEnd>
                     child: FractionallySizedBox(
                       widthFactor: 0.8,
                       child: SplashTag(
-                        name: widget.battle.blue.name,
-                        tagIcon: widget.battle.blue.icon,
+                        name: battle.opponent.name,
+                        tagIcon: battle.opponent.icon,
                       ),
                     ),
                   )
@@ -555,35 +556,11 @@ class _PlaySessionEndState extends State<PlaySessionEnd>
             Expanded(
               flex: 1,
               child: AnimatedBuilder(
-                    animation: _scoreCountersAnimator,
-                    builder: (_, __) {
-                      return Column(
-                          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                          children: [
-                            ScaleTransition(
-                              scale: scoreSize,
-                              child: FadeTransition(
-                                opacity: scoreFade,
-                                child: ScoreCounter(
-                                  scoreNotifier: widget.battle.blueCountNotifier,
-                                  traits: const BlueTraits()
-                                ),
-                              ),
-                            ),
-                            ScaleTransition(
-                              scale: scoreSize,
-                              child: FadeTransition(
-                                opacity: scoreFade,
-                                child: ScoreCounter(
-                                  scoreNotifier: widget.battle.yellowCountNotifier,
-                                  traits: const YellowTraits()
-                                ),
-                              ),
-                            ),
-                          ]
-                      );
-                    }
-                )
+                animation: _scoreCountersAnimator,
+                builder: (_, __) {
+                  return playerScores;
+                },
+              ),
             ),
             Expanded(
               flex: 1,
@@ -649,10 +626,14 @@ class _PlaySessionEndState extends State<PlaySessionEnd>
               _runOverlays();
               return false;
             },
-            child: screen
+            child: TableturfBattle(
+              controller: widget.controller,
+              eventStream: Stream.empty(),
+              child: screen,
+            ),
           ),
         ),
-      )
+      ),
     );
   }
 }

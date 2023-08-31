@@ -79,7 +79,7 @@ class PlayerProgress {
 
   late int _xp;
   late final ValueNotifier<int> cash;
-  late Set<TableturfCardIdentifier> _unlockedCards;
+  late Map<TableturfCardIdentifier, int> _unlockedCards;
   late Set<String> _unlockedCardSleeves;
   late Set<int> _unlockedOpponents;
   late int _nextDeckID;
@@ -87,7 +87,7 @@ class PlayerProgress {
   late int _nextMapID;
   late List<ValueNotifier<TableturfMap>> _maps;
 
-  Set<TableturfCardIdentifier> get unlockedCards => _unlockedCards;
+  Map<TableturfCardIdentifier, int> get unlockedCards => _unlockedCards;
   Set<int> get unlockedOpponents => _unlockedOpponents;
   Set<String> get unlockedCardSleeves => _unlockedCardSleeves;
   List<ValueNotifier<TableturfDeck>> get decks => List.unmodifiable(_decks);
@@ -149,13 +149,25 @@ class PlayerProgress {
     );
     _unlockedCardSleeves = unlockedCardSleevesJson.map((s) => s as String).toSet();
 
-    final List<dynamic> unlockedCardsJson = jsonDecode(
-      _prefs.getString("tableturf-unlocked_cards")
-          ?? jsonEncode([for (final card in starterDeck.cards) card!.toJson()])
+    dynamic unlockedCardsJson = jsonDecode(
+      _prefs.getString("tableturf-unlocked_cards") ?? jsonEncode({
+        for (final card in starterDeck.cards)
+          jsonEncode(card!.toJson()): 1
+      })
     );
-    _unlockedCards = Set.from(unlockedCardsJson.map((e) {
-      return TableturfCardIdentifier.fromJson(e as Map<String, dynamic>);
-    }));
+    if (unlockedCardsJson is List<dynamic>) {
+      unlockedCardsJson = Map.fromEntries(unlockedCardsJson.map(
+        (ident) => MapEntry(jsonEncode(ident), 1),
+      ));
+    }
+    _unlockedCards = (unlockedCardsJson as Map<String, dynamic>).map((key, value) {
+      return MapEntry(
+        TableturfCardIdentifier.fromJson(
+          jsonDecode(key) as Map<String, dynamic>,
+        ),
+        value as int,
+      );
+    });
 
 
     _nextDeckID = _prefs.getInt("tableturf-deck_nextID") ?? 1;
@@ -256,13 +268,18 @@ class PlayerProgress {
     if (_commitChanges) {
       await _prefs.setString(
         "tableturf-unlocked_cards",
-        jsonEncode(_unlockedCards.toList()),
-      );
+        jsonEncode(_unlockedCards.map((key, value) {
+          return MapEntry(
+            jsonEncode(key.toJson()),
+            value,
+          );
+        }),
+      ));
     }
   }
 
   void unlockCard(TableturfCardIdentifier ident) {
-    _unlockedCards.add(ident);
+    _unlockedCards.putIfAbsent(ident, () => 1);
     _writeUnlockedCards();
   }
 
@@ -521,7 +538,7 @@ class PlayerProgress {
       }
     }
     _unlockedOpponents = Set.from([-1]);
-    _unlockedCards = Set.from([...starterDeck.cards]);
+    _unlockedCards = {for (final card in starterDeck.cards) card!: 1};
     _unlockedCardSleeves = Set.from(["default"]);
     xp = 0;
     cash.value = 0;

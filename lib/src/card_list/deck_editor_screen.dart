@@ -272,8 +272,10 @@ class _DeckEditorScreenState extends State<DeckEditorScreen>
                             children: [
                               CardGridView(
                                 cardList: officialCards
-                                    .where((c) => playerProgress.unlockedCards.contains(c.ident))
-                                    .toList(),
+                                  .where((c) => playerProgress.unlockedCards
+                                    .containsKey(c.ident)
+                                  )
+                                  .toList(),
                                 sortMode: currentSortMode,
                               ),
                               CardGridView(

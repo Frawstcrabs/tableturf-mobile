@@ -1,19 +1,22 @@
-import 'package:flutter/material.dart';
-import 'package:tableturf_mobile/src/game_internals/player.dart';
+import 'dart:async';
 
+import 'package:flutter/material.dart';
+import 'package:tableturf_mobile/src/game_internals/battle.dart';
+import 'package:tableturf_mobile/src/game_internals/player.dart';
+import 'package:tableturf_mobile/src/components/tableturf_battle.dart';
+
+import '../game_internals/move.dart';
 import '../style/constants.dart';
 
 
 class ScoreCounter extends StatefulWidget {
-  final ValueNotifier<int> scoreNotifier;
-  final ValueNotifier<int?>? newScoreNotifier;
-  final PlayerTraits traits;
+  final TableturfPlayer player;
+  final int initialScore;
 
   const ScoreCounter({
     super.key,
-    required this.scoreNotifier,
-    required this.traits,
-    this.newScoreNotifier,
+    required this.player,
+    required this.initialScore,
   });
 
   @override
@@ -22,6 +25,8 @@ class ScoreCounter extends StatefulWidget {
 
 class _ScoreCounterState extends State<ScoreCounter>
     with TickerProviderStateMixin {
+  late final TableturfBattleController controller;
+  late final StreamSubscription<BattleEvent> battleSubscription;
   late AnimationController showDiffController, showSumController;
   late Animation<double>
       showDiffScale,
@@ -30,19 +35,21 @@ class _ScoreCounterState extends State<ScoreCounter>
   late final Animation<Offset> showDiffEndMove;
   late int _prevScore;
   int _scoreDiff = 0;
+  final ValueNotifier<int> potentialScoreDiff = ValueNotifier(0);
 
   @override
   void initState() {
     super.initState();
-    _prevScore = widget.scoreNotifier.value;
-    widget.scoreNotifier.addListener(onScoreUpdate);
+    controller = TableturfBattle.getControllerOf(context);
+    _prevScore = widget.initialScore;
+    battleSubscription = TableturfBattle.listen(context, _onBattleEvent);
     showDiffController = AnimationController(
-        duration: Durations.animateBattleScoreDiff,
-        vsync: this
+      duration: Durations.animateBattleScoreDiff,
+      vsync: this,
     );
     showSumController = AnimationController(
-        duration: Durations.animateBattleScoreSum,
-        vsync: this
+      duration: Durations.animateBattleScoreSum,
+      vsync: this,
     );
     showDiffController.value = 1.0;
     showSumController.value = 1.0;
@@ -107,19 +114,67 @@ class _ScoreCounterState extends State<ScoreCounter>
         weight: 70.0
       ),
     ]).animate(showSumController);
+
+    controller.moveChangeNotifier.addListener(_checkCalculatePotentialScore);
   }
 
   @override
   void dispose() {
-    widget.scoreNotifier.removeListener(onScoreUpdate);
+    battleSubscription.cancel();
     showDiffController.dispose();
     showSumController.dispose();
+    controller.moveChangeNotifier.removeListener(_checkCalculatePotentialScore);
     super.dispose();
   }
 
-  Future<void> onScoreUpdate() async {
-    final newScore = widget.scoreNotifier.value;
+  Future<void> _onBattleEvent(BattleEvent event) async {
+    switch (event) {
+      case TurnStart():
+        potentialScoreDiff.value = 0;
+      case ScoreUpdate(:final newScores):
+        await onScoreUpdate(newScores[widget.player.id]!);
+    }
+  }
+
+  void _checkCalculatePotentialScore() {
+    final move = controller.playerMove;
+    final isValid = controller.moveIsValidNotifier.value;
+    if (move != null && isValid) {
+      calculatePotentialScore(move);
+    } else {
+      potentialScoreDiff.value = 0;
+    }
+  }
+
+  void calculatePotentialScore(TableturfMove move) {
+    final changes = move.boardChanges;
+    final board = controller.board;
+    final traits = widget.player.traits;
+    int diff = 0;
+    for (final MapEntry(key: coords, value: state) in changes.entries) {
+      final boardTile = board[coords.y][coords.x];
+      if (boardTile != traits.normalTile && boardTile != traits.specialTile) {
+        if (state == traits.normalTile || state == traits.specialTile) {
+          // tile would go from one not in traits to one in traits
+          // this gain a point
+          diff += 1;
+        }
+      } else {
+        if (state != traits.normalTile && state != traits.specialTile) {
+          // tile would go from one in traits to one not in traits
+          // thus lose a point
+          diff -= 1;
+        }
+      }
+    }
+    potentialScoreDiff.value = diff;
+  }
+
+  Future<void> onScoreUpdate(int newScore) async {
     if (!mounted) return;
+    if (newScore - _prevScore == 0) {
+      return;
+    }
     setState(() {
       _scoreDiff = newScore - _prevScore;
     });
@@ -139,6 +194,7 @@ class _ScoreCounterState extends State<ScoreCounter>
 
   @override
   Widget build(BuildContext buildContext) {
+    final traits = widget.player.traits;
     final scoreDiffDisplay = FractionallySizedBox(
       heightFactor: 0.5,
       widthFactor: 0.5,
@@ -147,7 +203,7 @@ class _ScoreCounterState extends State<ScoreCounter>
         child: DecoratedBox(
           decoration: BoxDecoration(
             shape: BoxShape.circle,
-            color: _scoreDiff > 0 ? widget.traits.scoreCountShadow : Colors.grey,
+            color: _scoreDiff > 0 ? traits.scoreCountShadow : Colors.grey,
           ),
           child: Center(
                 child: FractionallySizedBox(
@@ -177,16 +233,16 @@ class _ScoreCounterState extends State<ScoreCounter>
       ),
     );
     final textStyle = TextStyle(
-        fontFamily: "Splatfont1",
-        fontStyle: FontStyle.italic,
-        color: widget.traits.scoreCountText,
-        letterSpacing: 0.6,
-        shadows: [
-          Shadow(
-            color: widget.traits.scoreCountShadow,
-            offset: Offset(1, 1),
-          )
-        ]
+      fontFamily: "Splatfont1",
+      fontStyle: FontStyle.italic,
+      color: traits.scoreCountText,
+      letterSpacing: 0.6,
+      shadows: [
+        Shadow(
+          color: traits.scoreCountShadow,
+          offset: Offset(1, 1),
+        ),
+      ],
     );
     return Center(
       child: AspectRatio(
@@ -199,7 +255,7 @@ class _ScoreCounterState extends State<ScoreCounter>
                 DecoratedBox(
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
-                    color: widget.traits.scoreCountBackground
+                    color: traits.scoreCountBackground,
                   ),
                   child: ScaleTransition(
                     scale: showSumScale,
@@ -217,8 +273,8 @@ class _ScoreCounterState extends State<ScoreCounter>
                                 _prevScore.toString(),
                                 style: textStyle,
                               ),
-                            )
-                          )
+                            ),
+                          ),
                         ),
                       ),
                     )
@@ -234,13 +290,13 @@ class _ScoreCounterState extends State<ScoreCounter>
                     ),
                   ),
                 ),
-                if (widget.newScoreNotifier != null) Transform.translate(
+                Transform.translate(
                   offset: Offset(diameter * 0.15, diameter * 0.6),
                   child: ValueListenableBuilder(
-                    valueListenable: widget.newScoreNotifier!,
-                    builder: (_, int? newScore, __) {
-                      if (newScore == null || newScore == _prevScore) {
-                        return Container();
+                    valueListenable: potentialScoreDiff,
+                    builder: (_, int newScore, __) {
+                      if (newScore == 0) {
+                        return const SizedBox();
                       }
                       return Row(
                         mainAxisAlignment: MainAxisAlignment.start,
@@ -252,17 +308,17 @@ class _ScoreCounterState extends State<ScoreCounter>
                             shadows: textStyle.shadows,
                           ),
                           Text(
-                            newScore.toString(),
+                            (_prevScore + newScore).toString(),
                             style: textStyle.copyWith(fontSize: diameter * 0.35),
-                          )
+                          ),
                         ],
                       );
-                    }
-                  )
-                )
-              ]
+                    },
+                  ),
+                ),
+              ],
             );
-          }
+          },
         ),
       ),
     );

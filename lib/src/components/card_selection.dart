@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:math';
 
 import 'package:flutter/material.dart';
@@ -5,6 +6,7 @@ import 'package:provider/provider.dart';
 import 'package:tableturf_mobile/src/game_internals/player.dart';
 
 import '../game_internals/card.dart';
+import 'tableturf_battle.dart';
 import '../style/constants.dart';
 
 import '../game_internals/battle.dart';
@@ -47,10 +49,14 @@ class _SpinnerWidgetState extends State<SpinnerWidget>
     return RepaintBoundary(
       child: RotationTransition(
         turns: _controller,
-        child: Icon(
-          Icons.refresh,
-          size: 50.0,
-          color: Color.fromRGBO(255, 255, 255, 0.2),
+        child: ConstrainedBox(
+          constraints: BoxConstraints(maxWidth: 50),
+          child: FittedBox(
+            child: Icon(
+              Icons.refresh,
+              color: Color.fromRGBO(255, 255, 255, 0.2),
+            ),
+          ),
         )
       ),
     );
@@ -324,19 +330,12 @@ class CardFrontWidget extends StatelessWidget {
 }
 
 class CardSelectionWidget extends StatefulWidget {
-  final ValueNotifier<TableturfMove?> moveNotifier;
-  final TableturfBattle battle;
   final TableturfPlayer player;
-  final Color tileColour, tileSpecialColour;
   final bool loopAnimation;
 
   const CardSelectionWidget({
     super.key,
-    required this.moveNotifier,
     required this.player,
-    required this.battle,
-    required this.tileColour,
-    required this.tileSpecialColour,
     required this.loopAnimation,
   });
 
@@ -352,12 +351,15 @@ class _CardSelectionWidgetState extends State<CardSelectionWidget>
   late Animation<double> confirmMoveIn, confirmMoveOut, confirmFadeIn, confirmFadeOut;
   late Animation<double> cardFlip;
   Widget _prevFront = Container();
+  final ValueNotifier<TableturfMove?> moveNotifier = ValueNotifier(null);
+  late final StreamSubscription<BattleEvent> battleSubscription;
 
   @override
   void initState() {
     super.initState();
-    widget.moveNotifier.addListener(onMoveChange);
-    widget.battle.revealCardsNotifier.addListener(onRevealCardsChange);
+    battleSubscription = TableturfBattle.listen(context, _onBattleEvent);
+    //widget.moveNotifier.addListener(onMoveChange);
+    //widget.battle.revealCardsNotifier.addListener(onRevealCardsChange);
     _confirmController = AnimationController(
       duration: const Duration(milliseconds: 200),
       vsync: this,
@@ -413,31 +415,27 @@ class _CardSelectionWidgetState extends State<CardSelectionWidget>
 
   @override
   void dispose() {
-    widget.moveNotifier.removeListener(onMoveChange);
+    battleSubscription.cancel();
     _confirmController.dispose();
     super.dispose();
   }
 
-  Future<void> onMoveChange() async {
-    if (widget.moveNotifier.value == null) {
-      try {
-        final fut = _confirmController.reverse(from: 1.0).orCancel;
+  Future<void> _onBattleEvent(BattleEvent event) async {
+    switch (event) {
+      case MoveConfirm(:final playerID) when playerID == widget.player.id:
+        final fut = _confirmController.forward(from: 0.0);
         setState(() {});
         await fut;
-      } catch (err) {}
-      _flipController.value = 0.0;
-    } else {
-      final fut = _confirmController.forward(from: 0.0);
-      setState(() {});
-      await fut;
-    }
-  }
-
-  void onRevealCardsChange() {
-    final isRevealed = widget.battle.revealCardsNotifier.value;
-    if (isRevealed) {
-      _flipController.forward(from: 0.0);
-      //setState(() {});
+      case TurnStart(:final moves):
+        moveNotifier.value = moves[widget.player.id]!;
+      case RevealCards():
+        await _flipController.forward(from: 0.0);
+      case ClearMoves():
+        moveNotifier.value = null;
+        final fut = _confirmController.reverse(from: 1.0);
+        setState(() {});
+        await fut;
+        _flipController.value = 0.0;
     }
   }
 
@@ -471,7 +469,7 @@ class _CardSelectionWidgetState extends State<CardSelectionWidget>
 
   Widget _buildCardFront(BuildContext context) {
     return ValueListenableBuilder(
-      valueListenable: widget.moveNotifier,
+      valueListenable: moveNotifier,
       builder: (_, TableturfMove? move, __) {
         if (move == null) {
           return _prevFront;
@@ -488,12 +486,12 @@ class _CardSelectionWidgetState extends State<CardSelectionWidget>
                     borderRadius: BorderRadius.circular(cornerRadius),
                     boxShadow: [
                       BoxShadow(
-                        spreadRadius: 6.0,
-                        blurRadius: 6.0,
+                        spreadRadius: 3.0,
+                        blurRadius: 3.0,
                         color: move.traits.normalColour,
-                      )
-                    ]
-                  )
+                      ),
+                    ],
+                  ),
                 ),
                 CardFrontWidget(
                   card: move.card.data,
@@ -503,7 +501,7 @@ class _CardSelectionWidgetState extends State<CardSelectionWidget>
                   decoration: BoxDecoration(
                     color: move.traits.normalColour.withOpacity(0.2),
                     borderRadius: BorderRadius.circular(cornerRadius),
-                  )
+                  ),
                 ),
                 if (move.pass) DecoratedBox(
                   decoration: BoxDecoration(
@@ -516,13 +514,13 @@ class _CardSelectionWidgetState extends State<CardSelectionWidget>
                       style: TextStyle(
                         fontSize: min(48.0, 80.0 * (constraints.maxHeight/CardWidget.CARD_HEIGHT)),
                         shadows: textStyle.shadows?.map((s) => s.scale(4 * (constraints.maxHeight/CardWidget.CARD_HEIGHT))).toList()
-                      )
-                    )
-                  )
-                )
-              ]
+                      ),
+                    ),
+                  ),
+                ),
+              ],
             );
-          }
+          },
         );
         _prevFront = newFront;
         return newFront;
@@ -602,18 +600,43 @@ class _CardSelectionWidgetState extends State<CardSelectionWidget>
   }
 }
 
-class CardSelectionConfirmButton extends StatelessWidget {
-  final TableturfBattle battle;
+class CardSelectionConfirmButton extends StatefulWidget {
   final bool loopAnimation;
 
   const CardSelectionConfirmButton({
     super.key,
-    required this.battle,
     required this.loopAnimation,
   });
 
-  void _confirmMove() {
-    battle.confirmMove();
+  @override
+  State<CardSelectionConfirmButton> createState() => _CardSelectionConfirmButtonState();
+}
+
+class _CardSelectionConfirmButtonState extends State<CardSelectionConfirmButton> {
+  late final TableturfBattleController controller;
+  late final StreamSubscription<BattleEvent> battleSubscription;
+  final ValueNotifier<bool> moveHasBeenPlayed = ValueNotifier(false);
+
+  @override
+  void initState() {
+    super.initState();
+    controller = TableturfBattle.getControllerOf(context);
+    battleSubscription = TableturfBattle.listen(context, _onBattleEvent);
+  }
+
+  @override
+  void dispose() {
+    battleSubscription.cancel();
+    super.dispose();
+  }
+
+  Future<void> _onBattleEvent(BattleEvent event) async {
+    switch (event) {
+      case MoveConfirm(:final playerID) when playerID == controller.player.id:
+        moveHasBeenPlayed.value = true;
+      case TurnEnd():
+        moveHasBeenPlayed.value = false;
+    }
   }
 
   Widget _buildButton(BuildContext context) {
@@ -645,12 +668,8 @@ class CardSelectionConfirmButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final selectionWidget = CardSelectionWidget(
-      battle: battle,
-      player: battle.yellow,
-      moveNotifier: battle.yellowMoveNotifier,
-      tileColour: Palette.tileYellow,
-      tileSpecialColour: Palette.tileYellowSpecial,
-      loopAnimation: loopAnimation,
+      player: controller.player,
+      loopAnimation: widget.loopAnimation,
     );
     return Stack(
       fit: StackFit.expand,
@@ -658,37 +677,38 @@ class CardSelectionConfirmButton extends StatelessWidget {
         selectionWidget,
         AnimatedBuilder(
           animation: Listenable.merge([
-            battle.moveCardNotifier,
-            battle.yellowMoveNotifier,
+            controller.moveCardNotifier,
+            controller.moveIsValidNotifier,
+            moveHasBeenPlayed,
           ]),
           builder: (context, child) {
-            final card = battle.moveCardNotifier.value;
-            final move = battle.yellowMoveNotifier.value;
-            if (card == null || move != null) {
+            final card = controller.moveCardNotifier.value?.data;
+            final movePlayed = moveHasBeenPlayed.value;
+            if (card == null || movePlayed) {
               return Container();
             }
             return CardFrontWidget(
-              card: card.data,
-              traits: battle.yellow.traits,
+              card: card,
+              traits: controller.player.traits,
             );
           }
         ),
         AnimatedBuilder(
-          animation: battle.yellowMoveNotifier,
+          animation: moveHasBeenPlayed,
           child: ValueListenableBuilder(
-            valueListenable: battle.moveIsValidNotifier,
+            valueListenable: controller.moveIsValidNotifier,
             child: GestureDetector(
-              onTap: _confirmMove,
+              onTap: () => controller.confirmMove(),
               child: _buildButton(context),
             ),
-            builder: (_, bool highlight, button) => AnimatedOpacity(
-              opacity: highlight ? 1 : 0,
+            builder: (_, bool valid, button) => AnimatedOpacity(
+              opacity: valid ? 1 : 0,
               duration: const Duration(milliseconds: 150),
               child: button,
-            )
+            ),
           ),
           builder: (context, child) {
-            if (battle.yellowMoveNotifier.value != null) {
+            if (moveHasBeenPlayed.value) {
               return Container();
             }
             return child!;

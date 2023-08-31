@@ -4,23 +4,23 @@ import 'dart:ui';
 
 import 'package:collection/collection.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:tableturf_mobile/src/audio/sounds.dart';
 import 'package:logging/logging.dart' hide Level;
 import 'package:provider/provider.dart';
 
 import 'package:tableturf_mobile/src/audio/audio_controller.dart';
 import 'package:tableturf_mobile/src/components/popup_transition_painter.dart';
+import 'package:tableturf_mobile/src/components/tableturf_controller_mixin.dart';
 import 'package:tableturf_mobile/src/game_internals/battle.dart';
-import 'package:tableturf_mobile/src/game_internals/card.dart';
 import 'package:tableturf_mobile/src/game_internals/move.dart';
 import 'package:tableturf_mobile/src/game_internals/player.dart';
-import 'package:tableturf_mobile/src/game_internals/tile.dart';
 import 'package:tableturf_mobile/src/components/multi_choice_prompt.dart';
+import 'package:tableturf_mobile/src/components/tableturf_battle.dart';
 import 'package:tableturf_mobile/src/settings/settings.dart';
 import 'package:tableturf_mobile/src/style/constants.dart';
 import 'package:tableturf_mobile/src/style/my_transition.dart';
 
+import '../audio/songs.dart';
 import '../components/exact_grid.dart';
 import '../game_internals/opponentAI.dart';
 import 'session_end.dart';
@@ -199,7 +199,8 @@ class _CardDeckSlice extends StatelessWidget {
 
 class PlaySessionScreen extends StatefulWidget {
   final String boardHeroTag;
-  final TableturfBattle battle;
+  final LocalTableturfBattle battle;
+  final TableturfBattleController controller;
   final void Function()? onWin, onLose;
   final Future<void> Function(BuildContext)? onPostGame;
   final Completer sessionCompleter;
@@ -210,6 +211,7 @@ class PlaySessionScreen extends StatefulWidget {
     required this.sessionCompleter,
     required this.boardHeroTag,
     required this.battle,
+    required this.controller,
     required this.showXpPopup,
     this.onWin,
     this.onLose,
@@ -221,10 +223,12 @@ class PlaySessionScreen extends StatefulWidget {
 }
 
 class _PlaySessionScreenState extends State<PlaySessionScreen>
-    with TickerProviderStateMixin {
+    with TickerProviderStateMixin, TableturfBattleMixin {
   static final _log = Logger('PlaySessionScreenState');
 
-  final GlobalKey _boardTileKey = GlobalKey(debugLabel: "InputArea");
+  final GlobalKey inputAreaKey = GlobalKey(debugLabel: "InputArea");
+  TableturfBattleController get controller => widget.controller;
+  TableturfBattleModel get battle => widget.battle;
   final GlobalKey _blueSelectionKey =
       GlobalKey(debugLabel: "BlueSelectionWidget");
   final GlobalKey _yellowSelectionKey =
@@ -236,9 +240,9 @@ class _PlaySessionScreenState extends State<PlaySessionScreen>
   PointerDeviceKind? pointerKind;
   bool _lockInputs = true;
   late final ValueNotifier<AppLifecycleState> lifecycleNotifier;
-
-  final ValueNotifier<int?> newYellowScoreNotifier = ValueNotifier(null);
-  final ValueNotifier<int?> newBlueScoreNotifier = ValueNotifier(null);
+  late final StreamController<BattleEvent> eventBroadcast;
+  final AsyncEvent backgroundEvent = AsyncEvent();
+  Completer<HandRedraw> redrawCompleter = Completer();
 
   late final AnimationController _turnFadeController;
   late final AnimationController _scoreFadeController;
@@ -271,12 +275,14 @@ class _PlaySessionScreenState extends State<PlaySessionScreen>
     lifecycleNotifier =
         Provider.of<ValueNotifier<AppLifecycleState>>(context, listen: false);
     lifecycleNotifier.addListener(_setBackgroundFlag);
-    widget.battle.endOfGameNotifier.addListener(_onGameEnd);
-    widget.battle.specialMoveNotifier.addListener(_onSpecialMove);
+    _setBackgroundFlag();
+    eventBroadcast = StreamController.broadcast();
 
     if (widget.battle.playerAI != null) {
-      widget.battle.playerControlLock.value = false;
-      widget.battle.playerControlLock.addListener(_resetPlayerLock);
+      widget.controller.playerControlIsLocked.value = true;
+      widget.controller.playerControlIsLocked.addListener(_resetPlayerLock);
+    } else {
+      widget.controller.playerControlIsLocked.value = false;
     }
 
     _scoreFadeController = AnimationController(
@@ -496,20 +502,18 @@ class _PlaySessionScreenState extends State<PlaySessionScreen>
       vsync: this,
     );
     deckPopupOverlay = OverlayEntry(builder: (_) {
-      return DeckPopupOverlay(
-        popupController: _deckPopupController,
-        player: widget.battle.yellow,
+      return TableturfBattle(
+        eventStream: eventBroadcast.stream,
+        controller: widget.controller,
+        child: DeckPopupOverlay(
+          popupController: _deckPopupController,
+          player: widget.battle.player,
+        ),
       );
     });
 
-    widget.battle.moveIsValidNotifier.addListener(_calculateNewScores);
-    widget.battle.playerControlLock.addListener(_calculateNewScores);
-    widget.battle.moveRotationNotifier.addListener(_calculateNewScores);
-    widget.battle.moveLocationNotifier.addListener(_calculateNewScores);
-    widget.battle.moveCardNotifier.addListener(_calculateNewScores);
-    widget.battle.movePassNotifier.addListener(_calculateNewScores);
-    widget.battle.moveSpecialNotifier.addListener(_calculateNewScores);
-
+    _monitorBattleEvents();
+    _monitorEventSounds();
     _playInitSequence();
   }
 
@@ -517,16 +521,8 @@ class _PlaySessionScreenState extends State<PlaySessionScreen>
   void dispose() {
     deckPopupOverlay.remove();
     lifecycleNotifier.removeListener(_setBackgroundFlag);
-    widget.battle.endOfGameNotifier.removeListener(_onGameEnd);
-    widget.battle.specialMoveNotifier.removeListener(_onSpecialMove);
-    widget.battle.moveIsValidNotifier.removeListener(_calculateNewScores);
-    widget.battle.playerControlLock.removeListener(_calculateNewScores);
-    widget.battle.playerControlLock.removeListener(_resetPlayerLock);
-    widget.battle.moveRotationNotifier.removeListener(_calculateNewScores);
-    widget.battle.moveLocationNotifier.removeListener(_calculateNewScores);
-    widget.battle.moveCardNotifier.removeListener(_calculateNewScores);
-    widget.battle.movePassNotifier.removeListener(_calculateNewScores);
-    widget.battle.moveSpecialNotifier.removeListener(_calculateNewScores);
+    widget.controller.playerControlIsLocked.removeListener(_resetPlayerLock);
+    eventBroadcast.close();
     _outroController.dispose();
     _turnFadeController.dispose();
     _scoreFadeController.dispose();
@@ -539,7 +535,132 @@ class _PlaySessionScreenState extends State<PlaySessionScreen>
   }
 
   void _resetPlayerLock() {
-    widget.battle.playerControlLock.value = false;
+    widget.controller.playerControlIsLocked.value = true;
+  }
+
+  Future<void> _monitorBattleEvents() async {
+    await for (final event in widget.battle.eventStream) {
+      final battle = widget.battle;
+      final controller = widget.controller;
+      _log.info("Waiting for background event...");
+      await backgroundEvent.wait();
+      _log.info("Battle event: ${event.runtimeType.toString()}");
+      switch (event) {
+        case HandRedraw():
+          redrawCompleter.complete(event);
+        case MoveConfirm():
+          eventBroadcast.add(event);
+        case Turn(:final moves, :final events):
+          if (moves.values.any((m) => m.special)) {
+            await _onSpecialMove(moves);
+          }
+          final playerMove = moves[controller.player.id]!;
+          playerMove.card.hasBeenPlayed = true;
+          eventBroadcast.add(TurnStart(moves));
+          _checkMusicChange(events);
+          for (final turnEvent in events) {
+            _log.info("Waiting for background event...");
+            await backgroundEvent.wait();
+            _log.info("Turn event: ${turnEvent.runtimeType.toString()}");
+            switch (turnEvent) {
+              case TurnCountTick(:final newTurnCount) when newTurnCount == 0:
+                await _onGameEnd();
+                return;
+              case UpdateHand(:final handIndex, :final deckIndex):
+                final handCardNotifier = controller.playerHand[handIndex];
+                final deckCard = controller.playerDeck[deckIndex];
+                handCardNotifier.value?.isHeld = false;
+                deckCard.isHeld = true;
+                handCardNotifier.value = deckCard;
+                eventBroadcast.add(turnEvent);
+              case PlayerSpecialUpdate(:final specialDiffs):
+                controller.playerSpecial += specialDiffs[controller.player.id] ?? 0;
+                eventBroadcast.add(turnEvent);
+              default:
+                eventBroadcast.add(turnEvent);
+            }
+            await Future.delayed(turnEvent.duration);
+          }
+          controller.reset();
+          eventBroadcast.add(const TurnEnd());
+          battle.runAI();
+      }
+    }
+  }
+
+  Future<void> _monitorEventSounds() async {
+    final audioController = AudioController();
+    final controller = widget.controller;
+    await for (final event in eventBroadcast.stream) {
+      switch (event) {
+        case MoveConfirm(:final playerID) when playerID == controller.player.id:
+          if (controller.movePassNotifier.value) {
+            audioController.playSfx(SfxType.confirmMovePass);
+          } else if (controller.moveSpecialNotifier.value) {
+            audioController.playSfx(SfxType.confirmMoveSpecial);
+          } else {
+            audioController.playSfx(SfxType.confirmMoveSucceed);
+          }
+        case MoveConfirm():
+          // TODO: replace with opponent move confirm
+          audioController.playSfx(SfxType.confirmMoveSucceed);
+        case RevealCards():
+          audioController.playSfx(SfxType.cardFlip);
+        case BoardTilesUpdate(:final type):
+          switch (type) {
+            case BoardTileUpdateType.normal:
+              audioController.playSfx(SfxType.normalMove);
+            case BoardTileUpdateType.overlap:
+              audioController.playSfx(SfxType.normalMoveOverlap);
+            case BoardTileUpdateType.conflict:
+              audioController.playSfx(SfxType.normalMoveConflict);
+            case BoardTileUpdateType.special:
+              audioController.playSfx(SfxType.specialMove);
+            case BoardTileUpdateType.silent:
+              break;
+          }
+        case BoardSpecialUpdate():
+          audioController.playSfx(SfxType.specialActivate);
+        case ScoreUpdate():
+          audioController.playSfx(SfxType.counterUpdate);
+        case PlayerSpecialUpdate(:final specialDiffs):
+          if (specialDiffs.values.any((s) => s > 0)) {
+            audioController.playSfx(SfxType.gainSpecial);
+          }
+        case ClearMoves():
+          audioController.playSfx(SfxType.cardDiscard);
+        case TurnCountTick(:final newTurnCount):
+          if (newTurnCount > 3) {
+            audioController.playSfx(SfxType.turnCountNormal);
+          } else {
+            audioController.playSfx(SfxType.turnCountEnding);
+          }
+      }
+    }
+  }
+
+  Future<void> _checkMusicChange(List<BattleEvent> events) async {
+    final turnCountTick = events.firstWhereOrNull((element) => element is TurnCountTick);
+    final turnCount = (turnCountTick as TurnCountTick?)?.newTurnCount;
+    if (turnCount == 3) {
+      final audioController = AudioController();
+      const musicOffset = Duration(milliseconds: 500);
+      const musicFadeTime = Duration(milliseconds: 1300);
+      const musicSilenceTime = Duration(milliseconds: 200);
+      final eventsDuration = events.fold(
+          Duration.zero,
+              (Duration d, e) => d + e.duration
+      ) - musicOffset;
+
+      await Future<void>.delayed(eventsDuration - (musicFadeTime + musicSilenceTime));
+      await audioController.stopSong(fadeDuration: musicFadeTime);
+      await Future.wait([
+        audioController.loadSong(SongType.last3Turns),
+        Future<void>.delayed(musicSilenceTime),
+      ]);
+      await audioController.startSong();
+    }
+
   }
 
   Future<void> _playInitSequence() async {
@@ -548,25 +669,12 @@ class _PlaySessionScreenState extends State<PlaySessionScreen>
     // complains about running markNeedsBuild during a build and dies
     await Future.delayed(const Duration(milliseconds: 100));
     await Future.wait<void>([
-      for (final card in battle.yellow.deck)
+      battle.startGame(),
+      for (final card in battle.playerDeck)
         precacheImage(AssetImage(card.designSprite), context),
       Future.delayed(const Duration(milliseconds: 500)),
     ]);
     final audioController = AudioController();
-
-    // handle blue since it doesnt matter anyway
-    final blue = battle.blue;
-    for (var i = 0; i < 4; i++) {
-      final newCard = blue.deck
-          .where((card) => !card.isHeld && !card.hasBeenPlayed)
-          .toList()
-          .random();
-      newCard
-        ..isHeld = true
-        ..isPlayable = getMoves(battle.board, newCard).isNotEmpty
-        ..isPlayableSpecial = false;
-      blue.hand[i].value = newCard;
-    }
 
     await _deckScaleController.forward(from: 0.0);
     await _dealHand();
@@ -583,7 +691,7 @@ class _PlaySessionScreenState extends State<PlaySessionScreen>
       );
     }
     if (redrawChoice == 1) {
-      for (final card in battle.yellow.hand) {
+      for (final card in widget.controller.playerHand) {
         final heldCard = card.value;
         if (heldCard != null) {
           heldCard
@@ -593,6 +701,8 @@ class _PlaySessionScreenState extends State<PlaySessionScreen>
         }
         card.value = null;
       }
+      redrawCompleter = Completer();
+      battle.requestRedraw();
       await Future<void>.delayed(const Duration(milliseconds: 150));
       await _dealHand();
     }
@@ -607,47 +717,37 @@ class _PlaySessionScreenState extends State<PlaySessionScreen>
       _lockInputs = false;
       Overlay.of(context).insert(deckPopupOverlay);
     });
-    widget.battle.runBlueAI();
-    if (widget.battle.playerAI != null) {
-      widget.battle.runYellowAI();
-    }
+    widget.battle.runAI();
   }
 
   Future<void> _dealHand() async {
-    final battle = widget.battle;
-    final yellow = battle.yellow;
+    final controller = widget.controller;
 
+    final handRedraw = await redrawCompleter.future;
     final audioController = AudioController();
     audioController.playSfx(SfxType.dealHand);
     _deckShuffleController.forward(from: 0.0);
     await Future<void>.delayed(const Duration(milliseconds: 800));
-    for (var i = 0; i < 4; i++) {
-      final newCard = yellow.deck
-          .where((card) => !card.isHeld && !card.hasBeenPlayed)
-          .toList()
-          .random();
+    for (final (i, deckIndex) in handRedraw.deckIndexes.indexed) {
+      final newCard = controller.playerDeck[deckIndex];
       newCard
         ..isHeld = true
-        ..isPlayable = getMoves(battle.board, newCard).isNotEmpty
+        ..isPlayable = getMoves(controller.board, newCard).isNotEmpty
         ..isPlayableSpecial = false;
-      yellow.hand[i].value = newCard;
+      controller.playerHand[i].value = newCard;
       await Future<void>.delayed(const Duration(milliseconds: 200));
     }
   }
 
   void _setBackgroundFlag() {
     final appLifecycleState = lifecycleNotifier.value;
-    switch (appLifecycleState) {
-      case AppLifecycleState.paused:
-        widget.battle.backgroundEvent.flag = false;
-        break;
-      default:
-        widget.battle.backgroundEvent.flag = true;
-        break;
-    }
+    backgroundEvent.flag = switch (appLifecycleState) {
+      AppLifecycleState.paused => false,
+      _ => true,
+    };
   }
 
-  Future<void> _onSpecialMove() async {
+  Future<void> _onSpecialMove(Map<PlayerID, TableturfMove> moves) async {
     _log.info("special move sequence started");
     final overlayState = Overlay.of(context);
     if (lifecycleNotifier.value == AppLifecycleState.paused) {
@@ -655,10 +755,11 @@ class _PlaySessionScreenState extends State<PlaySessionScreen>
       return;
     }
     final animationLayer = OverlayEntry(builder: (_) {
+      final battle = widget.battle;
       final mediaQuery = MediaQuery.of(context);
       final isLandscape = mediaQuery.orientation == Orientation.landscape;
-      final blueMove = widget.battle.blueMoveNotifier.value!;
-      final yellowMove = widget.battle.yellowMoveNotifier.value!;
+      final blueMove = moves[battle.opponent.id]!;
+      final yellowMove = moves[battle.player.id]!;
       final yellowSpecial = yellowMove.special;
       final blueSpecial = blueMove.special;
 
@@ -945,12 +1046,14 @@ class _PlaySessionScreenState extends State<PlaySessionScreen>
     widget.battle.updateScores();
     _log.info("outro sequence done");
 
+    widget.controller.reset();
     Navigator.of(context).pushReplacement(PageRouteBuilder(
       pageBuilder: (context, animation, secondaryAnimation) {
         return PlaySessionEnd(
           key: const Key('play session end'),
           sessionCompleter: widget.sessionCompleter,
           battle: widget.battle,
+          controller: widget.controller,
           boardHeroTag: widget.boardHeroTag,
           onWin: widget.onWin,
           onLose: widget.onLose,
@@ -975,163 +1078,6 @@ class _PlaySessionScreenState extends State<PlaySessionScreen>
     ));
   }
 
-  void _calculateNewScores() {
-    final battle = widget.battle;
-    if (!battle.moveIsValidNotifier.value ||
-        !battle.playerControlLock.value ||
-        battle.movePassNotifier.value) {
-      newBlueScoreNotifier.value = null;
-      newYellowScoreNotifier.value = null;
-      return;
-    }
-    final card = battle.moveCardNotifier.value!;
-    final location = battle.moveLocationNotifier.value!;
-    final rot = battle.moveRotationNotifier.value;
-    final selectPoint = rotatePatternPoint(
-      card.selectPoint,
-      card.minPattern.length,
-      card.minPattern[0].length,
-      rot,
-    );
-    final locationX = location.x - selectPoint.x;
-    final locationY = location.y - selectPoint.y;
-    final move = TableturfMove(
-      card: card,
-      rotation: rot,
-      x: locationX,
-      y: locationY,
-      pass: false,
-      special: battle.moveSpecialNotifier.value,
-    );
-    final board = battle.board.copy();
-    applyMoveToBoard(board, move);
-    int newYellowScore = 0;
-    int newBlueScore = 0;
-    for (final row in board) {
-      for (final tile in row) {
-        switch (tile) {
-          case TileState.yellow:
-          case TileState.yellowSpecial:
-            newYellowScore += 1;
-            break;
-          case TileState.blue:
-          case TileState.blueSpecial:
-            newBlueScore += 1;
-            break;
-          default:
-            break;
-        }
-      }
-    }
-    newYellowScoreNotifier.value = newYellowScore;
-    newBlueScoreNotifier.value = newBlueScore;
-  }
-
-  void _updateLocation(
-    Offset delta,
-    PointerDeviceKind? pointerKind,
-    BuildContext rootContext,
-  ) {
-    final battle = widget.battle;
-    if (battle.yellowMoveNotifier.value != null &&
-        battle.moveCardNotifier.value != null) {
-      return;
-    }
-    final board = battle.board;
-    if (piecePosition != null) {
-      piecePosition = piecePosition! + delta;
-    }
-
-    final boardContext = _boardTileKey.currentContext!;
-    // find the coordinates of the board within the input area
-    final boardLocation = (boardContext.findRenderObject()! as RenderBox)
-        .localToGlobal(Offset.zero, ancestor: rootContext.findRenderObject());
-    final boardTileStep = tileSize;
-    final newX =
-        ((piecePosition!.dx - boardLocation.dx) / boardTileStep).floor();
-    final newY =
-        ((piecePosition!.dy - boardLocation.dy) / boardTileStep).floor();
-    final newCoords = Coords(
-      newX.clamp(0, board[0].length - 1),
-      newY.clamp(0, board.length - 1),
-    );
-    if ((newY < 0 ||
-            newY >= board.length ||
-            newX < 0 ||
-            newX >= board[0].length) &&
-        pointerKind == PointerDeviceKind.mouse) {
-      battle.moveLocationNotifier.value = null;
-      // if pointer is touch, let the position remain
-    } else if (battle.moveLocationNotifier.value != newCoords) {
-      final audioController = AudioController();
-      if (battle.moveCardNotifier.value != null &&
-          !battle.movePassNotifier.value) {
-        audioController.playSfx(SfxType.cursorMove);
-      }
-      battle.moveLocationNotifier.value = newCoords;
-    }
-  }
-
-  void _resetPiecePosition(BuildContext rootContext) {
-    final battle = widget.battle;
-    final boardContext = _boardTileKey.currentContext!;
-    final boardTileStep = tileSize;
-    final boardLocation =
-        (boardContext.findRenderObject()! as RenderBox).localToGlobal(
-      Offset.zero,
-      ancestor: rootContext.findRenderObject(),
-    );
-    if (battle.moveLocationNotifier.value == null) {
-      battle.moveLocationNotifier.value = Coords(
-        battle.board[0].length ~/ 2,
-        battle.board.length ~/ 2,
-      );
-    }
-    final pieceLocation = battle.moveLocationNotifier.value!;
-    piecePosition = Offset(
-      boardLocation.dx +
-          (pieceLocation.x * boardTileStep) +
-          (boardTileStep / 2),
-      boardLocation.dy +
-          (pieceLocation.y * boardTileStep) +
-          (boardTileStep / 2),
-    );
-  }
-
-  void _onHover(PointerHoverEvent details) {
-    if (_lockInputs) return;
-
-    if (details.kind == PointerDeviceKind.mouse) {
-      piecePosition = details.localPosition;
-      pointerKind = details.kind;
-      _updateLocation(details.delta, details.kind, context);
-    }
-  }
-
-  void _onDragUpdate(DragUpdateDetails details, BuildContext context) {
-    if (_lockInputs) return;
-    _updateLocation(details.delta, pointerKind, context);
-  }
-
-  void _onDragStart(DragStartDetails details, BuildContext context) {
-    if (_lockInputs) return;
-
-    _resetPiecePosition(context);
-    pointerKind = details.kind;
-    _updateLocation(Offset.zero, pointerKind, context);
-  }
-
-  void _onTap() {
-    final battle = widget.battle;
-    if (battle.playerControlLock.value) {
-      if (pointerKind == PointerDeviceKind.mouse) {
-        battle.confirmMove();
-      } else {
-        battle.rotateRight();
-      }
-    }
-  }
-
   Future<void> _showDeckPopup() async {
     await _deckPopupController.forward();
   }
@@ -1140,39 +1086,17 @@ class _PlaySessionScreenState extends State<PlaySessionScreen>
     await _deckPopupController.reverse();
   }
 
-  KeyEventResult _handleKeyPress(FocusNode node, RawKeyEvent event) {
-    if (_lockInputs) return KeyEventResult.ignored;
-
-    final battle = widget.battle;
-    if (event is RawKeyDownEvent) {
-      if (event.logicalKey == LogicalKeyboardKey.keyQ) {
-        if (!battle.playerControlLock.value) {
-          return KeyEventResult.ignored;
-        }
-        battle.rotateLeft();
-        return KeyEventResult.handled;
-      }
-      if (event.logicalKey == LogicalKeyboardKey.keyE) {
-        if (!battle.playerControlLock.value) {
-          return KeyEventResult.ignored;
-        }
-        battle.rotateRight();
-        return KeyEventResult.handled;
-      }
-    }
-    return KeyEventResult.ignored;
-  }
-
   @override
   Widget build(BuildContext context) {
     final battle = widget.battle;
+    final controller = widget.controller;
     final settings = context.watch<Settings>();
     final mediaQuery = MediaQuery.of(context);
 
     final boardWidget = buildBoardWidget(
-      battle: battle,
-      key: _boardTileKey,
+      key: inputAreaKey,
       onTileSize: (ts) => tileSize = ts,
+      controller: controller,
       loopAnimation: settings.continuousAnimation.value,
       boardHeroTag: widget.boardHeroTag,
     );
@@ -1181,7 +1105,7 @@ class _PlaySessionScreenState extends State<PlaySessionScreen>
       child: AnimatedBuilder(
         animation: _turnFadeController,
         child: TurnCounter(
-          battle: battle,
+          initialTurnCount: widget.battle.turnCount,
         ),
         builder: (_, child) {
           return Transform.scale(
@@ -1199,9 +1123,8 @@ class _PlaySessionScreenState extends State<PlaySessionScreen>
       child: AnimatedBuilder(
         animation: _scoreFadeController,
         child: ScoreCounter(
-          scoreNotifier: battle.blueCountNotifier,
-          newScoreNotifier: newBlueScoreNotifier,
-          traits: const BlueTraits(),
+          initialScore: widget.battle.playerScores[widget.battle.opponent.id]!,
+          player: widget.battle.opponent,
         ),
         builder: (_, child) {
           return Transform.scale(
@@ -1219,9 +1142,8 @@ class _PlaySessionScreenState extends State<PlaySessionScreen>
       child: AnimatedBuilder(
         animation: _scoreFadeController,
         child: ScoreCounter(
-          scoreNotifier: battle.yellowCountNotifier,
-          newScoreNotifier: newYellowScoreNotifier,
-          traits: const YellowTraits(),
+          initialScore: widget.battle.playerScores[widget.battle.player.id]!,
+          player: widget.battle.player,
         ),
         builder: (_, child) {
           return Transform.scale(
@@ -1235,7 +1157,7 @@ class _PlaySessionScreenState extends State<PlaySessionScreen>
       ),
     );
 
-    final cardWidgets = Iterable.generate(battle.yellow.hand.length, (i) {
+    final cardWidgets = Iterable.generate(controller.playerHand.length, (i) {
       return Center(
         child: Padding(
           padding: EdgeInsets.all(
@@ -1243,8 +1165,7 @@ class _PlaySessionScreenState extends State<PlaySessionScreen>
                   ? mediaQuery.size.width * 0.005
                   : mediaQuery.size.height * 0.005),
           child: CardWidget(
-            cardNotifier: battle.yellow.hand[i],
-            battle: battle,
+            cardNotifier: controller.playerHand[i],
           ),
         ),
       );
@@ -1273,22 +1194,22 @@ class _PlaySessionScreenState extends State<PlaySessionScreen>
 
     final passButton = GestureDetector(
       onTap: () {
-        if (!battle.playerControlLock.value) {
+        if (controller.playerControlIsLocked.value) {
           return;
         }
-        battle.moveCardNotifier.value = null;
-        battle.moveLocationNotifier.value = null;
-        battle.movePassNotifier.value = !battle.movePassNotifier.value;
-        battle.moveSpecialNotifier.value = false;
+        controller.moveCardNotifier.value = null;
+        controller.moveLocationNotifier.value = null;
+        controller.movePassNotifier.value = !controller.movePassNotifier.value;
+        controller.moveSpecialNotifier.value = false;
       },
       child: AspectRatio(
         aspectRatio: 3.5 / 1,
         child: AnimatedBuilder(
-          animation: battle.movePassNotifier,
+          animation: controller.movePassNotifier,
           builder: (_, __) => AnimatedContainer(
               duration: const Duration(milliseconds: 200),
               decoration: BoxDecoration(
-                color: battle.movePassNotifier.value
+                color: controller.movePassNotifier.value
                     ? Palette.inGameButtonSelected
                     : Palette.inGameButtonUnselected,
                 borderRadius: BorderRadius.all(Radius.circular(10)),
@@ -1304,12 +1225,12 @@ class _PlaySessionScreenState extends State<PlaySessionScreen>
 
     Widget fadeOnControlLock({Widget? child}) {
       return AnimatedBuilder(
-        animation: battle.playerControlLock,
+        animation: controller.playerControlIsLocked,
         child: child,
         builder: (context, child) {
           return AnimatedOpacity(
             duration: const Duration(milliseconds: 200),
-            opacity: battle.playerControlLock.value ? 1.0 : 0.5,
+            opacity: !controller.playerControlIsLocked.value ? 1.0 : 0.5,
             child: child,
           );
         },
@@ -1318,22 +1239,22 @@ class _PlaySessionScreenState extends State<PlaySessionScreen>
 
     final specialButton = GestureDetector(
       onTap: () {
-        if (!battle.playerControlLock.value) {
+        if (controller.playerControlIsLocked.value) {
           return;
         }
-        battle.moveCardNotifier.value = null;
-        battle.moveLocationNotifier.value = null;
-        battle.moveSpecialNotifier.value = !battle.moveSpecialNotifier.value;
-        battle.movePassNotifier.value = false;
+        controller.moveCardNotifier.value = null;
+        controller.moveLocationNotifier.value = null;
+        controller.moveSpecialNotifier.value = !controller.moveSpecialNotifier.value;
+        controller.movePassNotifier.value = false;
       },
       child: AspectRatio(
         aspectRatio: 3.5 / 1,
         child: AnimatedBuilder(
-          animation: battle.moveSpecialNotifier,
+          animation: controller.moveSpecialNotifier,
           builder: (_, __) => AnimatedContainer(
             duration: const Duration(milliseconds: 200),
             decoration: BoxDecoration(
-              color: battle.moveSpecialNotifier.value
+              color: controller.moveSpecialNotifier.value
                   ? Color.fromRGBO(216, 216, 0, 1)
                   : Color.fromRGBO(109, 161, 198, 1),
               borderRadius: BorderRadius.all(Radius.circular(10)),
@@ -1352,16 +1273,11 @@ class _PlaySessionScreenState extends State<PlaySessionScreen>
 
     final blueCardSelection = CardSelectionWidget(
       key: _blueSelectionKey,
-      battle: battle,
-      player: battle.blue,
-      moveNotifier: battle.blueMoveNotifier,
-      tileColour: Palette.tileBlue,
-      tileSpecialColour: Palette.tileBlueSpecial,
+      player: battle.opponent,
       loopAnimation: settings.continuousAnimation.value,
     );
     final yellowCardSelection = CardSelectionConfirmButton(
       key: _yellowSelectionKey,
-      battle: battle,
       loopAnimation: settings.continuousAnimation.value,
     );
 
@@ -1449,7 +1365,7 @@ class _PlaySessionScreenState extends State<PlaySessionScreen>
                                               shuffleBottomCardMove.value * width,
                                           child: _CardDeckSlice(
                                             cardSleeve:
-                                                widget.battle.yellow.cardSleeve,
+                                                battle.player.cardSleeve,
                                             isDarkened: true,
                                             width: width,
                                           ),
@@ -1459,7 +1375,7 @@ class _PlaySessionScreenState extends State<PlaySessionScreen>
                                               (shuffleTopCardMove.value) * width,
                                           child: _CardDeckSlice(
                                             cardSleeve:
-                                                widget.battle.yellow.cardSleeve,
+                                                battle.player.cardSleeve,
                                             isDarkened: false,
                                             width: width,
                                           ),
@@ -1498,11 +1414,11 @@ class _PlaySessionScreenState extends State<PlaySessionScreen>
                                           fit: BoxFit.contain,
                                           child: AnimatedBuilder(
                                             animation: Listenable.merge(
-                                                battle.yellow.hand),
+                                                controller.playerHand),
                                             builder: (_, __) {
                                               int remainingCards = 0;
                                               for (final card
-                                                  in battle.yellow.deck) {
+                                                  in controller.playerDeck) {
                                                 if (!card.isHeld &&
                                                     !card.hasBeenPlayed) {
                                                   remainingCards += 1;
@@ -1584,14 +1500,14 @@ class _PlaySessionScreenState extends State<PlaySessionScreen>
                         children: [
                           Container(
                               width: 5,
-                              color: battle.yellow.traits.normalColour,
+                              color: battle.player.traits.normalColour,
                               margin: const EdgeInsets.only(right: 6)),
-                          Text(battle.yellow.name, style: playerNameStyle),
+                          Text(battle.player.name, style: playerNameStyle),
                           const Spacer(),
-                          Text(battle.blue.name, style: playerNameStyle),
+                          Text(battle.opponent.name, style: playerNameStyle),
                           Container(
                               width: 5,
-                              color: battle.blue.traits.normalColour,
+                              color: battle.opponent.traits.normalColour,
                               margin: const EdgeInsets.only(left: 6)),
                         ]),
                   ),
@@ -1633,13 +1549,13 @@ class _PlaySessionScreenState extends State<PlaySessionScreen>
                   children: [
                     Container(
                         width: 5,
-                        color: battle.yellow.traits.specialColour,
+                        color: battle.player.traits.specialColour,
                         margin: const EdgeInsets.only(right: 6)),
                     RepaintBoundary(
                       child: FractionallySizedBox(
                         heightFactor: 0.5,
                         child: SpecialMeter(
-                          player: battle.yellow,
+                          player: battle.player,
                           direction: TextDirection.ltr,
                         ),
                       ),
@@ -1649,14 +1565,14 @@ class _PlaySessionScreenState extends State<PlaySessionScreen>
                       child: FractionallySizedBox(
                         heightFactor: 0.5,
                         child: SpecialMeter(
-                          player: battle.blue,
+                          player: battle.opponent,
                           direction: TextDirection.rtl,
                         ),
                       ),
                     ),
                     Container(
                         width: 5,
-                        color: battle.blue.traits.specialColour,
+                        color: battle.opponent.traits.specialColour,
                         margin: const EdgeInsets.only(left: 6)),
                   ]),
               ),
@@ -1738,7 +1654,7 @@ class _PlaySessionScreenState extends State<PlaySessionScreen>
                         alignment: Alignment(-0.85, -0.9),
                         child: FractionallySizedBox(
                           heightFactor: 1 / 3,
-                          child: SpecialMeter(player: battle.blue),
+                          child: SpecialMeter(player: battle.opponent),
                         ),
                       ),
                     ),
@@ -1775,7 +1691,7 @@ class _PlaySessionScreenState extends State<PlaySessionScreen>
                         alignment: Alignment(-0.85, 0.9),
                         child: FractionallySizedBox(
                           heightFactor: 1 / 3,
-                          child: SpecialMeter(player: battle.yellow),
+                          child: SpecialMeter(player: battle.player),
                         ),
                       ),
                     ),
@@ -1841,14 +1757,14 @@ class _PlaySessionScreenState extends State<PlaySessionScreen>
       ),
       child: Focus(
         autofocus: true,
-        onKey: _handleKeyPress,
+        onKey: handleKeyPress,
         child: MouseRegion(
-          onHover: _onHover,
+          onHover: onHover,
           child: GestureDetector(
             behavior: HitTestBehavior.translucent,
-            onTap: _onTap,
-            onPanStart: (details) => _onDragStart(details, context),
-            onPanUpdate: (details) => _onDragUpdate(details, context),
+            onTap: onTap,
+            onPanStart: (details) => onDragStart(details, context),
+            onPanUpdate: (details) => onDragUpdate(details, context),
             //onPointerHover: (details) => _onPointerHover(details, context),
             child: WillPopScope(
               onWillPop: () async {
@@ -1864,7 +1780,6 @@ class _PlaySessionScreenState extends State<PlaySessionScreen>
                   sfx: [SfxType.giveUpSelect, SfxType.menuButtonPress],
                 );
                 if (choice == 0) {
-                  battle.stopAllProgress = true;
                   widget.sessionCompleter.complete();
                   return true;
                 }
@@ -1872,7 +1787,11 @@ class _PlaySessionScreenState extends State<PlaySessionScreen>
               },
               child: Container(
                 color: Palette.backgroundPlaySession,
-                child: screenContents,
+                child: TableturfBattle(
+                  controller: widget.controller,
+                  eventStream: eventBroadcast.stream,
+                  child: screenContents
+                ),
               ),
             ),
           ),
@@ -1900,11 +1819,13 @@ class _DeckPopupOverlayState extends State<DeckPopupOverlay> {
   late final SnapshotController snapshotController = SnapshotController(
     allowSnapshotting: true,
   );
+  late final TableturfBattleController controller;
   late final Animation<double> deckPopupFade, deckPopupScale;
 
   @override
   void initState() {
     super.initState();
+    controller = TableturfBattle.getControllerOf(context);
     deckPopupFade = widget.popupController.drive(
       Tween(
         begin: 0.0,
@@ -1917,14 +1838,14 @@ class _DeckPopupOverlayState extends State<DeckPopupOverlay> {
         end: 1.0,
       ).chain(CurveTween(curve: Curves.easeOut)),
     );
-    for (final card in widget.player.hand) {
+    for (final card in controller.playerHand) {
       card.addListener(_onHandChange);
     }
   }
 
   @override
   void dispose() {
-    for (final card in widget.player.hand) {
+    for (final card in controller.playerHand) {
       card.removeListener(_onHandChange);
     }
     super.dispose();
@@ -1971,12 +1892,12 @@ class _DeckPopupOverlayState extends State<DeckPopupOverlay> {
               ),
               padding: EdgeInsets.all(8),
               child: ListenableBuilder(
-                listenable: Listenable.merge(widget.player.hand),
+                listenable: Listenable.merge(controller.playerHand),
                 builder: (_, __) => ExactGrid(
                   height: 5,
                   width: 3,
                   children: [
-                    for (final card in widget.player.deck)
+                    for (final card in controller.playerDeck)
                       Padding(
                         padding: const EdgeInsets.all(5),
                         child: HandCardWidget(
@@ -1997,6 +1918,7 @@ class _DeckPopupOverlayState extends State<DeckPopupOverlay> {
         ),
       );
     } else {
+      // TODO: landscape mode deck view
       screen = Container(
 
       );

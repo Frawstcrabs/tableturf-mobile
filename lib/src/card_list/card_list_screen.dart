@@ -5,14 +5,17 @@ import 'package:collection/collection.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:tableturf_mobile/src/components/multi_choice_prompt.dart';
 import 'package:tableturf_mobile/src/game_internals/player.dart';
 import 'package:tableturf_mobile/src/components/card_selection.dart';
 import 'package:tableturf_mobile/src/components/selection_button.dart';
 import 'package:tableturf_mobile/src/settings/settings.dart';
+import 'package:tableturf_mobile/src/shop/shop_buy_prompt.dart';
 
 import '../game_internals/card.dart';
 import '../components/card_widget.dart';
 import '../player_progress/player_progress.dart';
+import '../shop/shop_screen.dart';
 import '../style/constants.dart';
 import 'deck_list_screen.dart';
 
@@ -114,22 +117,34 @@ class _CardRarityDisplayState extends State<CardRarityDisplay>
   }
 }
 
-class CardPopup extends StatelessWidget {
+class CardPopup extends StatefulWidget {
   final TableturfCardData card;
   final bool isVisible;
+  final void Function()? onExit;
   const CardPopup({
     super.key,
     required this.card,
     required this.isVisible,
+    this.onExit,
   });
 
   @override
+  State<CardPopup> createState() => _CardPopupState();
+}
+
+class _CardPopupState extends State<CardPopup> {
+  Future<bool>? upgradePopup = null;
+  @override
   Widget build(BuildContext context) {
+    final playerProgress = PlayerProgress();
+    final cardLevel = playerProgress.unlockedCards[widget.card.ident];
     return LayoutBuilder(builder: (context, constraints) {
       const headerFlex = 6.0;
       const gapFlex = 0.5;
       const cardFlex = 32.0;
-      const flexSum = headerFlex + gapFlex + cardFlex;
+      const buttonFlex = 8.0;
+      const flexSum = headerFlex + gapFlex + cardFlex + gapFlex + buttonFlex;
+
       const boxLayoutRatio = CardWidget.CARD_WIDTH /
           (CardWidget.CARD_HEIGHT * (((flexSum * 2) - cardFlex) / flexSum));
       final realLayoutRatio = constraints.maxWidth / constraints.maxHeight;
@@ -143,43 +158,143 @@ class CardPopup extends StatelessWidget {
             aspectRatio: flexSum / headerFlex,
             child: Row(children: [
               Expanded(
-                  child: FittedBox(
-                      fit: BoxFit.fitHeight,
-                      alignment: Alignment.centerLeft,
-                      child: Text("No. ${card.num}",
-                          style: TextStyle(
-                            fontFamily: "Splatfont1",
-                            color: const Color.fromRGBO(192, 192, 192, 1.0),
-                            fontSize: 36,
-                          )))),
+                child: FittedBox(
+                  fit: BoxFit.fitHeight,
+                  alignment: Alignment.centerLeft,
+                  child: Text(
+                    "No. ${widget.card.num}",
+                    style: TextStyle(
+                      fontFamily: "Splatfont1",
+                      color: const Color.fromRGBO(192, 192, 192, 1.0),
+                      fontSize: 36,
+                    ),
+                  ),
+                ),
+              ),
               Expanded(
-                  child: Align(
-                alignment: Alignment.centerRight,
-                child: Transform.rotate(
-                  angle: 0.05 * pi,
-                  child: FractionallySizedBox(
+                child: Align(
+                  alignment: Alignment.centerRight,
+                  child: Transform.rotate(
+                    angle: 0.05 * pi,
+                    child: FractionallySizedBox(
                       heightFactor: 0.7,
                       child: AspectRatio(
                         aspectRatio: 3.0,
                         child: RepaintBoundary(
-                            child: CardRarityDisplay(rarity: card.rarity)),
-                      )),
+                          child: CardRarityDisplay(rarity: widget.card.rarity),
+                        ),
+                      ),
+                    ),
+                  ),
                 ),
-              ))
+              ),
             ]),
           ),
         ),
         SizedBox(
-            width: columnWidth,
-            child: AspectRatio(aspectRatio: flexSum / gapFlex)),
+          width: columnWidth,
+          child: AspectRatio(aspectRatio: flexSum / gapFlex),
+        ),
         SizedBox(
           width: columnWidth,
           child: CardFrontWidget(
-            card: card,
+            card: widget.card,
             traits: const YellowTraits(),
-            isVisible: isVisible,
+            isVisible: widget.isVisible,
           ),
-        )
+        ),
+        SizedBox(
+          width: columnWidth,
+          child: AspectRatio(aspectRatio: flexSum / gapFlex),
+        ),
+        SizedBox(
+          width: columnWidth,
+          child: AspectRatio(
+            aspectRatio: flexSum / buttonFlex,
+            child: Row(children: [
+              Expanded(
+                child: Center(
+                  child: SelectionButton(
+                    onPressStart: () async {
+                      upgradePopup = showShopBuyPrompt(
+                        context,
+                        builder: (ctx, designRatio) {
+                          return Stack(
+                            fit: StackFit.passthrough,
+                            children: [
+                              Padding(
+                                padding: EdgeInsets.all(30 * designRatio),
+                                child: FractionallySizedBox(
+                                  heightFactor: 0.15,
+                                  child: ShopItemPrice(cost: "500"),
+                                ),
+                              ),
+                              Align(
+                                alignment: Alignment(0, -0.125),
+                                child: FractionallySizedBox(
+                                  heightFactor: 0.45,
+                                  child: CardFrontWidget(
+                                    card: widget.card,
+                                    traits: const YellowTraits(),
+                                    isVisible: true,
+                                  ),
+                                ),
+                              ),
+                              Align(
+                                alignment: Alignment(0, -1.4),
+                                child: FractionallySizedBox(
+                                  heightFactor: 1/2,
+                                  child: Row(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      Text(
+                                        cardLevel == null
+                                            ? "Create this card?"
+                                            : "Upgrade?",
+                                        style: TextStyle(
+                                          fontSize: 30 * designRatio,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ],
+                          );
+                        },
+                      );
+                      return true;
+                    },
+                    onPressEnd: () async {
+                      final accepted = await upgradePopup!;
+                      upgradePopup = null;
+                      if (accepted) {
+                        print("upgrade selected");
+                      }
+                    },
+                    designRatio: 0.5,
+                    child: Text(cardLevel == null ? "Purchase" : "Upgrade"),
+                  ),
+                ),
+              ),
+              Expanded(
+                child: Center(
+                  child: SelectionButton(
+                    onPressStart: () async {
+                      return true;
+                    },
+                    onPressEnd: () async {
+                      widget.onExit?.call();
+                      return Future<void>.delayed(const Duration(milliseconds: 100));
+                    },
+                    designRatio: 0.5,
+                    child: Text("Back"),
+                  ),
+                ),
+              ),
+            ]),
+          ),
+        ),
       ]);
     });
   }
@@ -241,10 +356,11 @@ class CardListScreen extends StatefulWidget {
 }
 
 class _CardListScreenState extends State<CardListScreen>
-    with SingleTickerProviderStateMixin{
+    with SingleTickerProviderStateMixin {
   bool _lockButtons = false;
   late final TabController tabController;
-  late final ValueNotifier<CardGridViewSortMode> sortMode = ValueNotifier(CardGridViewSortMode.number);
+  late final ValueNotifier<CardGridViewSortMode> sortMode =
+      ValueNotifier(CardGridViewSortMode.number);
 
   @override
   void initState() {
@@ -325,8 +441,10 @@ class _CardListScreenState extends State<CardListScreen>
                     builder: (_, currentSortMode, __) => GestureDetector(
                       onTap: () {
                         sortMode.value = switch (currentSortMode) {
-                          CardGridViewSortMode.number => CardGridViewSortMode.size,
-                          CardGridViewSortMode.size => CardGridViewSortMode.number,
+                          CardGridViewSortMode.number =>
+                            CardGridViewSortMode.size,
+                          CardGridViewSortMode.size =>
+                            CardGridViewSortMode.number,
                         };
                       },
                       child: Container(
@@ -387,7 +505,8 @@ class _CardListScreenState extends State<CardListScreen>
               children: [
                 CardGridView(
                   cardList: officialCards,
-                  cardIsVisible: (c) => playerProgress.unlockedCards.contains(c.ident),
+                  cardIsVisible: (c) =>
+                      playerProgress.unlockedCards.containsKey(c.ident),
                   sortMode: currentSortMode,
                 ),
                 CardGridView(
@@ -489,7 +608,8 @@ class CardGridView extends StatefulWidget {
 }
 
 class _CardGridViewState extends State<CardGridView> {
-  final ValueNotifier<TableturfCardIdentifier?> _cardScrollNotifier = ValueNotifier(null);
+  final ValueNotifier<TableturfCardIdentifier?> _cardScrollNotifier =
+      ValueNotifier(null);
   late final Map<CardGridViewSortMode, List<TableturfCardData>> cardLists;
 
   @override
@@ -547,7 +667,6 @@ class _CardGridViewState extends State<CardGridView> {
     );
   }
 }
-
 
 class CardDisplayPopup extends StatefulWidget {
   final PageController pageController;
@@ -645,6 +764,7 @@ class _CardDisplayPopupState extends State<CardDisplayPopup>
                 child: CardPopup(
                   card: card,
                   isVisible: widget.cardIsVisible(card),
+                  onExit: onExit,
                 ),
               ),
             ),

@@ -3,6 +3,7 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 
 import '../game_internals/battle.dart';
+import 'tableturf_battle.dart';
 import 'board_widget.dart';
 import 'move_overlay.dart';
 
@@ -12,16 +13,16 @@ import 'move_overlay.dart';
  * needs to be built across 3 different pages
  */
 Widget buildBoardWidget({
-  required TableturfBattle battle,
   Key? key,
   void Function(double)? onTileSize,
   required bool loopAnimation,
+  required TableturfBattleController controller,
   required String boardHeroTag,
 }) {
   final boardBuilder = LayoutBuilder(
     builder: (context, constraints) {
       final mediaQuery = MediaQuery.of(context);
-      final board = battle.board;
+      final board = controller.board;
       final height = constraints.maxHeight.isFinite ? constraints.maxHeight : mediaQuery.size.height;
       final width = constraints.maxWidth.isFinite ? constraints.maxWidth : mediaQuery.size.width;
       final boardTileSize = min(
@@ -45,11 +46,9 @@ Widget buildBoardWidget({
           child: Stack(
             children: [
               BoardWidget(
-                battle,
                 tileSize: boardTileSize,
               ),
               MoveOverlayWidget(
-                battle,
                 tileSize: boardTileSize,
                 loopAnimation: loopAnimation,
               ),
@@ -68,7 +67,11 @@ Widget buildBoardWidget({
       // this makes it so the in-flight board is in the flight context, which does
       // change size between page
       //print("Building flight of screen $flightIdentifier");
-      return boardBuilder;
+      return TableturfBattle(
+        controller: controller,
+        eventStream: Stream.empty(),
+        child: boardBuilder
+      );
     },
     child: boardBuilder,
   );

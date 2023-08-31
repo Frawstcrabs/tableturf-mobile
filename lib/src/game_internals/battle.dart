@@ -4,6 +4,7 @@
 
 import 'dart:async';
 import 'dart:math';
+import 'package:collection/collection.dart';
 import 'package:flutter/foundation.dart';
 import 'package:logging/logging.dart';
 import 'package:tableturf_mobile/src/style/constants.dart';
@@ -18,46 +19,99 @@ import 'tile.dart';
 import 'move.dart';
 import 'player.dart';
 
-class BattleEvent {
-  Duration get duration => Duration.zero;
+abstract class BattleEvent {
   const BattleEvent();
+  Duration get duration => Duration.zero;
 }
 
-class BoardUpdate extends BattleEvent {
-  get duration => Durations.battleUpdateTiles;
-  final Map<Coords, TileState> updates;
-  final SfxType sfx;
+class HandRedraw extends BattleEvent {
+  final List<int> deckIndexes;
+  const HandRedraw(this.deckIndexes);
+}
 
-  const BoardUpdate(this.updates, this.sfx);
+class MoveConfirm extends BattleEvent {
+  final PlayerID playerID;
+
+  const MoveConfirm(this.playerID);
+  Duration get duration => Duration.zero;
+}
+
+class Turn extends BattleEvent {
+  final Map<PlayerID, TableturfMove> moves;
+  final List<BattleEvent> events;
+  const Turn(this.moves, this.events);
+}
+
+class TurnStart extends BattleEvent {
+  final Map<PlayerID, TableturfMove> moves;
+  const TurnStart(this.moves);
+}
+
+class RevealCards extends BattleEvent {
+  const RevealCards();
+  Duration get duration => const Duration(seconds: 1);
+}
+
+enum BoardTileUpdateType {
+  normal,
+  overlap,
+  conflict,
+  special,
+  silent,
+}
+
+class BoardTilesUpdate extends BattleEvent {
+  final Map<Coords, TileState> updates;
+  final BoardTileUpdateType type;
+
+  const BoardTilesUpdate(this.updates, this.type);
+  Duration get duration => const Duration(seconds: 1);
 }
 
 class BoardSpecialUpdate extends BattleEvent {
-  get duration => Durations.battleUpdateSpecials;
   final Set<Coords> updates;
 
   const BoardSpecialUpdate(this.updates);
+  Duration get duration => const Duration(seconds: 1);
 }
 
 class ScoreUpdate extends BattleEvent {
-  get duration => Durations.battleUpdateScores;
-  final int yellowScore, blueScore;
-
-  const ScoreUpdate(this.yellowScore, this.blueScore);
+  final Map<PlayerID, int> newScores;
+  const ScoreUpdate(this.newScores);
+  Duration get duration => Durations.battleUpdateScores;
 }
 
 class PlayerSpecialUpdate extends BattleEvent {
-  final int yellowSpecial, blueSpecial;
+  final Map<PlayerID, int> specialDiffs;
 
-  const PlayerSpecialUpdate(this.yellowSpecial, this.blueSpecial);
+  const PlayerSpecialUpdate(this.specialDiffs);
 }
 
-class EndTurn extends BattleEvent {
-  const EndTurn();
+class UpdateHand extends BattleEvent {
+  final int handIndex;
+  final int deckIndex;
+  Duration get duration => const Duration(milliseconds: 200);
+  const UpdateHand(this.handIndex, this.deckIndex);
+}
+
+class ClearMoves extends BattleEvent {
+  Duration get duration => const Duration(milliseconds: 100);
+  const ClearMoves();
+}
+
+class TurnCountTick extends BattleEvent {
+  final int newTurnCount;
+  const TurnCountTick(this.newTurnCount);
+  Duration get duration => const Duration(seconds: 1);
+}
+
+class TurnEnd extends BattleEvent {
+  const TurnEnd();
 }
 
 class NopEvent extends BattleEvent {
-  get duration => Durations.battleNopEvent;
   const NopEvent();
+  Duration get duration => const Duration(seconds: 1);
 }
 
 class AsyncEvent {
@@ -79,303 +133,319 @@ class AsyncEvent {
   Future<void> wait() => _completer.future;
 }
 
-class TableturfBattle {
-  static final _log = Logger('TableturfBattle');
+class TableturfBattleController {
   final ValueNotifier<TableturfCard?> moveCardNotifier = ValueNotifier(null);
   final ValueNotifier<Coords?> moveLocationNotifier = ValueNotifier(null);
   final ValueNotifier<int> moveRotationNotifier = ValueNotifier(0);
   final ValueNotifier<bool> moveSpecialNotifier = ValueNotifier(false);
   final ValueNotifier<bool> movePassNotifier = ValueNotifier(false);
-  final ValueNotifier<bool> moveIsValidNotifier = ValueNotifier(false);
+  final ValueNotifier<bool> _moveIsValidNotifier = ValueNotifier(false);
+  ValueListenable<bool> get moveIsValidNotifier => _moveIsValidNotifier;
+  late final Listenable moveChangeNotifier = Listenable.merge([
+    moveCardNotifier,
+    moveLocationNotifier,
+    moveRotationNotifier,
+    moveSpecialNotifier,
+    movePassNotifier,
+  ]);
 
-  final ValueNotifier<bool> revealCardsNotifier = ValueNotifier(false);
-  final ValueNotifier<bool> playerControlLock = ValueNotifier(true);
-  final ValueNotifier<Set<Coords>> boardChangeNotifier = ValueNotifier(Set());
-  final ValueNotifier<Set<Coords>> activatedSpecialsNotifier = ValueNotifier(Set());
-  final ChangeNotifier endOfGameNotifier = ChangeNotifier();
-  final ChangeNotifier specialMoveNotifier = ChangeNotifier();
-  bool stopAllProgress = false;
-  AsyncEvent backgroundEvent = AsyncEvent();
+  final ValueNotifier<bool> playerControlIsLocked = ValueNotifier(true);
 
-  final ValueNotifier<TableturfMove?> blueMoveNotifier = ValueNotifier(null);
-  final ValueNotifier<TableturfMove?> yellowMoveNotifier = ValueNotifier(null);
+  final TileGrid board;
+  final ValueNotifier<Set<Coords>> activatedSpecials = ValueNotifier(Set());
+  final TableturfPlayer player;
+  final List<TableturfCard> playerDeck;
+  final List<ValueNotifier<TableturfCard?>> playerHand = List.generate(4, (_) => ValueNotifier(null));
+  int playerSpecial = 0;
+  TableturfMove? _playerMove = null;
+  TableturfMove? get playerMove => _playerMove;
+  final TableturfBattleModel _model;
 
-  final ValueNotifier<int> yellowCountNotifier = ValueNotifier(1);
-  final ValueNotifier<int> blueCountNotifier = ValueNotifier(1);
-  final ValueNotifier<int> turnCountNotifier = ValueNotifier(kReleaseMode ? 12 : 1);
-  int _yellowSpecialCount = 0, _blueSpecialCount = 0;
-
-  final TableturfPlayer yellow;
-  final TableturfPlayer blue;
-  final AILevel aiLevel;
-  final AILevel? playerAI;
-
-  TileGrid board;
-  final TileGrid origBoard;
-
-  TableturfBattle({
-    required this.yellow,
-    required this.blue,
+  TableturfBattleController({
     required this.board,
-    required this.aiLevel,
-    this.playerAI,
-  }): origBoard = board.copy() {
-    backgroundEvent.flag = true;
-    moveCardNotifier.addListener(_updateMoveHighlight);
-    moveLocationNotifier.addListener(_updateMoveHighlight);
-    moveRotationNotifier.addListener(_updateMoveHighlight);
-    movePassNotifier.addListener(_updateMoveHighlight);
-    moveSpecialNotifier.addListener(_updateMoveHighlight);
-    yellowMoveNotifier.addListener(_checkMovesSet);
-    blueMoveNotifier.addListener(_checkMovesSet);
-    updateScores();
+    required this.player,
+    required this.playerDeck,
+    required TableturfBattleModel model,
+  }) : _model = model {
+    moveChangeNotifier.addListener(_updatePlayerMove);
   }
 
-  void dispose() {
-    moveCardNotifier.removeListener(_updateMoveHighlight);
-    moveLocationNotifier.removeListener(_updateMoveHighlight);
-    moveRotationNotifier.removeListener(_updateMoveHighlight);
-    movePassNotifier.addListener(_updateMoveHighlight);
-    moveSpecialNotifier.removeListener(_updateMoveHighlight);
-    yellowMoveNotifier.removeListener(_checkMovesSet);
-    blueMoveNotifier.removeListener(_checkMovesSet);
-  }
-
-  void _updateMoveHighlight() {
-    final card = moveCardNotifier.value;
-    final rot = moveRotationNotifier.value;
-    final location = moveLocationNotifier.value;
-    final special = moveSpecialNotifier.value;
-    final pass = movePassNotifier.value;
-    if (pass) {
-      moveIsValidNotifier.value = card != null;
-    } else if (location != null
-        && card != null) {
-      final pattern = rotatePattern(
-        card.minPattern,
-        rot
-      );
-      final selectPoint = rotatePatternPoint(
-        card.selectPoint,
-        card.minPattern.length,
-        card.minPattern[0].length,
-        rot
-      );
-      final locationX = location.x - selectPoint.x;
-      final locationY = location.y - selectPoint.y;
-      if (!(
-          locationY >= 0
-              && locationY <= board.length - pattern.length
-              && locationX >= 0
-              && locationX <= board[0].length - pattern[0].length
-      )) {
-        moveIsValidNotifier.value = false;
-        return;
-      }
-      final move = TableturfMove(
-          card: card,
-          rotation: rot,
-          x: locationX,
-          y: locationY,
-          special: special
-      );
-      moveIsValidNotifier.value = moveIsValid(board, move);
+  void _updatePlayerMove() {
+    final moveCard = moveCardNotifier.value;
+    final moveLocation = moveLocationNotifier.value;
+    final moveRotation = moveRotationNotifier.value;
+    if (moveCard == null) {
+      _playerMove = null;
+      _moveIsValidNotifier.value = false;
+      return;
     }
-  }
-
-  Future<void> _checkMovesSet() async {
-    if (yellowMoveNotifier.value != null && blueMoveNotifier.value != null) {
-      print("waiting on background lock");
-      await backgroundEvent.wait();
-      _log.info("turn triggered");
-      await Future<void>.delayed(const Duration(milliseconds: 1000));
-      await runTurn();
+    if (movePassNotifier.value) {
+      _playerMove = TableturfMove(
+        card: moveCard,
+        rotation: moveRotation,
+        x: 0,
+        y: 0,
+        pass: movePassNotifier.value,
+      );
+      _moveIsValidNotifier.value = true;
+      return;
     }
+    if (moveLocation == null) {
+      _playerMove = null;
+      _moveIsValidNotifier.value = false;
+      return;
+    }
+    final pattern = rotatePattern(
+      moveCard.minPattern,
+      moveRotation,
+    );
+    final selectPoint = rotatePatternPoint(
+      moveCard.selectPoint,
+      moveCard.minPattern.length,
+      moveCard.minPattern[0].length,
+      moveRotation,
+    );
+    final locationX = moveLocation.x - selectPoint.x;
+    final locationY = moveLocation.y - selectPoint.y;
+    if (!(
+        locationY >= 0
+            && locationY <= board.length - pattern.length
+            && locationX >= 0
+            && locationX <= board[0].length - pattern[0].length
+    )) {
+      _playerMove = null;
+      _moveIsValidNotifier.value = false;
+      return;
+    }
+    final newPlayerMove = TableturfMove(
+      card: moveCard,
+      rotation: moveRotation,
+      x: locationX,
+      y: locationY,
+      special: moveSpecialNotifier.value,
+    );
+    _playerMove = newPlayerMove;
+    _moveIsValidNotifier.value = _model.checkMoveValidity(board, newPlayerMove);
   }
 
-  void rotateLeft() {
-    final audioController = AudioController();
-    audioController.playSfx(SfxType.cursorRotate);
-    int rot = moveRotationNotifier.value;
+  void rotateCounterClockwise() {
+    var rot = moveRotationNotifier.value;
     rot -= 1;
     rot %= 4;
     moveRotationNotifier.value = rot;
   }
 
-  void rotateRight() {
-    final audioController = AudioController();
-    audioController.playSfx(SfxType.cursorRotate);
-    int rot = moveRotationNotifier.value;
+  void rotateClockwise() {
+    var rot = moveRotationNotifier.value;
     rot += 1;
     rot %= 4;
     moveRotationNotifier.value = rot;
   }
 
   void confirmMove() {
-    if (!moveIsValidNotifier.value) {
+    if (!_moveIsValidNotifier.value) {
       return;
     }
-    final card = moveCardNotifier.value!;
-    final audioController = AudioController();
-    if (movePassNotifier.value) {
-      audioController.playSfx(SfxType.confirmMovePass);
-      yellowMoveNotifier.value = TableturfMove(
-        card: card,
-        rotation: 0,
-        x: 0,
-        y: 0,
-        pass: movePassNotifier.value,
-        special: moveSpecialNotifier.value,
-      );
-      playerControlLock.value = false;
-      return;
+    _model.setPlayerMove(player.id, _playerMove!);
+    playerControlIsLocked.value = true;
+  }
+
+  void reset() {
+    for (final cardNotifier in playerHand) {
+      final card = cardNotifier.value!;
+      card.isPlayable = getMoves(board, card, special: false).isNotEmpty;
+      card.isPlayableSpecial = card.special <= playerSpecial && getMoves(board, card, special: true).isNotEmpty;
+    }
+    moveCardNotifier.value = null;
+    moveLocationNotifier.value = null;
+    moveRotationNotifier.value = 0;
+    moveSpecialNotifier.value = false;
+    movePassNotifier.value = false;
+    playerControlIsLocked.value = false;
+  }
+}
+
+abstract interface class TableturfBattleModel {
+  bool checkMoveValidity(TileGrid board, TableturfMove move);
+  void setPlayerMove(PlayerID playerID, TableturfMove move);
+  Stream<BattleEvent> get eventStream;
+}
+
+const kNormalBattleTurns = 4;
+
+class LocalTableturfBattle implements TableturfBattleModel {
+  static final _log = Logger('LocalTableturfBattle');
+
+  final Map<PlayerID, TableturfMove> playerMoves = {};
+
+  Map<PlayerID, int> playerScores = {};
+  Map<PlayerID, int> playerSpecials = {};
+  int turnCount = kNormalBattleTurns;
+
+  final TableturfPlayer player, opponent;
+  List<TableturfCard> playerDeck, opponentDeck;
+  List<TableturfCard> playerHand = [], opponentHand = [];
+
+  StreamController<BattleEvent> _eventStreamController = StreamController();
+  Stream<BattleEvent> get eventStream => _eventStreamController.stream;
+
+  int _yellowSpecialCount = 0, _blueSpecialCount = 0;
+
+  final AILevel aiLevel;
+  final AILevel? playerAI;
+
+  TileGrid _board;
+  TileGrid get board => _board;
+  final TileGrid origBoard;
+
+  LocalTableturfBattle({
+    required this.player,
+    required this.playerDeck,
+    required this.opponent,
+    required this.opponentDeck,
+    required TileGrid board,
+    required this.aiLevel,
+    this.playerAI,
+  }):
+      _board = board,
+      origBoard = board.copy() {
+    reset();
+  }
+
+  void dispose() {
+    _eventStreamController.close();
+  }
+
+  Future<void> startGame() async {
+    //initialise opponent hand
+    opponentHand = opponentDeck.randomSample(4);
+    for (final card in opponentHand) {
+      card
+        ..isHeld = true
+        ..isPlayable = getMoves(board, card).isNotEmpty
+        ..isPlayableSpecial = false;
     }
 
-    final location = moveLocationNotifier.value;
-    if (location == null) {
-      return;
+    final playerHandIndexes = List.generate(playerDeck.length, (index) => index).randomSample(4);
+    playerHand = playerHandIndexes.map((i) => playerDeck[i]).toList();
+    _eventStreamController.add(HandRedraw(playerHandIndexes));
+  }
+
+  void reset() {
+    _board = origBoard.copy();
+    _eventStreamController.close();
+    _eventStreamController = StreamController();
+    playerHand = [];
+    for (final card in playerDeck) {
+      card.isHeld = false;
+      card.hasBeenPlayed = false;
+      card.isPlayable = false;
+      card.isPlayableSpecial = false;
     }
-    final rot = moveRotationNotifier.value;
-    final pattern = rotatePattern(card.minPattern, rot);
-    final selectPoint = rotatePatternPoint(
-      card.selectPoint,
-      card.minPattern.length,
-      card.minPattern[0].length,
-      rot,
-    );
-    final locationX = location.x - selectPoint.x;
-    final locationY = location.y - selectPoint.y;
-    _log.info("trying location $locationX, $locationY");
-    if (!(
-      locationY >= 0
-        && locationY <= board.length - pattern.length
-        && locationX >= 0
-        && locationX <= board[0].length - pattern[0].length
-    )) {
-      return;
+    opponentHand = [];
+    for (final card in opponentDeck) {
+      card.isHeld = false;
+      card.hasBeenPlayed = false;
+      card.isPlayable = false;
+      card.isPlayableSpecial = false;
     }
-    audioController.playSfx(SfxType.confirmMoveSucceed);
-    yellowMoveNotifier.value = TableturfMove(
-      card: card,
-      rotation: rot,
-      x: locationX,
-      y: locationY,
-      pass: movePassNotifier.value,
-      special: moveSpecialNotifier.value,
-    );
-    playerControlLock.value = false;
+    turnCount = kNormalBattleTurns;
+    playerSpecials = {player.id: 0, opponent.id: 0};
+    _yellowSpecialCount = 0;
+    _blueSpecialCount = 0;
+    updateScores();
+  }
+
+  Future<void> requestRedraw() async {
+    final playerHandIndexes = List.generate(playerDeck.length, (index) => index).randomSample(4);
+    playerHand = playerHandIndexes.map((i) => playerDeck[i]).toList();
+    _eventStreamController.add(HandRedraw(playerHandIndexes));
+  }
+
+  bool checkMoveValidity(TileGrid board, TableturfMove move) {
+    return checkMoveIsValid(board, move);
+  }
+
+  void setPlayerMove(PlayerID playerID, TableturfMove move) {
+    playerMoves[playerID] = move;
+    _eventStreamController.add(MoveConfirm(playerID));
+    _checkMovesSet();
+  }
+
+  Future<void> _checkMovesSet() async {
+    if (playerMoves.containsKey(player.id) && playerMoves.containsKey(opponent.id)) {
+      _log.info("turn triggered");
+      await Future<void>.delayed(const Duration(milliseconds: 1000));
+      await runTurn();
+    }
   }
 
   Future<void> runTurn() async {
-    if (stopAllProgress) return;
-    final yellowMove = yellowMoveNotifier.value!;
-    final blueMove = blueMoveNotifier.value!;
-    final audioController = AudioController();
+    final yellowMove = playerMoves[player.id]!;
+    final blueMove = playerMoves[opponent.id]!;
 
-    if (yellowMove.special || blueMove.special) {
-      audioController.playSfx(SfxType.specialCutIn);
-      specialMoveNotifier.notifyListeners();
-      await Future<void>.delayed(const Duration(milliseconds: 1600));
-    }
-    if (stopAllProgress) return;
-    await audioController.playSfx(SfxType.cardFlip);
-    revealCardsNotifier.value = true;
     yellowMove.card.hasBeenPlayed = true;
     blueMove.card.hasBeenPlayed = true;
-    yellow.special.value -= yellowMove.special ? yellowMove.card.special : 0;
-    blue.special.value -= blueMove.special ? blueMove.card.special : 0;
-    final List<BattleEvent> events = _populateEvents();
-    const cardRevealTime = const Duration(milliseconds: 1000);
-    print(events);
 
-    if (stopAllProgress) return;
-    if (turnCountNotifier.value == 4) {
-      () async {
-        const endTurnWaitTime = const Duration(milliseconds: 500);
-        final eventsDuration = events.fold(
-          cardRevealTime + endTurnWaitTime,
-          (Duration d, e) => d + e.duration
+    final List<BattleEvent> events = [];
+
+    final specialDiffs = {
+      player.id: yellowMove.special ? -yellowMove.card.special : 0,
+      opponent.id: blueMove.special ? -blueMove.card.special : 0,
+    };
+
+    if (specialDiffs.values.any((s) => s != 0)) {
+      events.add(PlayerSpecialUpdate(Map.of(specialDiffs)));
+      for (final MapEntry(:key, :value) in specialDiffs.entries) {
+        playerSpecials.update(
+          key,
+              (s) => s + value,
+          ifAbsent: () => value,
         );
-        const musicFadeTime = Duration(milliseconds: 1300);
-        const musicSilenceTime = Duration(milliseconds: 200);
-
-        await Future<void>.delayed(eventsDuration - (musicFadeTime + musicSilenceTime));
-        await audioController.stopSong(fadeDuration: musicFadeTime);
-        await Future.wait([
-          audioController.loadSong(SongType.last3Turns),
-          Future<void>.delayed(musicSilenceTime),
-        ]);
-        await audioController.startSong();
-      }();
+      }
     }
+    events.add(const RevealCards());
+    events.addAll(calculateEvents(yellowMove, blueMove));
 
-    await Future<void>.delayed(cardRevealTime);
-    for (final event in events) {
-      if (stopAllProgress) return;
-      if (event is BoardUpdate) {
-        for (final entry in event.updates.entries) {
-          board[entry.key.y][entry.key.x] = entry.value;
-        }
-        boardChangeNotifier.value = event.updates.keys.toSet();
-        audioController.playSfx(event.sfx);
-      } else if (event is BoardSpecialUpdate) {
-        activatedSpecialsNotifier.value = event.updates;
-        await audioController.playSfx(SfxType.specialActivate);
-      } else if (event is PlayerSpecialUpdate) {
-        yellow.special.value = event.yellowSpecial;
-        blue.special.value = event.blueSpecial;
-        if (turnCountNotifier.value > 1) {
-          await audioController.playSfx(SfxType.gainSpecial);
-        }
-      } else if (event is ScoreUpdate) {
-        yellowCountNotifier.value = event.yellowScore;
-        blueCountNotifier.value = event.blueScore;
-        await audioController.playSfx(SfxType.counterUpdate);
-      } else if (event is EndTurn) {
-        if (turnCountNotifier.value == 1) {
-          endOfGameNotifier.notifyListeners();
-          return;
+    if (turnCount > 1) {
+      events.add(const ClearMoves());
+      for (var i = 0; i < opponentHand.length; i++) {
+        final card = opponentHand[i];
+        if (card.hasBeenPlayed) {
+          final newCard = opponentDeck.where((card) =>
+            !card.isHeld && !card.hasBeenPlayed).toList().random();
+          card.isHeld = false;
+          newCard.isHeld = true;
+          opponentHand[i] = newCard;
         }
       }
-      await Future<void>.delayed(event.duration);
+      for (var i = 0; i < playerHand.length; i++) {
+        final card = playerHand[i];
+        if (card.hasBeenPlayed) {
+          final newCardIndex = [
+            for (final (i, card) in playerDeck.indexed)
+              if (!card.isHeld && !card.hasBeenPlayed)
+                i
+          ].random();
+          final newCard = playerDeck[newCardIndex];
+          card.isHeld = false;
+          newCard.isHeld = true;
+          playerHand[i] = newCard;
+          events.add(UpdateHand(i, newCardIndex));
+        }
+      }
     }
 
-    if (stopAllProgress) return;
-    moveLocationNotifier.value = null;
-    moveCardNotifier.value = null;
-    moveRotationNotifier.value = 0;
-    movePassNotifier.value = false;
-    moveSpecialNotifier.value = false;
-    moveIsValidNotifier.value = false;
-    revealCardsNotifier.value = false;
+    turnCount -= 1;
+    events.add(TurnCountTick(turnCount));
+    _log.info(events);
+    _eventStreamController.add(Turn(Map.of(playerMoves), events));
+    playerMoves.clear();
 
-    yellowMoveNotifier.value = null;
-    blueMoveNotifier.value = null;
-    await Future<void>.delayed(const Duration(milliseconds: 100));
-    yellow.refreshHand();
-    blue.refreshHand();
-    await Future<void>.delayed(const Duration(milliseconds: 200));
-    turnCountNotifier.value -= 1;
-    await Future<void>.delayed(const Duration(milliseconds: 1000));
-    if (stopAllProgress) return;
-
-    for (final cardNotifier in yellow.hand) {
-      final card = cardNotifier.value!;
-      card.isPlayable = getMoves(board, card, special: false).isNotEmpty;
-      card.isPlayableSpecial = card.special <= yellow.special.value && getMoves(board, card, special: true).isNotEmpty;
-    }
-    playerControlLock.value = true;
-    if (stopAllProgress) return;
-    runBlueAI();
-    if (playerAI != null) {
-      runYellowAI();
-    }
     _log.info("turn complete");
   }
 
-  List<BattleEvent> _populateEvents() {
-    final yellowMove = yellowMoveNotifier.value!;
-    final blueMove = blueMoveNotifier.value!;
+  List<BattleEvent> calculateEvents(TableturfMove yellowMove, TableturfMove blueMove) {
     final List<BattleEvent> events = [];
 
     if (blueMove.pass && yellowMove.pass) {
@@ -384,26 +454,36 @@ class TableturfBattle {
 
     } else if (blueMove.pass && !yellowMove.pass) {
       _log.info("yellow move only");
-      events.add(BoardUpdate(
-        yellowMove.boardChanges,
-        yellowMove.special ? SfxType.specialMove : SfxType.normalMove
-      ));
+      final updates = yellowMove.boardChanges;
+      if (yellowMove.special) {
+        events.add(BoardTilesUpdate(updates, BoardTileUpdateType.special));
+      } else {
+        events.add(BoardTilesUpdate(updates, BoardTileUpdateType.normal));
+      }
+      applyMoveToBoard(board, yellowMove);
 
     } else if (!blueMove.pass && yellowMove.pass) {
       _log.info("blue move only");
-      events.add(BoardUpdate(
-          blueMove.boardChanges,
-          blueMove.special ? SfxType.specialMove : SfxType.normalMove
-      ));
+      final updates = blueMove.boardChanges;
+      if (blueMove.special) {
+        events.add(BoardTilesUpdate(updates, BoardTileUpdateType.special));
+      } else {
+        events.add(BoardTilesUpdate(updates, BoardTileUpdateType.normal));
+      }
+      applyMoveToBoard(board, blueMove);
 
-    } else if (!_checkOverlap(blueMove, yellowMove)) {
+    } else if (!checkOverlap(blueMove, yellowMove)) {
       _log.info("no overlap");
-      final boardChanges = yellowMove.boardChanges;
-      boardChanges.addAll(blueMove.boardChanges);
-      events.add(BoardUpdate(
-          boardChanges,
-          yellowMove.special || blueMove.special ? SfxType.specialMove : SfxType.normalMove
-      ));
+      final updates = yellowMove.boardChanges;
+      updates.addAll(blueMove.boardChanges);
+      if (yellowMove.special || blueMove.special) {
+        events.add(BoardTilesUpdate(updates, BoardTileUpdateType.special));
+      } else {
+        events.add(BoardTilesUpdate(updates, BoardTileUpdateType.normal));
+      }
+      for (final entry in updates.entries) {
+        board[entry.key.y][entry.key.x] = entry.value;
+      }
 
       /*
     } else if (blueMove.special && !yellowMove.special) {
@@ -417,56 +497,46 @@ class TableturfBattle {
 
     } else if (blueMove.card.count < yellowMove.card.count) {
       _log.info("blue over yellow");
-      events.addAll(_applyOverlap(below: yellowMove, above: blueMove));
+      events.addAll(applyOverlap(below: yellowMove, above: blueMove));
 
     } else if (yellowMove.card.count < blueMove.card.count) {
       _log.info("yellow over blue");
-      events.addAll(_applyOverlap(below: blueMove, above: yellowMove));
+      events.addAll(applyOverlap(below: blueMove, above: yellowMove));
 
     } else {
       _log.info("conflict");
-      events.addAll(_applyConflict(blueMove, yellowMove));
+      events.addAll(applyConflict(blueMove, yellowMove));
     }
-
-    final newBoard = events.fold<TileGrid>(board.copy(), (newBoard, event) {
-      if (event is BoardUpdate) {
-        for (final entry in event.updates.entries) {
-          newBoard[entry.key.y][entry.key.x] = entry.value;
-        }
-      }
-      return newBoard;
-    });
 
     final prevYellowSpecialCount = _yellowSpecialCount;
     final prevBlueSpecialCount = _blueSpecialCount;
-    events.addAll(countSpecial(newBoard));
+    events.addAll(countSpecial());
 
-    final newYellowSpecial = (
-        yellow.special.value
-            + (_yellowSpecialCount - prevYellowSpecialCount)
-            + (yellowMove.pass ? 1 : 0)
-    );
-    final newBlueSpecial = (
-        blue.special.value
-            + (_blueSpecialCount - prevBlueSpecialCount)
-            + (blueMove.pass ? 1 : 0)
-    );
+    final specialDiffs = {
+      player.id: (_yellowSpecialCount - prevYellowSpecialCount)
+          + (yellowMove.pass ? 1 : 0),
+      opponent.id: (_blueSpecialCount - prevBlueSpecialCount)
+          + (blueMove.pass ? 1 : 0),
+    };
 
-    if (yellow.special.value != newYellowSpecial || blue.special.value != newBlueSpecial) {
-      events.add(PlayerSpecialUpdate(newYellowSpecial, newBlueSpecial));
+    if (specialDiffs.values.any((s) => s > 0)) {
+      events.add(PlayerSpecialUpdate(Map.of(specialDiffs)));
+      for (final MapEntry(:key, :value) in specialDiffs.entries) {
+        playerSpecials.update(
+          key,
+          (s) => s + value,
+          ifAbsent: () => value,
+        );
+      }
     }
-    if (turnCountNotifier.value == 1) {
-      events.add(const EndTurn());
-      return events;
+    if (turnCount > 1) {
+      events.addAll(countBoard());
     }
 
-    events.addAll(_countBoard(newBoard));
-
-    events.add(const EndTurn());
     return events;
   }
 
-  bool _checkOverlap(TableturfMove move1, TableturfMove move2) {
+  bool checkOverlap(TableturfMove move1, TableturfMove move2) {
     final relativePoint = Coords(
         move1.x - move2.x,
         move1.y - move2.y
@@ -492,12 +562,19 @@ class TableturfBattle {
     return false;
   }
 
-  Iterable<BattleEvent> _applyOverlap({required TableturfMove below, required TableturfMove above}) sync* {
+  Iterable<BattleEvent> applyOverlap({required TableturfMove below, required TableturfMove above}) sync* {
     final belowChanges = below.boardChanges;
-    yield BoardUpdate(
-      belowChanges,
-      below.special ? SfxType.specialMove : SfxType.normalMove
-    );
+    if (below.special) {
+      yield BoardTilesUpdate(
+        belowChanges,
+        BoardTileUpdateType.special,
+      );
+    } else {
+      yield BoardTilesUpdate(
+        belowChanges,
+        BoardTileUpdateType.normal,
+      );
+    }
 
     final relativePoint = Coords(
         above.x - below.x,
@@ -540,13 +617,26 @@ class TableturfBattle {
         }
       }
     }
-    yield BoardUpdate(
-      overlapChanges,
-      above.special ? SfxType.specialMove : SfxType.normalMoveOverlap
-    );
+    if (above.special) {
+      yield BoardTilesUpdate(
+        overlapChanges,
+        BoardTileUpdateType.special,
+      );
+    } else {
+      yield BoardTilesUpdate(
+        overlapChanges,
+        BoardTileUpdateType.overlap,
+      );
+    }
+    for (final entry in belowChanges.entries) {
+      board[entry.key.y][entry.key.x] = entry.value;
+    }
+    for (final entry in overlapChanges.entries) {
+      board[entry.key.y][entry.key.x] = entry.value;
+    }
   }
 
-  Iterable<BattleEvent> _applyConflict(TableturfMove move1, TableturfMove move2) sync* {
+  Iterable<BattleEvent> applyConflict(TableturfMove move1, TableturfMove move2) sync* {
     var wallsGenerated = false;
     final Map<Coords, TileState> overlapChanges = {};
     void applyOneWay(TableturfMove above, TableturfMove below) {
@@ -603,19 +693,33 @@ class TableturfBattle {
     }
     applyOneWay(move1, move2);
     applyOneWay(move2, move1);
-    yield BoardUpdate(
-      overlapChanges,
-      wallsGenerated ? SfxType.normalMoveConflict :
-      move1.special || move2.special ? SfxType.specialMove : SfxType.normalMove
-    );
+    for (final entry in overlapChanges.entries) {
+      board[entry.key.y][entry.key.x] = entry.value;
+    }
+    if (wallsGenerated) {
+      yield BoardTilesUpdate(
+        overlapChanges,
+        BoardTileUpdateType.conflict,
+      );
+    } else if (move1.special || move2.special) {
+      yield BoardTilesUpdate(
+        overlapChanges,
+        BoardTileUpdateType.special,
+      );
+    } else {
+      yield BoardTilesUpdate(
+        overlapChanges,
+        BoardTileUpdateType.normal,
+      );
+    }
   }
 
-  Iterable<BattleEvent> _countBoard(TileGrid newBoard) sync* {
+  Iterable<BattleEvent> countBoard() sync* {
     var yellowCount = 0;
     var blueCount = 0;
-    for (var y = 0; y < newBoard.length; y++) {
-      for (var x = 0; x < newBoard[0].length; x++) {
-        final boardTile = newBoard[y][x];
+    for (var y = 0; y < board.length; y++) {
+      for (var x = 0; x < board[0].length; x++) {
+        final boardTile = board[y][x];
         if (boardTile.isYellow) {
           yellowCount += 1;
         }
@@ -624,39 +728,41 @@ class TableturfBattle {
         }
       }
     }
-    if (yellowCountNotifier.value != yellowCount || blueCountNotifier.value != blueCount) {
-      yield ScoreUpdate(yellowCount, blueCount);
+    final newScores = {
+      player.id: yellowCount,
+      opponent.id: blueCount,
+    };
+    playerScores.putIfAbsent(player.id, () => yellowCount);
+    playerScores.putIfAbsent(opponent.id, () => blueCount);
+    if (!const MapEquality<PlayerID, int>().equals(playerScores, newScores)) {
+      yield ScoreUpdate(Map.of(newScores));
     }
+    playerScores = Map.of(newScores);
   }
 
   void updateScores() {
-    final newCountsIterator = _countBoard(board);
-    if (newCountsIterator.isNotEmpty) {
-      final newCounts = newCountsIterator.first as ScoreUpdate;
-      yellowCountNotifier.value = newCounts.yellowScore;
-      blueCountNotifier.value = newCounts.blueScore;
-    }
+    countBoard().forEach((e) {print(e);});
   }
 
-  Iterable<BattleEvent> countSpecial(TileGrid newBoard) sync* {
+  Iterable<BattleEvent> countSpecial() sync* {
     final prevYellowSpecialCount = _yellowSpecialCount;
     final prevBlueSpecialCount = _blueSpecialCount;
     _yellowSpecialCount = 0;
     _blueSpecialCount = 0;
     final activatedCoordsSet = Set<Coords>();
-    for (var y = 0; y < newBoard.length; y++) {
-      for (var x = 0; x < newBoard[0].length; x++) {
-        final boardTile = newBoard[y][x];
+    for (var y = 0; y < board.length; y++) {
+      for (var x = 0; x < board[0].length; x++) {
+        final boardTile = board[y][x];
         if (boardTile.isSpecial) {
           bool surrounded = true;
           for (var dy = -1; dy <= 1; dy++) {
             for (var dx = -1; dx <= 1; dx++) {
               final newY = y + dy;
               final newX = x + dx;
-              if (newY < 0 || newY >= newBoard.length || newX < 0 || newX >= newBoard[0].length) {
+              if (newY < 0 || newY >= board.length || newX < 0 || newX >= board[0].length) {
                 continue;
               }
-              final adjacentTile = newBoard[newY][newX];
+              final adjacentTile = board[newY][newX];
               if (!adjacentTile.isFilled) {
                 surrounded = false;
                 continue;
@@ -680,29 +786,21 @@ class TableturfBattle {
     }
   }
 
-  void resetSpecials() {
-    _yellowSpecialCount = 0;
-    _blueSpecialCount = 0;
-    activatedSpecialsNotifier.value = Set();
-  }
-
   Future<void> runBlueAI() async {
     final TableturfMove blueMove = (await Future.wait([
       compute(findBestBlueMove, [
         board,
-        blue.hand.map((v) => v.value!).toList(),
-        blue.special.value,
-        turnCountNotifier.value,
+        opponentHand,
+        playerSpecials[opponent.id]!,
+        turnCount,
         aiLevel,
         true,
       ]),
       Future.delayed(Duration(milliseconds: 1500 + Random().nextInt(500)))
     ]))[0];
 
-    final audioController = AudioController();
-    await audioController.playSfx(SfxType.confirmMoveSucceed);
-    blueMoveNotifier.value = TableturfMove(
-      card: blue.hand.firstWhere((card) => card.value!.data == blueMove.card.data).value!,
+    final ret = TableturfMove(
+      card: opponentHand.firstWhere((card) => card.ident == blueMove.card.ident),
       rotation: blueMove.rotation,
       x: blueMove.x,
       y: blueMove.y,
@@ -710,6 +808,7 @@ class TableturfBattle {
       special: blueMove.special,
       traits: blueMove.traits,
     );
+    setPlayerMove(opponent.id, ret);
   }
 
   Future<void> runYellowAI() async {
@@ -717,19 +816,17 @@ class TableturfBattle {
     final TableturfMove yellowMove = (await Future.wait([
       compute(findBestBlueMove, [
         board,
-        yellow.hand.map((v) => v.value!).toList(),
-        yellow.special.value,
-        turnCountNotifier.value,
+        playerHand,
+        playerSpecials[player.id]!,
+        turnCount,
         playerAI,
         false,
       ]),
       Future.delayed(Duration(milliseconds: 1500 + Random().nextInt(500)))
     ]))[0];
 
-    final audioController = AudioController();
-    await audioController.playSfx(SfxType.confirmMoveSucceed);
-    yellowMoveNotifier.value = TableturfMove(
-      card: yellow.hand.firstWhere((card) => card.value!.data == yellowMove.card.data).value!,
+    final ret = TableturfMove(
+      card: playerHand.firstWhere((card) => card.ident == yellowMove.card.ident),
       rotation: yellowMove.rotation,
       x: yellowMove.x,
       y: yellowMove.y,
@@ -737,5 +834,14 @@ class TableturfBattle {
       special: yellowMove.special,
       traits: yellowMove.traits,
     );
+    setPlayerMove(player.id, ret);
+  }
+
+  Future<void> runAI() async {
+    await Future.wait([
+      runBlueAI(),
+      if (playerAI != null)
+        runYellowAI(),
+    ]);
   }
 }

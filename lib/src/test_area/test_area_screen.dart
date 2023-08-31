@@ -1,12 +1,14 @@
+import 'dart:async';
 import 'dart:math';
 import 'dart:ui' as ui;
 
+import 'package:collection/collection.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
-import 'package:flutter/services.dart';
 import 'package:tableturf_mobile/src/components/build_board_widget.dart';
-import 'package:tableturf_mobile/src/game_internals/opponentAI.dart';
+import 'package:tableturf_mobile/src/components/tableturf_battle.dart';
+import 'package:tableturf_mobile/src/components/tableturf_controller_mixin.dart';
 import 'package:tableturf_mobile/src/game_internals/player.dart';
 
 import '../audio/audio_controller.dart';
@@ -20,15 +22,179 @@ import '../game_internals/tile.dart';
 import '../style/constants.dart';
 
 class BoardOperation {
-  final TileGrid board;
+  final Map<Coords, (TileState, TileState)> boardDiff;
   final Set<Coords> activatedSpecials;
   final TableturfCard? card;
 
   const BoardOperation({
-    required this.board,
+    required this.boardDiff,
     required this.activatedSpecials,
     required this.card,
   });
+}
+
+class TestingTableturfBattle implements TableturfBattleModel {
+  final List<TableturfCard> playerDeck;
+  TileGrid board;
+  final TileGrid origBoard;
+  final List<BoardOperation> moveStack = [];
+  int moveStackPtr = 0;
+  Set<Coords> activatedSpecials = Set();
+
+  final StreamController<BattleEvent> streamController = StreamController();
+  Stream<BattleEvent> get eventStream => streamController.stream;
+
+  TestingTableturfBattle({
+    required this.playerDeck,
+    required this.board,
+  }): origBoard = board.copy() {
+    moveStack.add(BoardOperation(
+      boardDiff: {},
+      activatedSpecials: Set(),
+      card: null,
+    ));
+  }
+
+  @override
+  bool checkMoveValidity(TileGrid board, TableturfMove move) {
+    return checkMoveIsValid(board, move);
+  }
+
+  @override
+  void setPlayerMove(PlayerID playerID, TableturfMove move) async {
+    move.card.hasBeenPlayed = true;
+    move.card.isPlayable = false;
+
+    final List<BattleEvent> events = [];
+    final moveChanges = move.boardChanges;
+    events.add(BoardTilesUpdate(moveChanges, BoardTileUpdateType.normal));
+    final boardDiff = Map.fromEntries(moveChanges.entries.map((entry) {
+      final coords = entry.key;
+      final before = board[coords.y][coords.x];
+      final after = entry.value;
+      return MapEntry(coords, (before, after));
+    }));
+    for (final MapEntry(key: coords, value: state) in moveChanges.entries) {
+      board[coords.y][coords.x] = state;
+    }
+
+    final specialEvent = countSpecial();
+    if (specialEvent != null) {
+      activatedSpecials = specialEvent.updates;
+      events.add(specialEvent);
+    }
+    if (moveStackPtr < moveStack.length - 1) {
+      // operations were undone, have to clear them to
+      // add this to the stack or the order will get fucked
+      moveStack.removeRange(moveStackPtr + 1, moveStack.length);
+    }
+    moveStack.add(BoardOperation(
+      boardDiff: boardDiff,
+      activatedSpecials: Set.of(activatedSpecials),
+      card: move.card,
+    ));
+    moveStackPtr += 1;
+    streamController.add(Turn({}, events));
+  }
+
+  BoardSpecialUpdate? countSpecial() {
+    final activatedCoordsSet = Set<Coords>();
+    for (var y = 0; y < board.length; y++) {
+      for (var x = 0; x < board[0].length; x++) {
+        final boardTile = board[y][x];
+        if (boardTile.isSpecial) {
+          bool surrounded = true;
+          for (var dy = -1; dy <= 1; dy++) {
+            for (var dx = -1; dx <= 1; dx++) {
+              final newY = y + dy;
+              final newX = x + dx;
+              if (newY < 0 || newY >= board.length || newX < 0 ||
+                  newX >= board[0].length) {
+                continue;
+              }
+              final adjacentTile = board[newY][newX];
+              if (!adjacentTile.isFilled) {
+                surrounded = false;
+                continue;
+              }
+            }
+          }
+          if (surrounded) {
+            activatedCoordsSet.add(Coords(x, y));
+          }
+        }
+      }
+    }
+    if (!const SetEquality<Coords>().equals(activatedCoordsSet, activatedSpecials)) {
+      return BoardSpecialUpdate(activatedCoordsSet);
+    }
+    return null;
+  }
+
+  void undoMove() {
+    if (moveStackPtr == 0) {
+      // already at bottom of stack
+      return;
+    }
+    final currentState = moveStack[moveStackPtr];
+    currentState.card?.isPlayable = true;
+    currentState.card?.hasBeenPlayed = false;
+    moveStackPtr -= 1;
+    final boardDiff = currentState.boardDiff;
+    final boardChanges = Map.fromEntries(boardDiff.entries.map((entry) {
+      return MapEntry(entry.key, entry.value.$1);
+    }));
+    for (final MapEntry(key: coords, value: state) in boardChanges.entries) {
+      board[coords.y][coords.x] = state;
+    }
+    final activatedSpecials = moveStack[moveStackPtr].activatedSpecials;
+    streamController.add(BoardTilesUpdate(boardChanges, BoardTileUpdateType.silent));
+    streamController.add(BoardSpecialUpdate(activatedSpecials));
+  }
+
+  void redoMove() {
+    if (moveStackPtr == moveStack.length - 1) {
+      // already at top of stack
+      return;
+    }
+    moveStackPtr += 1;
+    final nextState = moveStack[moveStackPtr];
+    final boardDiff = nextState.boardDiff;
+    final boardChanges = Map.fromEntries(boardDiff.entries.map((entry) {
+      return MapEntry(entry.key, entry.value.$2);
+    }));
+    for (final MapEntry(key: coords, value: state) in boardChanges.entries) {
+      board[coords.y][coords.x] = state;
+    }
+    nextState.card?.isPlayable = false;
+    nextState.card?.hasBeenPlayed = true;
+    streamController.add(BoardTilesUpdate(boardChanges, BoardTileUpdateType.silent));
+    streamController.add(BoardSpecialUpdate(nextState.activatedSpecials));
+  }
+
+  void reset() {
+    activatedSpecials = Set();
+    final Map<Coords, TileState> boardChanges = {};
+    for (final move in moveStack.reversed) {
+      for (final MapEntry(key: coords, value: (before, _)) in move.boardDiff.entries) {
+        boardChanges[coords] = before;
+      }
+      move.card?.hasBeenPlayed = false;
+      move.card?.isPlayable = true;
+    }
+    moveStack.clear();
+    moveStack.add(BoardOperation(
+      boardDiff: {},
+      activatedSpecials: Set(),
+      card: null,
+    ));
+    moveStackPtr = 0;
+    for (final MapEntry(key: coords, value: state) in boardChanges.entries) {
+      board[coords.y][coords.x] = state;
+    }
+    streamController.add(BoardTilesUpdate(boardChanges, BoardTileUpdateType.silent));
+    streamController.add(BoardSpecialUpdate(activatedSpecials));
+  }
 }
 
 class TestAreaScreen extends StatefulWidget {
@@ -45,14 +211,13 @@ class TestAreaScreen extends StatefulWidget {
 }
 
 class _TestAreaScreenState extends State<TestAreaScreen>
-    with SingleTickerProviderStateMixin {
-  final GlobalKey _boardTileKey = GlobalKey(debugLabel: "InputArea");
+    with SingleTickerProviderStateMixin, TableturfBattleMixin {
+  final GlobalKey inputAreaKey = GlobalKey(debugLabel: "InputArea");
+  bool lockInputs = false;
+  late final TestingTableturfBattle battle;
+  late final TableturfBattleController controller;
   final GlobalKey _screenKey = GlobalKey(debugLabel: "ScreenView");
-  final List<BoardOperation> moveStack = [];
-  int moveStackPtr = 0;
-  late final TableturfBattle battle;
 
-  bool _lockInputs = false;
   double tileSize = 22.0;
   Offset? piecePosition;
   PointerDeviceKind? pointerKind;
@@ -60,298 +225,105 @@ class _TestAreaScreenState extends State<TestAreaScreen>
   late final AnimationController screenWipeController;
   final ValueNotifier<ui.Image?> screenImageNotifier = ValueNotifier(null);
 
-  void _updateLocation(
-      Offset delta,
-      PointerDeviceKind? pointerKind,
-      BuildContext rootContext,
-      ) {
-    if (battle.yellowMoveNotifier.value != null &&
-        battle.moveCardNotifier.value != null) {
-      return;
-    }
-    final board = battle.board;
-    if (piecePosition != null) {
-      piecePosition = piecePosition! + delta;
-    }
-
-    final boardContext = _boardTileKey.currentContext!;
-    // find the coordinates of the board within the input area
-    final boardLocation = (boardContext.findRenderObject()! as RenderBox)
-        .localToGlobal(Offset.zero, ancestor: rootContext.findRenderObject());
-    final boardTileStep = tileSize;
-    final newX =
-    ((piecePosition!.dx - boardLocation.dx) / boardTileStep).floor();
-    final newY =
-    ((piecePosition!.dy - boardLocation.dy) / boardTileStep).floor();
-    final newCoords = Coords(
-      newX.clamp(0, board[0].length - 1),
-      newY.clamp(0, board.length - 1),
-    );
-    if ((newY < 0 ||
-        newY >= board.length ||
-        newX < 0 ||
-        newX >= board[0].length) &&
-        pointerKind == PointerDeviceKind.mouse) {
-      battle.moveLocationNotifier.value = null;
-      // if pointer is touch, let the position remain
-    } else if (battle.moveLocationNotifier.value != newCoords) {
-      final audioController = AudioController();
-      if (battle.moveCardNotifier.value != null &&
-          !battle.movePassNotifier.value) {
-        audioController.playSfx(SfxType.cursorMove);
-      }
-      battle.moveLocationNotifier.value = newCoords;
-    }
-  }
-
-  void _resetPiecePosition(BuildContext rootContext) {
-    final boardContext = _boardTileKey.currentContext!;
-    final boardTileStep = tileSize;
-    final boardLocation =
-    (boardContext.findRenderObject()! as RenderBox).localToGlobal(
-      Offset.zero,
-      ancestor: rootContext.findRenderObject(),
-    );
-    if (battle.moveLocationNotifier.value == null) {
-      battle.moveLocationNotifier.value = Coords(
-        battle.board[0].length ~/ 2,
-        battle.board.length ~/ 2,
-      );
-    }
-    final pieceLocation = battle.moveLocationNotifier.value!;
-    piecePosition = Offset(
-      boardLocation.dx +
-          (pieceLocation.x * boardTileStep) +
-          (boardTileStep / 2),
-      boardLocation.dy +
-          (pieceLocation.y * boardTileStep) +
-          (boardTileStep / 2),
-    );
-  }
-
-  void _onHover(PointerHoverEvent details) {
-    if (_lockInputs) return;
-
-    if (details.kind == PointerDeviceKind.mouse) {
-      piecePosition = details.localPosition;
-      pointerKind = details.kind;
-      _updateLocation(details.delta, details.kind, context);
-    }
-  }
-
-  void _onDragUpdate(DragUpdateDetails details, BuildContext context) {
-    if (_lockInputs) return;
-    _updateLocation(details.delta, pointerKind, context);
-  }
-
-  void _onDragStart(DragStartDetails details, BuildContext context) {
-    if (_lockInputs) return;
-
-    _resetPiecePosition(context);
-    pointerKind = details.kind;
-    _updateLocation(Offset.zero, pointerKind, context);
-  }
-
-  void _onTap() {
-    if (battle.playerControlLock.value) {
-      if (pointerKind == PointerDeviceKind.mouse) {
-        battle.confirmMove();
-      } else {
-        battle.rotateRight();
-      }
-    }
-  }
-
-  KeyEventResult _handleKeyPress(FocusNode node, RawKeyEvent event) {
-    if (_lockInputs) return KeyEventResult.ignored;
-
-    if (event is RawKeyDownEvent) {
-      if (event.logicalKey == LogicalKeyboardKey.keyQ) {
-        if (!battle.playerControlLock.value) {
-          return KeyEventResult.ignored;
-        }
-        battle.rotateLeft();
-        return KeyEventResult.handled;
-      }
-      if (event.logicalKey == LogicalKeyboardKey.keyE) {
-        if (!battle.playerControlLock.value) {
-          return KeyEventResult.ignored;
-        }
-        battle.rotateRight();
-        return KeyEventResult.handled;
-      }
-    }
-    return KeyEventResult.ignored;
-  }
+  final StreamController<BattleEvent> eventBroadcast = StreamController.broadcast();
 
   @override
   void initState() {
     super.initState();
-    battle = TableturfBattle(
-      yellow: TableturfPlayer(
-        name: "Yellow",
-        deck: widget.deck.map((card) {
-          return TableturfCard(card)..isPlayable = true;
-        }).toList(),
-        hand: [],  // isnt used
+
+    final playerDeck = widget.deck.map((card) {
+      return TableturfCard(card)
+        ..isPlayable = true;
+    }).toList();
+
+    battle = TestingTableturfBattle(
+      playerDeck: playerDeck,
+      board: widget.board.copy(),
+    );
+    controller = TableturfBattleController(
+      board: widget.board.copy(),
+      player: TableturfPlayer(
+        id: 0,
+        name: "Test",
         traits: const YellowTraits(),
       ),
-      blue: TableturfPlayer(  // isnt used
-        name: "Blue",
-        deck: [],
-        hand: [],
-        traits: const BlueTraits(),
-      ),
-      board: widget.board.copy(),
-      aiLevel: AILevel.level1,
+      playerDeck: playerDeck,
+      model: battle,
     );
-    battle.yellowMoveNotifier.addListener(_playMove);
-
-    moveStack.add(BoardOperation(
-      board: battle.board.copy(),
-      activatedSpecials: Set(),
-      card: null,
-    ));
+    controller.playerHand.clear();
+    controller.playerControlIsLocked.value = false;
 
     screenWipeController = AnimationController(
-      duration: const Duration(milliseconds: 500),
+      duration: const Duration(milliseconds: 700),
       vsync: this,
     );
+
+    _monitorBattleEvents();
+  }
+
+  Future<void> _monitorBattleEvents() async {
+    final audioController = AudioController();
+    await for (final event in battle.eventStream) {
+      switch (event) {
+        case Turn(:final events):
+          eventBroadcast.add(const TurnStart({}));
+          for (final turnEvent in events) {
+            switch (turnEvent) {
+              case BoardTilesUpdate():
+                audioController.playSfx(SfxType.normalMove);
+              case BoardSpecialUpdate(:final updates):
+                controller.activatedSpecials.value = updates;
+                audioController.playSfx(SfxType.specialActivate);
+            }
+            eventBroadcast.add(turnEvent);
+            await Future.delayed(turnEvent.duration ~/ 2);
+          }
+          controller.reset();
+          eventBroadcast.add(const TurnEnd());
+        default:
+          eventBroadcast.add(event);
+      }
+    }
   }
 
   @override
   void dispose() {
-    battle.yellowMoveNotifier.removeListener(_playMove);
-    battle.dispose();
     screenWipeController.dispose();
+    battle.streamController.close();
+    eventBroadcast.close();
     super.dispose();
   }
 
   void _undoMove() {
-    if (moveStackPtr == 0) {
-      // already at bottom of stack
-      return;
-    }
-    final currentState = moveStack[moveStackPtr];
-    currentState.card?.isPlayable = true;
-    currentState.card?.hasBeenPlayed = false;
-    moveStackPtr -= 1;
-    final prevState = moveStack[moveStackPtr];
-    for (var y = 0; y < battle.board.length; y++) {
-      for (var x = 0; x < battle.board[0].length; x++) {
-        battle.board[y][x] = prevState.board[y][x];
-      }
-    }
-    battle.boardChangeNotifier.value = Set();
-    battle.activatedSpecialsNotifier.value = prevState.activatedSpecials;
-    battle.countSpecial(battle.board).forEach((_) {});
-    battle.moveCardNotifier.value = null;
+    battle.undoMove();
+    controller.moveCardNotifier.value = null;
     // in case the values were already set to this
-    battle.moveCardNotifier.notifyListeners();
-    battle.boardChangeNotifier.notifyListeners();
+    controller.moveCardNotifier.notifyListeners();
   }
 
   void _redoMove() {
-    if (moveStackPtr == moveStack.length - 1) {
-      // already at top of stack
-      return;
-    }
-    moveStackPtr += 1;
-    final nextState = moveStack[moveStackPtr];
-    for (var y = 0; y < battle.board.length; y++) {
-      for (var x = 0; x < battle.board[0].length; x++) {
-        battle.board[y][x] = nextState.board[y][x];
-      }
-    }
-    battle.boardChangeNotifier.value = Set();
-    battle.activatedSpecialsNotifier.value = nextState.activatedSpecials;
-    battle.countSpecial(battle.board).forEach((_) {});
-    nextState.card?.isPlayable = false;
-    nextState.card?.hasBeenPlayed = true;
-    battle.moveCardNotifier.value = null;
+    battle.redoMove();
+    controller.moveCardNotifier.value = null;
     // in case the values were already set to this
-    battle.moveCardNotifier.notifyListeners();
-    battle.boardChangeNotifier.notifyListeners();
-  }
-
-  Future<void> _playMove() async {
-    final move = battle.yellowMoveNotifier.value;
-    if (move == null || !battle.moveIsValidNotifier.value) {
-      return;
-    }
-    battle.playerControlLock.value = true;
-    move.card.hasBeenPlayed = true;
-    move.card.isPlayable = false;
-    battle.revealCardsNotifier.value = true;
-    final modifiedSpaces = move.boardChanges;
-    for (final entry in modifiedSpaces.entries) {
-      battle.board[entry.key.y][entry.key.x] = entry.value;
-    }
-    battle.boardChangeNotifier.value = modifiedSpaces.keys.toSet();
-    await Future<void>.delayed(Durations.battleUpdateTiles ~/ 2);
-    final specialEvents = battle.countSpecial(battle.board).toList();
-    late Set<Coords> activatedSpecials;
-    if (specialEvents.isNotEmpty) {
-      activatedSpecials = (specialEvents[0] as BoardSpecialUpdate).updates;
-      battle.activatedSpecialsNotifier.value = activatedSpecials;
-      await Future<void>.delayed(Durations.battleUpdateSpecials ~/ 2);
-    } else {
-      activatedSpecials = Set();
-    }
-    if (moveStackPtr < moveStack.length - 1) {
-      // operations were undone, have to clear them to
-      // add this to the stack or the order will get fucked
-      moveStack.removeRange(moveStackPtr + 1, moveStack.length);
-    }
-    moveStack.add(BoardOperation(
-      board: battle.board.copy(),
-      activatedSpecials: activatedSpecials,
-      card: move.card,
-    ));
-    moveStackPtr += 1;
-    battle.moveLocationNotifier.value = null;
-    battle.moveCardNotifier.value = null;
-    battle.moveRotationNotifier.value = 0;
-    battle.moveIsValidNotifier.value = false;
-    battle.revealCardsNotifier.value = false;
-    battle.yellowMoveNotifier.value = null;
-    battle.playerControlLock.value = true;
+    controller.moveCardNotifier.notifyListeners();
   }
 
   Future<void> _resetBoard() async {
-    // TODO: play the reset sound here
+    final audioController = AudioController();
     final boundary = _screenKey.currentContext!.findRenderObject()! as RenderRepaintBoundary;
     final image = await boundary.toImage(
       pixelRatio: MediaQuery.of(context).devicePixelRatio,
     );
-    battle.playerControlLock.value = false;
+    controller.playerControlIsLocked.value = true;
     screenImageNotifier.value = image;
+    audioController.playSfx(SfxType.screenWipe);
     screenWipeController.forward(from: 0.0).then((_) async {
       screenImageNotifier.value = null;
-      battle.playerControlLock.value = true;
+      controller.playerControlIsLocked.value = false;
     });
-    for (var y = 0; y < battle.board.length; y++) {
-      for (var x = 0; x < battle.board[0].length; x++) {
-        battle.board[y][x] = battle.origBoard[y][x];
-      }
-    }
-    battle.boardChangeNotifier.value = Set();
-    battle.resetSpecials();
-    for (final card in battle.yellow.deck) {
-      card.isPlayable = true;
-      card.hasBeenPlayed = false;
-    }
-    battle.moveCardNotifier.value = null;
-    // in case the values were already set to this
-    battle.moveCardNotifier.notifyListeners();
-    battle.boardChangeNotifier.notifyListeners();
-    moveStack.clear();
-    moveStack.add(BoardOperation(
-      board: battle.origBoard.copy(),
-      activatedSpecials: Set(),
-      card: null,
-    ));
-    moveStackPtr = 0;
+    controller.reset();
+    battle.reset();
+    controller.moveCardNotifier.notifyListeners();
   }
 
   @override
@@ -378,8 +350,8 @@ class _TestAreaScreenState extends State<TestAreaScreen>
             child: FractionallySizedBox(
               heightFactor: 0.9,
               child: buildBoardWidget(
-                key: _boardTileKey,
-                battle: battle,
+                key: inputAreaKey,
+                controller: controller,
                 onTileSize: (ts) => tileSize = ts,
                 loopAnimation: true,
                 boardHeroTag: "board",
@@ -395,13 +367,13 @@ class _TestAreaScreenState extends State<TestAreaScreen>
               scrollDirection: Axis.horizontal,
               prototypeItem: AspectRatio(aspectRatio: CardWidget.CARD_RATIO),
               children: [
-                for (final card in battle.yellow.deck)
+                for (final card in battle.playerDeck)
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 5.0),
                     child: Center(
                       child: AspectRatio(
                         aspectRatio: CardWidget.CARD_RATIO,
-                        child: SelectableCard(battle: battle, card: card),
+                        child: SelectableCard(card: card),
                       ),
                     ),
                   )
@@ -426,7 +398,7 @@ class _TestAreaScreenState extends State<TestAreaScreen>
                     ),
                     designRatio: 0.5,
                     onPressStart: () async {
-                      if (_lockInputs) {
+                      if (lockInputs) {
                         return false;
                       }
                       return true;
@@ -477,10 +449,10 @@ class _TestAreaScreenState extends State<TestAreaScreen>
                     ),
                     designRatio: 0.5,
                     onPressStart: () async {
-                      if (_lockInputs) {
+                      if (lockInputs) {
                         return false;
                       }
-                      _lockInputs = true;
+                      lockInputs = true;
                       return true;
                     },
                     onPressEnd: () async {
@@ -512,17 +484,21 @@ class _TestAreaScreenState extends State<TestAreaScreen>
               ),
               child: Focus(
                 autofocus: true,
-                onKey: _handleKeyPress,
+                onKey: handleKeyPress,
                 child: MouseRegion(
-                  onHover: _onHover,
+                  onHover: onHover,
                   child: GestureDetector(
                     behavior: HitTestBehavior.translucent,
-                    onTap: _onTap,
-                    onPanStart: (details) => _onDragStart(details, context),
-                    onPanUpdate: (details) => _onDragUpdate(details, context),
+                    onTap: onTap,
+                    onPanStart: (details) => onDragStart(details, context),
+                    onPanUpdate: (details) => onDragUpdate(details, context),
                     child: Padding(
                       padding: mediaQuery.padding,
-                      child: screen,
+                      child: TableturfBattle(
+                        controller: controller,
+                        eventStream: eventBroadcast.stream,
+                        child: screen,
+                      ),
                     ),
                   ),
                 ),
@@ -601,16 +577,26 @@ class ScreenWipePainter extends CustomPainter {
   }
 }
 
-class SelectableCard extends StatelessWidget {
+class SelectableCard extends StatefulWidget {
   const SelectableCard({
     super.key,
-    required this.battle,
     required this.card,
   });
 
-  final TableturfBattle battle;
   final TableturfCard card;
 
+  @override
+  State<SelectableCard> createState() => _SelectableCardState();
+}
+
+class _SelectableCardState extends State<SelectableCard> {
+  late final TableturfBattleController controller;
+
+  @override
+  void initState() {
+    super.initState();
+    controller = TableturfBattle.getControllerOf(context);
+  }
   Widget _buildButton(BuildContext context) {
     return Transform.scale(
       scale: 1.05,  // account for the stretch cards do when selected
@@ -651,31 +637,30 @@ class SelectableCard extends StatelessWidget {
       fit: StackFit.passthrough,
       children: [
         CardWidget(
-          battle: battle,
-          cardNotifier: ValueNotifier(card),
+          cardNotifier: ValueNotifier(widget.card),
         ),
         ValueListenableBuilder(
-          valueListenable: battle.moveCardNotifier,
+          valueListenable: controller.moveCardNotifier,
           builder: (_, selectedCard, ___) {
-            if (selectedCard != card) {
+            if (selectedCard != widget.card) {
               return Container();
             }
             return GestureDetector(
               onTap: () {
-                battle.confirmMove();
+                controller.confirmMove();
               },
-              child: AnimatedBuilder(
-                animation: battle.yellowMoveNotifier,
+              child: ValueListenableBuilder(
+                valueListenable: controller.playerControlIsLocked,
                 child: ValueListenableBuilder(
-                  valueListenable: battle.moveIsValidNotifier,
-                  builder: (_, bool highlight, button) => AnimatedOpacity(
-                    opacity: highlight ? 1 : 0,
+                  valueListenable: controller.moveIsValidNotifier,
+                  builder: (_, highlighted, button) => AnimatedOpacity(
+                    opacity: highlighted ? 1 : 0,
                     duration: const Duration(milliseconds: 150),
                     child: _buildButton(context),
                   ),
                 ),
-                builder: (context, child) {
-                  if (battle.yellowMoveNotifier.value != null) {
+                builder: (context, isLocked, child) {
+                  if (isLocked) {
                     return Container();
                   }
                   return child!;

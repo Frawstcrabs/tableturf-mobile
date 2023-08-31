@@ -82,7 +82,9 @@ class _MobileMusicPlayer extends _MusicPlayer {
   StreamSubscription<int?>? _musicLoopTimer;
   StreamSubscription<bool>? _musicPlayMonitor;
 
-  Soundpool _sfxPlayer = Soundpool.fromOptions(options: SoundpoolOptions(maxStreams: 8));
+  Soundpool _sfxPlayer = Soundpool.fromOptions(
+    options: SoundpoolOptions(maxStreams: kMaxSfxPlayers),
+  );
   Map<SfxType, List<int>> _sfxSources = {};
 
   _MobileMusicPlayer() {}
@@ -402,6 +404,7 @@ class AudioController {
 
   void _handleAppLifecycle() {
     switch (_lifecycleNotifier!.value) {
+      case AppLifecycleState.hidden:
       case AppLifecycleState.paused:
       case AppLifecycleState.detached:
         _muteAll();

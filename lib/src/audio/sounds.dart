@@ -45,6 +45,8 @@ enum SfxType {
   cardPackOpen,
   cardPackBits,
 
+  screenWipe,
+
   dealHand,
   selectCardNormal,
   cardFlip,

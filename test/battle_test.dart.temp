@@ -1,0 +1,42 @@
+import 'package:tableturf_mobile/src/game_internals/move.dart';
+import 'package:tableturf_mobile/src/game_internals/opponentAI.dart';
+import 'package:tableturf_mobile/src/game_internals/player.dart';
+import 'package:tableturf_mobile/src/game_internals/tile.dart';
+import 'package:test/test.dart';
+import 'package:tableturf_mobile/src/game_internals/battle.dart';
+
+TableturfBattle createMockBattle() {
+  return TableturfBattle(
+    yellow: TableturfPlayer(
+      name: "Yellow",
+      deck: [],
+      hand: [],
+      traits: const YellowTraits(),
+    ),
+    blue: TableturfPlayer(
+      name: "Blue",
+      deck: [],
+      hand: [],
+      traits: const BlueTraits(),
+    ),
+    board: [
+      for (var y = 0; y < 10; y++) [
+        for (var x = 0; x < 10; x++)
+          TileState.unfilled,
+      ],
+    ],
+    aiLevel: AILevel.level1,
+  );
+}
+
+void main() {
+  group("TableturfBattle", () {
+    test("Passed moves return nop event", () {
+      final battle = createMockBattle();
+      final events = battle.calculateEvents(
+        TableturfMove(),
+        TableturfMove(),
+      );
+    });
+  });
+}
