@@ -5,8 +5,10 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:dropdown_button2/dropdown_button2.dart';
+import 'package:tableturf_mobile/src/game_internals/battle.dart';
 import 'package:tableturf_mobile/src/game_internals/opponentAI.dart';
 import 'package:tableturf_mobile/src/game_internals/player.dart';
+import 'package:tableturf_mobile/src/game_internals/tile.dart';
 import 'package:tableturf_mobile/src/level_selection/level_selection_screen.dart';
 import 'package:tableturf_mobile/src/level_selection/opponents.dart';
 import 'package:tableturf_mobile/src/player_progress/player_progress.dart';
@@ -15,9 +17,59 @@ import 'package:tableturf_mobile/src/settings/settings.dart';
 import '../game_internals/card.dart';
 import '../game_internals/deck.dart';
 import '../game_internals/map.dart';
+import '../game_internals/move.dart';
 import '../play_session/start_game.dart';
 import '../style/constants.dart';
 import '../style/responsive_screen.dart';
+
+class DarkJellyTableturfBattle extends LocalTableturfBattle {
+  DarkJellyTableturfBattle({
+    required super.player,
+    required super.playerDeck,
+    required super.board,
+    required super.aiLevel,
+    super.playerAI,
+  }): super(
+    opponent: TableturfPlayer(
+      id: player.id + 1,
+      name: "Dark Jelly",
+      traits: const BlueTraits(),
+      icon: "assets/images/character_icons/darkjelly.png",
+      cardSleeve: player.cardSleeve,
+    ),
+    opponentDeck: [],
+  );
+
+  @override
+  Future<void> startGame() async {
+    opponentDeck = [
+      for (final card in playerDeck)
+        TableturfCard(card.data)
+    ];
+    await super.startGame();
+    opponentDeck = [];
+  }
+
+  @override
+  void setPlayerMove(PlayerID playerID, TableturfMove move) async {
+    if (playerID == player.id) {
+      super.setPlayerMove(playerID, move);
+      opponentDeck = [TableturfCard(move.card.data), TableturfCard(move.card.data)];
+      opponentHand = [opponentDeck[0]];
+      await runBlueAI();
+    } else {
+      super.setPlayerMove(playerID, move);
+    }
+  }
+
+  @override
+  Future<void> runAI() async {
+    // blue AI is dependent on the player's moves, so don't run it here
+    if (playerAI != null) {
+      await runYellowAI();
+    }
+  }
+}
 
 class FreePlayScreen extends StatefulWidget {
   const FreePlayScreen({Key? key}) : super(key: key);
@@ -44,10 +96,10 @@ class _FreePlayScreenState extends State<FreePlayScreen> {
       name: "Randomiser",
       cards: [],
     );
-    const pureRandomiser = TableturfDeck(
-      deckID: -1001,
+    const darkJelly = TableturfDeck(
+      deckID: -1002,
       cardSleeve: "default",
-      name: "Randomiser",
+      name: "Dark Jelly",
       cards: [],
     );
 
@@ -90,7 +142,13 @@ class _FreePlayScreenState extends State<FreePlayScreen> {
                   opponentDeck = newDeck;
                 });
               },
-              items: deckListWidgets,
+              items: [
+                ...deckListWidgets,
+                DropdownMenuItem(
+                  value: darkJelly,
+                  child: Text(darkJelly.name),
+                ),
+              ],
             ),
             DropdownButton2<TableturfDeck?>(
               isExpanded: true,
@@ -215,18 +273,43 @@ class _FreePlayScreenState extends State<FreePlayScreen> {
 
                 final playerName = playerAI != null ? tempPlayerDeck.name : settings.playerName.value;
 
-                await startGame(
-                  context: context,
-                  map: map!,
-                  yellowDeck: tempPlayerDeck,
-                  yellowName: playerName,
-                  yellowIcon: deckIcons[tempPlayerDeck.deckID],
-                  blueDeck: tempOpponentDeck,
-                  blueName: tempOpponentDeck.name,
-                  blueIcon: deckIcons[tempOpponentDeck.deckID],
-                  playerAI: playerAI,
-                  aiLevel: difficulty!,
-                );
+                if (tempOpponentDeck.deckID == -1002) {
+                  final battle = DarkJellyTableturfBattle(
+                    player: TableturfPlayer(
+                      id: 0,
+                      name: playerName,
+                      icon: deckIcons[tempPlayerDeck.deckID] == null
+                          ? null
+                          : "assets/images/character_icons/${deckIcons[tempPlayerDeck.deckID]}.png",
+                      traits: const YellowTraits(),
+                      cardSleeve: "assets/images/card_sleeves/sleeve_${tempPlayerDeck.cardSleeve}.png",
+                    ),
+                    playerDeck: [
+                      for (final ident in tempPlayerDeck.cards)
+                        TableturfCard(playerProgress.identToCard(ident!)),
+                    ],
+                    board: map!.board.copy(),
+                    aiLevel: difficulty!,
+                    playerAI: playerAI,
+                  );
+                  await startCustomGame(
+                    context: context,
+                    battle: battle,
+                  );
+                } else {
+                  await startNormalGame(
+                    context: context,
+                    map: map!,
+                    yellowDeck: tempPlayerDeck,
+                    yellowName: playerName,
+                    yellowIcon: deckIcons[tempPlayerDeck.deckID],
+                    blueDeck: tempOpponentDeck,
+                    blueName: tempOpponentDeck.name,
+                    blueIcon: deckIcons[tempOpponentDeck.deckID],
+                    playerAI: playerAI,
+                    aiLevel: difficulty!,
+                  );
+                }
                 if (yellowRandomiser != null) {
                   for (final card in yellowRandomiser) {
                     playerProgress.removeTempCard(card.ident);

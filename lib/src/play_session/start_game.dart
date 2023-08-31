@@ -17,9 +17,55 @@ import '../game_internals/deck.dart';
 import '../game_internals/opponentAI.dart';
 import 'session_intro.dart';
 
-PageRouteBuilder<T> _buildGameSessionPage<T>({
+PageRouteBuilder<T> buildGameSessionPage<T>({
   required BuildContext context,
   required Completer sessionCompleter,
+  required LocalTableturfBattle battle,
+  void Function()? onWin,
+  void Function()? onLose,
+  Future<void> Function(BuildContext)? onPostGame,
+  required bool showXpPopup,
+}) {
+  return buildFadeToBlackTransition(
+    child: PlaySessionIntro(
+      battle: battle,
+      sessionCompleter: sessionCompleter,
+      boardHeroTag: "boardView-${Random().nextInt(2^31).toString()}",
+      onWin: onWin,
+      onLose: onLose,
+      onPostGame: onPostGame,
+      showXpPopup: showXpPopup,
+    ),
+    color: Palette.backgroundPlaySession,
+    transitionDuration: Durations.transitionToGame,
+    reverseTransitionDuration: Durations.transitionToGame,
+  );
+}
+
+Future<void> startCustomGame({
+  required BuildContext context,
+  required LocalTableturfBattle battle,
+  void Function()? onWin,
+  void Function()? onLose,
+  Future<void> Function(BuildContext)? onPostGame,
+  bool showXpPopup = false,
+}) async {
+  final sessionCompleter = Completer();
+  Navigator.of(context).push(buildGameSessionPage(
+    context: context,
+    sessionCompleter: sessionCompleter,
+    battle: battle,
+    onWin: onWin,
+    onLose: onLose,
+    onPostGame: onPostGame,
+    showXpPopup: showXpPopup,
+  ));
+  await sessionCompleter.future;
+  AudioController().stopSong(fadeDuration: Durations.transitionToGame);
+}
+
+Future<void> startNormalGame({
+  required BuildContext context,
   required TableturfMap map,
   required TableturfDeck yellowDeck,
   required TableturfDeck blueDeck,
@@ -32,8 +78,8 @@ PageRouteBuilder<T> _buildGameSessionPage<T>({
   void Function()? onWin,
   void Function()? onLose,
   Future<void> Function(BuildContext)? onPostGame,
-  required bool showXpPopup,
-}) {
+  bool showXpPopup = false,
+}) async {
   final playerProgress = PlayerProgress();
 
   final yellowDeckCards = yellowDeck.cards
@@ -69,56 +115,5 @@ PageRouteBuilder<T> _buildGameSessionPage<T>({
     playerAI: playerAI,
   );
 
-  return buildFadeToBlackTransition(
-    child: PlaySessionIntro(
-      battle: battle,
-      sessionCompleter: sessionCompleter,
-      boardHeroTag: "boardView-${Random().nextInt(2^31).toString()}",
-      onWin: onWin,
-      onLose: onLose,
-      onPostGame: onPostGame,
-      showXpPopup: showXpPopup,
-    ),
-    color: Palette.backgroundPlaySession,
-    transitionDuration: Durations.transitionToGame,
-    reverseTransitionDuration: Durations.transitionToGame,
-  );
-}
-
-Future<void> startGame({
-  required BuildContext context,
-  required TableturfMap map,
-  required TableturfDeck yellowDeck,
-  required TableturfDeck blueDeck,
-  String yellowName = "You",
-  String blueName = "Them",
-  String? yellowIcon,
-  String? blueIcon,
-  required AILevel aiLevel,
-  AILevel? playerAI,
-  void Function()? onWin,
-  void Function()? onLose,
-  Future<void> Function(BuildContext)? onPostGame,
-  bool showXpPopup = false,
-}) async {
-  final sessionCompleter = Completer();
-  Navigator.of(context).push(_buildGameSessionPage(
-    context: context,
-    sessionCompleter: sessionCompleter,
-    map: map,
-    yellowDeck: yellowDeck,
-    blueDeck: blueDeck,
-    yellowName: yellowName,
-    blueName: blueName,
-    yellowIcon: yellowIcon,
-    blueIcon: blueIcon,
-    aiLevel: aiLevel,
-    playerAI: playerAI,
-    onWin: onWin,
-    onLose: onLose,
-    onPostGame: onPostGame,
-    showXpPopup: showXpPopup,
-  ));
-  await sessionCompleter.future;
-  AudioController().stopSong(fadeDuration: Durations.transitionToGame);
+  await startCustomGame(context: context, battle: battle);
 }

@@ -271,7 +271,7 @@ abstract interface class TableturfBattleModel {
   Stream<BattleEvent> get eventStream;
 }
 
-const kNormalBattleTurns = 4;
+const kNormalBattleTurns = 12;
 
 class LocalTableturfBattle implements TableturfBattleModel {
   static final _log = Logger('LocalTableturfBattle');

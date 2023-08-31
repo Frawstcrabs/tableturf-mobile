@@ -712,7 +712,7 @@ class _LevelSelectionScreenState extends State<LevelSelectionScreen> {
           mapID = opponent.mapID;
           break;
       }
-      await startGame(
+      await startNormalGame(
         context: context,
         map: playerProgress.getMap(mapID),
         yellowDeck: yellowDeck,
